@@ -49,17 +49,38 @@
 
 ## キャンセル料計算ルール
 
+### 時間基準の原則
+- 計算は **epoch ミリ秒（ms）** を基準とする。日付単位（00:00区切り）禁止
+- `hours_before` は `(appointment_datetime_ms - cancel_requested_at_ms) / 3_600_000` で求める
+- 「前日」等の曖昧な表現を計算ロジックに使わない。`hoursBefore` 数値で明示する
+
 ### 入力変数
-- `appointment_datetime`: 診療日時
-- `cancel_requested_at`: キャンセル操作日時
+- `appointment_datetime_ms`: 診療日時（epoch ms）
+- `cancel_requested_at_ms`: キャンセル操作日時（epoch ms）
 - `policy_version`: **同意時**のバージョン（SSOTルール）
 - `authorization_amount`: オーソリ済み金額
 
-### 計算順序
-1. `hours_before = (appointment_datetime - cancel_requested_at) / 3600`
+### 計算順序（単一閾値ポリシーの場合）
+1. `hours_before = (appointment_datetime_ms - cancel_requested_at_ms) / 3_600_000`
 2. `hours_before >= policy.free_cancel_hours` → 料金0
 3. `hours_before < policy.free_cancel_hours` かつ `fee_type=fixed` → `fee_value`
 4. `hours_before < policy.free_cancel_hours` かつ `fee_type=percentage` → `min(authorization_amount * fee_value / 100, fee_max ?? ∞)`
+
+### 複数ステップポリシーの評価順序
+段階的キャンセル料（例: 72h前30%・24h前50%・当日100%）を扱う場合:
+- ステップを `hoursBefore` **昇順**に評価し、`hours_before <= step.hoursBefore` を満たす最初のステップを適用する
+- **降順ソート禁止**: 降順で評価すると `hours_before=20h` のとき最大閾値（72h）が先にマッチし過小料率になる誤判定が発生する
+
+### オーソリ推奨時刻
+- オーソリ（与信確保）の実行推奨時刻 = ポリシー最初の発動時刻の **48時間前**
+- 「ポリシー最初の発動時刻」= `appointment_datetime_ms - max(hoursBefore) * 3_600_000`
+- オーソリ後は来院人数・日時変更を制限する（変更可否の判定基準が変わるため）
+
+### 日時・人数変更の可否
+- **日時変更可**: ポリシー発動前（`cancel_requested_at_ms < policy_start_ms`）のみ無料変更可
+- **日時変更不可**: ポリシー発動後は「キャンセル＋新規予約」として処理し、旧予約のキャンセル料を適用する
+- **人数変更可**: オーソリ実行前のみ可。オーソリ後は与信額が確定するため変更不可
+- 変更操作のたびにイベントログへ記録する（変更前後の値・操作主体を含む）
 
 ## 予約日時変更時の同意再取得
 - 変更前と変更後でキャンセル料が変わる可能性がある場合 → **同意再取得必須**

@@ -49,6 +49,28 @@
 - `authorized` 状態でオーソリが失効した場合は `card_pending` に戻す（`authorized` のまま放置禁止）
 - 同意ログのない状態で `authorized` へ遷移不可
 
+## 決済ステータス（PaymentStatus）候補
+
+| status | 意味 |
+|---|---|
+| `none` | 未オーソリ。カード登録前または登録後・オーソリ前 |
+| `authorized` | オーソリ完了（Stripe: `requires_capture`）。来院待ち |
+| `captured` | capture完了（Stripe: `succeeded`）。請求確定 |
+| `refunded` | 返金完了。キャンセル料なしのキャンセルまたは返金処理後 |
+
+- 正本は DB（`payment_intents` テーブル）。Stripe は `payment_intent.status` の正本（SSOT.md参照）
+- `released`（void）は Stripe 側のオーソリ取り消し。DB では `refunded` または `cancelled_free` として記録する
+
+## 状態管理の禁止事項
+- **localStorage を状態の正本・復元・同期に使用することを禁止**
+  - UI の表示補助・一時キャッシュ目的のみ許容
+  - localStorage がクリアされても業務状態が失われない設計にする
+- 同意ログ・決済ログ・状態遷移ログは **分離して保存する**
+  - `consent_logs`（同意の証拠）
+  - `payment_intents` / `event_logs`（決済の証拠）
+  - `appointment_transitions`（状態遷移の証拠）
+  - 1テーブルに混在させない
+
 ## 関連する状態
 - `payment_intent.status` (Stripe): `requires_capture` = authorized, `succeeded` = captured
 - `consent.status`: `agreed` なしに `card_pending` へ進めない
