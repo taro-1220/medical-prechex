@@ -27,6 +27,9 @@ function logError(label: string, error: { code?: string; message?: string; detai
     details: error?.details,
     hint:    error?.hint,
   });
+  console.error("[appointments] supabase raw error", error);
+  console.error("[appointments] supabase error keys", Object.keys(error ?? {}));
+  console.error("[appointments] supabase error json", JSON.stringify(error, null, 2));
 }
 
 export async function getAllAppointments(): Promise<Appointment[]> {
@@ -40,7 +43,13 @@ export async function getAllAppointments(): Promise<Appointment[]> {
     .select("*")
     .order("created_at", { ascending: false });
   console.error("[appointments] after select (getAll)", { hasError: !!error, rowCount: data?.length ?? 0 });
-  if (error) { logError("supabase error (getAll)", error); throw new Error(error.message); }
+  if (error) {
+    logError("supabase error (getAll)", error);
+    console.error("[appointments] getAll raw error", error);
+    console.error("[appointments] getAll error keys", Object.keys(error ?? {}));
+    console.error("[appointments] getAll error json", JSON.stringify(error, null, 2));
+    return [];
+  }
   return (data ?? []).map(toAppt);
 }
 
