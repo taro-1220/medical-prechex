@@ -36,9 +36,16 @@ export default function ClinicPage() {
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    const res = await fetch("/api/appointments");
-    setAppointments(await res.json());
-    setLoading(false);
+    try {
+      const res = await fetch("/api/appointments");
+      if (!res.ok) { setAppointments([]); return; }
+      const data = await res.json();
+      setAppointments(Array.isArray(data) ? data : []);
+    } catch {
+      setAppointments([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
