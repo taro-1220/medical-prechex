@@ -21,20 +21,34 @@ function toAppt(row: Record<string, unknown>): Appointment {
 }
 
 export async function getAllAppointments(): Promise<Appointment[]> {
-  const { data, error } = await getSupabase()
+  console.error("[appointments] before getSupabase (getAll)");
+  const db = getSupabase();
+  console.error("[appointments] after getSupabase (getAll)");
+
+  console.error("[appointments] before select (getAll)");
+  const { data, error } = await db
     .from("appointments")
     .select("*")
     .order("created_at", { ascending: false });
+  console.error("[appointments] after select (getAll)", { hasError: !!error, rowCount: data?.length ?? 0 });
+
   if (error) throw new Error(error.message);
   return (data ?? []).map(toAppt);
 }
 
 export async function getAppointment(token: string): Promise<Appointment | undefined> {
-  const { data, error } = await getSupabase()
+  console.error("[appointments] before getSupabase (get)");
+  const db = getSupabase();
+  console.error("[appointments] after getSupabase (get)");
+
+  console.error("[appointments] before select (get)");
+  const { data, error } = await db
     .from("appointments")
     .select("*")
     .eq("token", token)
     .maybeSingle();
+  console.error("[appointments] after select (get)", { hasError: !!error, found: !!data });
+
   if (error) throw new Error(error.message);
   return data ? toAppt(data) : undefined;
 }
@@ -42,7 +56,12 @@ export async function getAppointment(token: string): Promise<Appointment | undef
 export async function createAppointment(
   input: Omit<Appointment, "id" | "token" | "status" | "createdAt">
 ): Promise<Appointment> {
-  const { data, error } = await getSupabase()
+  console.error("[appointments] before getSupabase (create)");
+  const db = getSupabase();
+  console.error("[appointments] after getSupabase (create)");
+
+  console.error("[appointments] before insert");
+  const { data, error } = await db
     .from("appointments")
     .insert({
       token:                 crypto.randomUUID(),
@@ -58,6 +77,8 @@ export async function createAppointment(
     })
     .select()
     .single();
+  console.error("[appointments] after insert", { hasError: !!error });
+
   if (error) throw new Error(error.message);
   return toAppt(data);
 }
@@ -72,11 +93,17 @@ export async function updateStatus(
   if (extra?.checkedInAt) patch.checked_in_at = extra.checkedInAt;
   if (extra?.cancelledAt) patch.cancelled_at  = extra.cancelledAt;
 
-  const { data, error } = await getSupabase()
+  console.error("[appointments] before getSupabase (update)");
+  const db = getSupabase();
+  console.error("[appointments] after getSupabase (update)");
+
+  console.error("[appointments] before update");
+  const { data, error } = await db
     .from("appointments")
     .update(patch)
     .eq("token", token)
     .select("id");
+  console.error("[appointments] after update", { hasError: !!error, rowCount: data?.length ?? 0 });
 
   if (error) throw new Error(error.message);
   return (data?.length ?? 0) > 0;
