@@ -5,10 +5,12 @@ function safeError(e: unknown) {
   const err = e instanceof Error ? e : new Error(String(e));
   const cause = err.cause as Record<string, unknown> | undefined;
   const info = {
-    debugName:         err.name,
-    debugMessage:      err.message,
-    debugCauseMessage: typeof cause?.message === "string" ? cause.message : undefined,
-    debugCauseCode:    typeof cause?.code    === "string" ? cause.code    : undefined,
+    debugName:            err.name,
+    debugMessage:         err.message,
+    debugCauseName:       cause instanceof Error ? cause.name    : typeof cause?.name    === "string" ? cause.name    : undefined,
+    debugCauseMessage:    cause instanceof Error ? cause.message : typeof cause?.message === "string" ? cause.message : undefined,
+    debugCauseCode:       typeof cause?.code === "string" ? cause.code : undefined,
+    debugCauseOwnProps:   cause != null ? Object.getOwnPropertyNames(cause) : undefined,
   };
   console.error("[api/appointments]", info);
   return info;
