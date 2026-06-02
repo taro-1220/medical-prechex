@@ -5,20 +5,27 @@ export async function GET(
   _: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
-  const { token } = await params;
-  const appt = getAppointment(token);
-  if (!appt) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(appt);
+  try {
+    const { token } = await params;
+    const appt = await getAppointment(token);
+    if (!appt) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(appt);
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
 }
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
-  const { token } = await params;
-  const { status } = await req.json();
-  if (!updateStatus(token, status)) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  try {
+    const { token } = await params;
+    const { status } = await req.json();
+    const ok = await updateStatus(token, status);
+    if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
   }
-  return NextResponse.json({ ok: true });
 }

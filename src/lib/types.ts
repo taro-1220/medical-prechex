@@ -21,5 +21,7 @@ export interface Appointment {
   cancellationPolicy: string;
   status: AppointmentStatus;
   consentAt?: string;
+  checkedInAt?: string;
+  cancelledAt?: string;
   createdAt: string;
 }

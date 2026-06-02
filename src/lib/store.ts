@@ -1,41 +1,83 @@
+import { getSupabase } from "./supabase";
 import type { Appointment, AppointmentStatus } from "./types";
 
-// MVP: in-memory store. Hot-reload safe via globalThis. Replace with Supabase for production.
-const g = globalThis as typeof globalThis & { _appointments?: Map<string, Appointment> };
-if (!g._appointments) g._appointments = new Map();
-const db = g._appointments;
-
-export function getAllAppointments(): Appointment[] {
-  return Array.from(db.values()).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
-}
-
-export function getAppointment(token: string): Appointment | undefined {
-  return db.get(token);
-}
-
-export function createAppointment(
-  data: Omit<Appointment, "id" | "token" | "status" | "createdAt">
-): Appointment {
-  const appt: Appointment = {
-    ...data,
-    id: crypto.randomUUID(),
-    token: crypto.randomUUID(),
-    status: "confirmation_pending",
-    createdAt: new Date().toISOString(),
+// DB row (snake_case) → Appointment (camelCase)
+function toAppt(row: Record<string, unknown>): Appointment {
+  return {
+    id:                   row.id as string,
+    token:                row.token as string,
+    clinicName:           row.clinic_name as string,
+    patientName:          row.patient_name as string,
+    phone:                row.phone as string,
+    email:                row.email as string,
+    communicationChannel: row.communication_channel as Appointment["communicationChannel"],
+    appointmentAt:        row.appointment_at as string,
+    description:          row.description as string,
+    cancellationPolicy:   row.cancellation_policy as string,
+    status:               row.status as AppointmentStatus,
+    consentAt:            row.consent_at as string | undefined,
+    createdAt:            row.created_at as string,
   };
-  db.set(appt.token, appt);
-  return appt;
 }
 
-export function updateStatus(
+export async function getAllAppointments(): Promise<Appointment[]> {
+  const { data, error } = await getSupabase()
+    .from("appointments")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(toAppt);
+}
+
+export async function getAppointment(token: string): Promise<Appointment | undefined> {
+  const { data, error } = await getSupabase()
+    .from("appointments")
+    .select("*")
+    .eq("token", token)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? toAppt(data) : undefined;
+}
+
+export async function createAppointment(
+  input: Omit<Appointment, "id" | "token" | "status" | "createdAt">
+): Promise<Appointment> {
+  const { data, error } = await getSupabase()
+    .from("appointments")
+    .insert({
+      token:                 crypto.randomUUID(),
+      clinic_name:           input.clinicName,
+      patient_name:          input.patientName,
+      phone:                 input.phone ?? "",
+      email:                 input.email ?? "",
+      communication_channel: input.communicationChannel ?? "manual",
+      appointment_at:        input.appointmentAt,
+      description:           input.description,
+      cancellation_policy:   input.cancellationPolicy,
+      status:                "confirmation_pending",
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return toAppt(data);
+}
+
+export async function updateStatus(
   token: string,
   status: AppointmentStatus,
   extra?: Partial<Appointment>
-): boolean {
-  const appt = db.get(token);
-  if (!appt) return false;
-  db.set(token, { ...appt, status, ...extra });
-  return true;
+): Promise<boolean> {
+  const patch: Record<string, unknown> = { status };
+  if (extra?.consentAt)   patch.consent_at   = extra.consentAt;
+  if (extra?.checkedInAt) patch.checked_in_at = extra.checkedInAt;
+  if (extra?.cancelledAt) patch.cancelled_at  = extra.cancelledAt;
+
+  const { data, error } = await getSupabase()
+    .from("appointments")
+    .update(patch)
+    .eq("token", token)
+    .select("id");
+
+  if (error) throw new Error(error.message);
+  return (data?.length ?? 0) > 0;
 }
