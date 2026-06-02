@@ -5,14 +5,18 @@ let _client: SupabaseClient | null = null;
 function diagnoseEnv() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-  let urlHostname = "";
-  try { urlHostname = new URL(url).hostname; } catch { urlHostname = "(invalid url)"; }
+  let hostname = "(invalid url)";
+  try { hostname = new URL(url).hostname; } catch { /* keep default */ }
+  const hl = hostname.length;
   return {
     urlExists:           url.length > 0,
     urlStartsHttps:      url.startsWith("https://"),
     urlEndsSupabaseCo:   url.endsWith(".supabase.co"),
-    urlHostname,
     urlLength:           url.length,
+    hostname,
+    hostnameLength:      hl,
+    hostnameFirst5:      hostname.slice(0, 5),
+    hostnameLast5:       hostname.slice(-5),
     keyExists:           key.length > 0,
     keyStartsSbSecret:   key.startsWith("sb_secret_"),
     keyLength:           key.length,
