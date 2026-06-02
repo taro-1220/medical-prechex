@@ -20,6 +20,15 @@ function toAppt(row: Record<string, unknown>): Appointment {
   };
 }
 
+function logError(label: string, error: { code?: string; message?: string; details?: string; hint?: string } | null) {
+  console.error(`[appointments] ${label}`, {
+    code:    error?.code,
+    message: error?.message,
+    details: error?.details,
+    hint:    error?.hint,
+  });
+}
+
 export async function getAllAppointments(): Promise<Appointment[]> {
   console.error("[appointments] before getSupabase (getAll)");
   const db = getSupabase();
@@ -31,8 +40,7 @@ export async function getAllAppointments(): Promise<Appointment[]> {
     .select("*")
     .order("created_at", { ascending: false });
   console.error("[appointments] after select (getAll)", { hasError: !!error, rowCount: data?.length ?? 0 });
-
-  if (error) throw new Error(error.message);
+  if (error) { logError("supabase error (getAll)", error); throw new Error(error.message); }
   return (data ?? []).map(toAppt);
 }
 
@@ -48,8 +56,7 @@ export async function getAppointment(token: string): Promise<Appointment | undef
     .eq("token", token)
     .maybeSingle();
   console.error("[appointments] after select (get)", { hasError: !!error, found: !!data });
-
-  if (error) throw new Error(error.message);
+  if (error) { logError("supabase error (get)", error); throw new Error(error.message); }
   return data ? toAppt(data) : undefined;
 }
 
@@ -78,8 +85,7 @@ export async function createAppointment(
     .select()
     .single();
   console.error("[appointments] after insert", { hasError: !!error });
-
-  if (error) throw new Error(error.message);
+  if (error) { logError("supabase error (insert)", error); throw new Error(error.message); }
   return toAppt(data);
 }
 
@@ -104,7 +110,6 @@ export async function updateStatus(
     .eq("token", token)
     .select("id");
   console.error("[appointments] after update", { hasError: !!error, rowCount: data?.length ?? 0 });
-
-  if (error) throw new Error(error.message);
+  if (error) { logError("supabase error (update)", error); throw new Error(error.message); }
   return (data?.length ?? 0) > 0;
 }
