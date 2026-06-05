@@ -28,6 +28,8 @@ export default function ClinicNewPage() {
   const [confirmUrl, setConfirmUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<"sms" | "line" | "email">("sms");
+  const [copiedTpl, setCopiedTpl] = useState(false);
 
   const set = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(prev => ({ ...prev, [key]: e.target.value }));
@@ -52,9 +54,27 @@ export default function ClinicNewPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const copyTemplate = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedTpl(true);
+    setTimeout(() => setCopiedTpl(false), 2000);
+  };
+
   if (confirmUrl) {
+    const apptDate = form.appointmentAt
+      ? new Date(form.appointmentAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      : "";
+
+    const templates = {
+      sms: `【${form.clinicName}】${form.patientName} 様\n予約確認をお願いします。\n${confirmUrl}`,
+      line: `【${form.clinicName}】${form.patientName} 様\n\nご予約の確認をお願いします。\n予約内容：${form.description}（${apptDate}）\n\n${confirmUrl}`,
+      email: `件名：【予約確認】${form.description} ご確認のお願い\n\n${form.patientName} 様\n\nご予約の確認をお願いします。\n以下のURLからご確認ください。\n\n${confirmUrl}\n\n${form.clinicName}`,
+    };
+
+    const TAB_LABELS: Record<"sms" | "line" | "email", string> = { sms: "SMS", line: "LINE", email: "メール" };
+
     return (
-      <div className="min-h-screen bg-[#0B1629] text-white flex flex-col items-center justify-center px-6">
+      <div className="min-h-screen bg-[#0B1629] text-white flex flex-col items-center justify-center px-6 py-10">
         <div className="w-full max-w-lg space-y-4">
           <div className="text-center mb-2">
             <div className="text-5xl mb-4">✓</div>
@@ -69,6 +89,37 @@ export default function ClinicNewPage() {
               className="w-full py-3 rounded-xl bg-blue-600 font-bold hover:bg-blue-500 transition text-sm"
             >
               {copied ? "コピーしました ✓" : "コピー"}
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-white/40">送信用テンプレート</p>
+              <span className="text-xs text-white/30 border border-white/10 rounded-full px-2.5 py-0.5">自動送信ではありません</span>
+            </div>
+            <p className="text-xs text-white/30 mb-4">本文をコピーして手動で送信してください</p>
+
+            <div className="flex gap-1 mb-4">
+              {(["sms", "line", "email"] as const).map((ch) => (
+                <button
+                  key={ch}
+                  onClick={() => setActiveTab(ch)}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${activeTab === ch ? "bg-blue-600 text-white" : "bg-white/5 text-white/40 hover:bg-white/10"}`}
+                >
+                  {TAB_LABELS[ch]}
+                </button>
+              ))}
+            </div>
+
+            <pre className="text-xs text-white/70 bg-white/5 rounded-lg px-3 py-3 whitespace-pre-wrap break-all leading-relaxed mb-4 select-all font-sans">
+              {templates[activeTab]}
+            </pre>
+
+            <button
+              onClick={() => copyTemplate(templates[activeTab])}
+              className="w-full py-2.5 rounded-xl border border-white/20 text-sm font-bold hover:bg-white/10 transition"
+            >
+              {copiedTpl ? "コピーしました ✓" : `${TAB_LABELS[activeTab]} 用本文をコピー`}
             </button>
           </div>
 
