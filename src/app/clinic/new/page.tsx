@@ -55,39 +55,29 @@ export default function ClinicNewPage() {
   if (confirmUrl) {
     return (
       <div className="min-h-screen bg-[#0B1629] text-white flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-lg">
-          <div className="text-center mb-8">
+        <div className="w-full max-w-lg space-y-4">
+          <div className="text-center mb-2">
             <div className="text-5xl mb-4">✓</div>
-            <h1 className="text-2xl font-black">予約を作成しました</h1>
-            <p className="text-white/50 mt-2 text-sm">患者に以下の確認URLを共有してください</p>
+            <h1 className="text-2xl font-black">予約作成完了</h1>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 mb-4">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
             <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3">確認URL</p>
-            <p className="text-sm text-blue-300 break-all mb-4 font-mono leading-relaxed">{confirmUrl}</p>
+            <p className="text-sm text-blue-300 break-all font-mono bg-white/5 rounded-lg px-3 py-2 mb-4 leading-relaxed select-all">{confirmUrl}</p>
             <button
               onClick={copyUrl}
               className="w-full py-3 rounded-xl bg-blue-600 font-bold hover:bg-blue-500 transition text-sm"
             >
-              {copied ? "コピーしました ✓" : "URLをコピー"}
+              {copied ? "コピーしました ✓" : "コピー"}
             </button>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 mb-6">
-            <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3">送信手段</p>
-            <div className="space-y-2.5">
-              {[
-                { label: "SMS", note: "準備中" },
-                { label: "メール", note: "準備中" },
-                { label: "LINE", note: "準備中" },
-              ].map((ch) => (
-                <div key={ch.label} className="flex items-center justify-between">
-                  <span className="text-sm text-white/70">{ch.label}</span>
-                  <span className="text-xs text-white/30 border border-white/10 rounded-full px-2.5 py-0.5">{ch.note}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <button
+            onClick={() => { setConfirmUrl(null); setForm({ clinicName: "", patientName: "", phone: "", email: "", appointmentAt: "", description: "", cancellationPolicy: DEFAULT_POLICY }); }}
+            className="w-full py-3 rounded-2xl border border-white/20 font-bold hover:bg-white/5 transition text-sm"
+          >
+            新しい予約を作成
+          </button>
 
           <Link href="/clinic" className="block text-center text-sm text-white/40 hover:text-white transition">
             ← 予約一覧に戻る
@@ -132,7 +122,7 @@ export default function ClinicNewPage() {
 
           <div>
             <label className="block text-sm font-bold mb-1.5 text-white/80">
-              キャンセルポリシー<span className="text-red-400 ml-1">*</span>
+              予約確認ポリシー<span className="text-red-400 ml-1">*</span>
             </label>
             <textarea
               required
@@ -148,7 +138,7 @@ export default function ClinicNewPage() {
             disabled={loading}
             className="w-full py-4 rounded-2xl bg-blue-600 font-bold hover:bg-blue-500 transition disabled:opacity-50 text-base"
           >
-            {loading ? "作成中..." : "予約を作成して確認URLを発行"}
+            {loading ? "作成中..." : "確認URLを発行"}
           </button>
         </form>
       </div>

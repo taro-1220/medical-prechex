@@ -3,6 +3,7 @@ export type AppointmentStatus =
   | "confirmed"
   | "ticket_issued"
   | "checked_in"
+  | "completed"
   | "cancelled"
   | "expired";
 

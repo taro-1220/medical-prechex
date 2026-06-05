@@ -2,12 +2,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
+import OnboardingGuide, { GUIDE_KEY } from "./OnboardingGuide";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmation_pending: "確認待ち",
   confirmed: "確認済み",
   ticket_issued: "確認済み",
   checked_in: "来院済み",
+  completed: "完了",
   cancelled: "キャンセル",
   expired: "期限切れ",
 };
@@ -17,6 +19,7 @@ const STATUS_COLOR: Record<AppointmentStatus, string> = {
   confirmed: "bg-blue-500/20 text-blue-300",
   ticket_issued: "bg-blue-500/20 text-blue-300",
   checked_in: "bg-emerald-500/20 text-emerald-300",
+  completed: "bg-teal-500/20 text-teal-300",
   cancelled: "bg-white/10 text-white/40",
   expired: "bg-white/10 text-white/40",
 };
@@ -34,6 +37,13 @@ const isCancelled = (s: AppointmentStatus) => s === "cancelled" || s === "expire
 export default function ClinicPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !localStorage.getItem(GUIDE_KEY)) {
+      setShowGuide(true);
+    }
+  }, []);
 
   const load = async () => {
     try {
@@ -55,6 +65,15 @@ export default function ClinicPage() {
     if (diff !== 0) return diff;
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
+
+  const markCompleted = async (token: string) => {
+    await fetch(`/api/appointments/${token}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "completed" }),
+    });
+    load();
+  };
 
   const markCheckedIn = async (token: string) => {
     await fetch(`/api/appointments/${token}`, {
@@ -81,10 +100,20 @@ export default function ClinicPage() {
           <Link href="/" className="text-white/40 text-sm hover:text-white transition">← PreChex</Link>
           <h1 className="text-xl font-black mt-1">クリニック管理画面</h1>
         </div>
-        <Link href="/clinic/new" className="px-4 py-2 bg-blue-600 rounded-xl font-bold text-sm hover:bg-blue-500 transition">
-          ＋ 新規予約
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowGuide(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-full border border-white/20 text-white/50 text-sm hover:bg-white/10 transition"
+            title="使い方ガイド"
+          >
+            ?
+          </button>
+          <Link href="/clinic/new" className="px-4 py-2 bg-blue-600 rounded-xl font-bold text-sm hover:bg-blue-500 transition">
+            ＋ 新規予約
+          </Link>
+        </div>
       </header>
+      {showGuide && <OnboardingGuide onClose={() => setShowGuide(false)} />}
 
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Summary */}
@@ -154,6 +183,14 @@ export default function ClinicPage() {
                       className="px-3 py-1.5 rounded-lg bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs hover:bg-emerald-600/50 transition"
                     >
                       来院受付
+                    </button>
+                  )}
+                  {a.status === "checked_in" && (
+                    <button
+                      onClick={() => markCompleted(a.token)}
+                      className="px-3 py-1.5 rounded-lg bg-teal-600/30 border border-teal-500/40 text-teal-300 text-xs hover:bg-teal-600/50 transition"
+                    >
+                      診察完了
                     </button>
                   )}
                 </div>
