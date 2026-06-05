@@ -5,11 +5,11 @@ import type { Appointment, AppointmentStatus } from "@/lib/types";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmation_pending: "確認待ち",
-  confirmed: "確認済",
-  ticket_issued: "確認済",
-  checked_in: "来院済",
+  confirmed: "確認済み",
+  ticket_issued: "確認済み",
+  checked_in: "来院済み",
   cancelled: "キャンセル",
-  expired: "キャンセル",
+  expired: "期限切れ",
 };
 
 const STATUS_COLOR: Record<AppointmentStatus, string> = {
@@ -49,6 +49,12 @@ export default function ClinicPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const sorted = [...appointments].sort((a, b) => {
+    const diff = new Date(a.appointmentAt).getTime() - new Date(b.appointmentAt).getTime();
+    if (diff !== 0) return diff;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
   const markCheckedIn = async (token: string) => {
     await fetch(`/api/appointments/${token}`, {
@@ -111,7 +117,7 @@ export default function ClinicPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {appointments.map((a) => (
+            {sorted.map((a) => (
               <div key={a.id} className="rounded-2xl border border-white/10 bg-white/5 p-5 flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
@@ -119,8 +125,16 @@ export default function ClinicPage() {
                       {STATUS_LABEL[a.status]}
                     </span>
                     <span className="text-white/40 text-xs">{formatDate(a.appointmentAt)}</span>
+                    <span className="text-white/20 text-xs font-mono">#{a.id.slice(0, 8)}</span>
                   </div>
                   <p className="font-bold">{a.patientName}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
+                    {a.phone && <span className="text-xs text-white/50">{a.phone}</span>}
+                    {a.email && <span className="text-xs text-white/50">{a.email}</span>}
+                  </div>
+                  {a.consentAt && (
+                    <p className="text-xs text-blue-300/60 mt-1">同意: {formatDate(a.consentAt)}</p>
+                  )}
                   <p className="text-sm text-white/50 mt-0.5">{a.description}</p>
                   <p className="text-xs text-white/30 mt-1">{a.clinicName}</p>
                 </div>
