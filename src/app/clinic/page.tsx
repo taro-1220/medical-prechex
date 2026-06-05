@@ -135,6 +135,9 @@ export default function ClinicPage() {
                   {a.consentAt && (
                     <p className="text-xs text-blue-300/60 mt-1">同意: {formatDate(a.consentAt)}</p>
                   )}
+                  {a.checkedInAt && (
+                    <p className="text-xs text-emerald-300/60 mt-0.5">来院: {formatDate(a.checkedInAt)}</p>
+                  )}
                   <p className="text-sm text-white/50 mt-0.5">{a.description}</p>
                   <p className="text-xs text-white/30 mt-1">{a.clinicName}</p>
                 </div>
@@ -145,12 +148,12 @@ export default function ClinicPage() {
                   >
                     URL コピー
                   </button>
-                  {isConfirmed(a.status) && (
+                  {a.status === "confirmed" && (
                     <button
                       onClick={() => markCheckedIn(a.token)}
                       className="px-3 py-1.5 rounded-lg bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs hover:bg-emerald-600/50 transition"
                     >
-                      来院確認
+                      来院受付
                     </button>
                   )}
                 </div>

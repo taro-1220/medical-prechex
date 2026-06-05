@@ -15,6 +15,7 @@ function toAppt(row: Record<string, unknown>): Appointment {
     cancellationPolicy:   row.cancellation_policy as string,
     status:               row.status as AppointmentStatus,
     consentAt:            row.consent_at as string | undefined,
+    checkedInAt:          row.checked_in_at as string | undefined,
     createdAt:            row.created_at as string,
   };
 }

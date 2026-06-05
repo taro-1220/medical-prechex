@@ -22,7 +22,8 @@ export async function PATCH(
   try {
     const { token } = await params;
     const { status } = await req.json();
-    const ok = await updateStatus(token, status);
+    const extra = status === "checked_in" ? { checkedInAt: new Date().toISOString() } : undefined;
+    const ok = await updateStatus(token, status, extra);
     if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (e) {
