@@ -65,6 +65,31 @@ export async function createAppointment(
   return toAppt(data);
 }
 
+export async function confirmWithConsent(token: string): Promise<boolean> {
+  // 1. 予約を取得（policy_text / patient_name / appointment_at が必要）
+  const appt = await getAppointment(token);
+  if (!appt) return false;
+
+  const consentAt = new Date().toISOString();
+
+  // 2. consent_logs に先に insert（失敗時は appointments を更新しない）
+  const { error: logError } = await getSupabase()
+    .from("consent_logs")
+    .insert({
+      appointment_id: appt.id,
+      token:          appt.token,
+      policy_text:    appt.cancellationPolicy,
+      consented_at:   consentAt,
+      patient_name:   appt.patientName,
+      appointment_at: appt.appointmentAt,
+    });
+  if (logError) throw new Error(`consent_log insert failed: ${logError.message}`);
+
+  // 3. consent_logs 保存成功後のみ appointments を confirmed に更新
+  const ok = await updateStatus(token, "confirmed", { consentAt });
+  return ok;
+}
+
 export async function updateStatus(
   token: string,
   status: AppointmentStatus,
