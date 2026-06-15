@@ -31,7 +31,7 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
   if (error) {
     return (
       <div className="min-h-screen bg-[#0B1629] text-white flex items-center justify-center px-6">
-        <div className="text-center"><p className="text-4xl mb-4">⚠️</p><p className="text-white/60">{error}</p></div>
+        <div className="text-center"><p className="text-4xl mb-4">⚠️</p><p className="text-white/60">チケットを確認できません</p></div>
       </div>
     );
   }
@@ -44,7 +44,19 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
     );
   }
 
-  const qrData = encodeURIComponent(`${appt.id}`);
+  if (appt.status === "checked_in" || appt.status === "completed") {
+    return (
+      <div className="min-h-screen bg-[#0B1629] text-white flex items-center justify-center px-6">
+        <div className="text-center max-w-sm">
+          <p className="text-5xl mb-4">✓</p>
+          <p className="text-xl font-black mb-2">来院受付済み</p>
+          <p className="text-sm text-white/50">{appt.patientName} さんの来院受付は完了しています</p>
+        </div>
+      </div>
+    );
+  }
+
+  const qrData = encodeURIComponent(`${window.location.origin}/confirm/${appt.token}/complete`);
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}&bgcolor=0B1629&color=ffffff&margin=16`;
 
   return (
@@ -82,7 +94,11 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
             height={200}
             className="rounded-xl"
           />
-          <p className="text-xs text-white/40">来院時に受付でご提示ください</p>
+          <p className="text-sm font-bold text-white/80">受付スタッフにこのQRを提示してください</p>
+          <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/20 px-4 py-3 text-center space-y-1">
+            <p className="text-xs text-yellow-300/80 font-bold">この画面は来院受付用ではありません</p>
+            <p className="text-xs text-white/40">読み取っただけでは受付完了になりません</p>
+          </div>
         </div>
 
         {/* 予約情報 */}

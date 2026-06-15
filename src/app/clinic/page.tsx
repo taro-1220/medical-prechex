@@ -178,12 +178,12 @@ export default function ClinicPage() {
                     URL コピー
                   </button>
                   {a.status === "confirmed" && (
-                    <button
-                      onClick={() => markCheckedIn(a.token)}
+                    <Link
+                      href={`/clinic/checkin/${a.token}`}
                       className="px-3 py-1.5 rounded-lg bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 text-xs hover:bg-emerald-600/50 transition"
                     >
                       来院受付
-                    </button>
+                    </Link>
                   )}
                   {a.status === "checked_in" && (
                     <button
