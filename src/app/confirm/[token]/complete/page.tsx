@@ -30,63 +30,65 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0B1629] text-white flex items-center justify-center px-6">
-        <div className="text-center"><p className="text-4xl mb-4">⚠️</p><p className="text-white/60">チケットを確認できません</p></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+        <div className="text-center"><p className="text-4xl mb-4">⚠️</p><p className="text-gray-500">チケットを確認できません</p></div>
       </div>
     );
   }
 
   if (!appt) {
     return (
-      <div className="min-h-screen bg-[#0B1629] text-white flex items-center justify-center">
-        <p className="text-white/30 text-sm">読み込み中...</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-400 text-sm">読み込み中...</p>
       </div>
     );
   }
 
   if (appt.status === "checked_in" || appt.status === "completed") {
     return (
-      <div className="min-h-screen bg-[#0B1629] text-white flex items-center justify-center px-6">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
         <div className="text-center max-w-sm">
-          <p className="text-5xl mb-4">✓</p>
-          <p className="text-xl font-black mb-2">来院受付済み</p>
-          <p className="text-sm text-white/50">{appt.patientName} さんの来院受付は完了しています</p>
+          <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl text-teal-600">✓</span>
+          </div>
+          <p className="text-xl font-black text-gray-900 mb-2">来院受付済み</p>
+          <p className="text-sm text-gray-500">{appt.patientName} さんの来院受付は完了しています</p>
         </div>
       </div>
     );
   }
 
   const qrData = encodeURIComponent(`${window.location.origin}/confirm/${appt.token}/complete`);
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}&bgcolor=0B1629&color=ffffff&margin=16`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}&bgcolor=ffffff&color=0f766e&margin=16`;
 
   return (
-    <div className="min-h-screen bg-[#0B1629] text-white">
-      <header className="border-b border-white/10 px-6 py-4 text-center">
-        <span className="text-lg font-black">PreChex</span>
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <header className="border-b border-gray-200 bg-white px-6 py-4 text-center">
+        <span className="text-lg font-black text-teal-700">PreChex</span>
       </header>
 
       <div className="max-w-sm mx-auto px-6 py-8 space-y-6">
         {/* チケットヘッダー */}
         <div className="text-center">
-          <p className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-2">Ticket</p>
-          <h1 className="text-2xl font-black">予約確定チケット</h1>
+          <p className="text-xs font-bold uppercase tracking-widest text-teal-600 mb-2">Ticket</p>
+          <h1 className="text-2xl font-black text-gray-900">予約確定チケット</h1>
         </div>
 
         {/* バッジ */}
         <div className="flex justify-center gap-3 flex-wrap">
           {[
-            { icon: "✓", label: "予約確認済" },
-            { icon: "✓", label: "同意取得済" },
-            { icon: "✓", label: "来院用QR" },
+            { label: "予約確認済" },
+            { label: "同意取得済" },
+            { label: "来院用QR" },
           ].map((b) => (
-            <span key={b.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30 text-blue-300 text-xs font-bold">
-              <span className="text-emerald-400">{b.icon}</span> {b.label}
+            <span key={b.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-bold">
+              <span className="text-teal-500">✓</span> {b.label}
             </span>
           ))}
         </div>
 
         {/* QR */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 flex flex-col items-center gap-4">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 flex flex-col items-center gap-4">
           <img
             src={qrUrl}
             alt="来院用QRコード"
@@ -94,15 +96,15 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
             height={200}
             className="rounded-xl"
           />
-          <p className="text-sm font-bold text-white/80">受付スタッフにこのQRを提示してください</p>
-          <div className="rounded-xl bg-yellow-500/10 border border-yellow-500/20 px-4 py-3 text-center space-y-1">
-            <p className="text-xs text-yellow-300/80 font-bold">この画面は来院受付用ではありません</p>
-            <p className="text-xs text-white/40">読み取っただけでは受付完了になりません</p>
+          <p className="text-sm font-bold text-gray-700">受付スタッフにこのQRを提示してください</p>
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-center space-y-1">
+            <p className="text-xs text-amber-700 font-bold">この画面は来院受付用ではありません</p>
+            <p className="text-xs text-gray-400">読み取っただけでは受付完了になりません</p>
           </div>
         </div>
 
         {/* 予約情報 */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-3">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 space-y-3">
           {[
             { label: "予約番号", value: appt.id.slice(0, 8).toUpperCase() },
             { label: "クリニック", value: appt.clinicName },
@@ -111,13 +113,13 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
             { label: "内容", value: appt.description },
           ].map((row) => (
             <div key={row.label} className="flex gap-4">
-              <span className="text-xs text-white/40 w-20 shrink-0 pt-0.5">{row.label}</span>
-              <span className="text-sm font-bold leading-snug">{row.value}</span>
+              <span className="text-xs text-gray-400 w-20 shrink-0 pt-0.5">{row.label}</span>
+              <span className="text-sm font-bold text-gray-900 leading-snug">{row.value}</span>
             </div>
           ))}
         </div>
 
-        <p className="text-center text-xs text-white/30 pb-4">
+        <p className="text-center text-xs text-gray-400 pb-4">
           このチケットは予約確認・同意取得済みの証明です
         </p>
       </div>
