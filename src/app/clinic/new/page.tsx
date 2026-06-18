@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import type { Patient } from "@/lib/types";
 
 const DEFAULT_POLICY =
   "予約日の前日までのキャンセルは無料です。当日キャンセルおよび無断キャンセルには、予約確認対象額の全額をご請求する場合があります。";
@@ -30,9 +31,37 @@ export default function ClinicNewPage() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"sms" | "line" | "email">("sms");
   const [copiedTpl, setCopiedTpl] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const set = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(prev => ({ ...prev, [key]: e.target.value }));
+
+  useEffect(() => {
+    if (searchQuery.length < 2) { setPatients([]); setShowDropdown(false); return; }
+    fetch(`/api/patients/search?q=${encodeURIComponent(searchQuery)}`)
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) { setPatients(data); setShowDropdown(data.length > 0); } })
+      .catch(() => {});
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowDropdown(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const selectPatient = (p: Patient) => {
+    setForm(prev => ({ ...prev, patientName: p.name, phone: p.phone, email: p.email }));
+    setSelectedPatientId(p.id);
+    setSearchQuery(p.name);
+    setShowDropdown(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +69,7 @@ export default function ClinicNewPage() {
     const res = await fetch("/api/appointments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, communicationChannel: "manual" }),
+      body: JSON.stringify({ ...form, communicationChannel: "manual", ...(selectedPatientId ? { patientId: selectedPatientId } : {}) }),
     });
     const appt = await res.json();
     setConfirmUrl(`${location.origin}/confirm/${appt.token}`);
@@ -126,7 +155,7 @@ export default function ClinicNewPage() {
           </div>
 
           <button
-            onClick={() => { setConfirmUrl(null); setForm({ clinicName: "", patientName: "", phone: "", email: "", appointmentAt: "", description: "", cancellationPolicy: DEFAULT_POLICY }); }}
+            onClick={() => { setConfirmUrl(null); setForm({ clinicName: "", patientName: "", phone: "", email: "", appointmentAt: "", description: "", cancellationPolicy: DEFAULT_POLICY }); setSearchQuery(""); setSelectedPatientId(null); setPatients([]); }}
             className="w-full py-3 rounded-2xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-100 transition text-sm"
           >
             新しい予約を作成
@@ -149,6 +178,38 @@ export default function ClinicNewPage() {
 
       <div className="max-w-lg mx-auto px-6 py-8">
         <form onSubmit={handleSubmit} className="space-y-5">
+          {/* 患者検索 */}
+          <div ref={searchRef} className="relative">
+            <label className="block text-sm font-bold mb-1.5 text-gray-700">
+              既存患者を検索（名前・電話番号・メール）
+            </label>
+            <input
+              type="text"
+              placeholder="山田太郎 / 090-..."
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setSelectedPatientId(null); }}
+              className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-teal-500 transition text-sm"
+            />
+            {selectedPatientId && (
+              <p className="text-xs text-teal-600 mt-1">✓ 既存患者を選択済み</p>
+            )}
+            {showDropdown && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                {patients.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => selectPatient(p)}
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition"
+                  >
+                    <p className="font-bold text-sm text-gray-900">{p.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{[p.phone, p.email].filter(Boolean).join(" · ")}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {([
             { key: "clinicName", label: "クリニック名", type: "text", required: true, placeholder: "○○クリニック" },
             { key: "patientName", label: "患者名", type: "text", required: true, placeholder: "山田 太郎" },

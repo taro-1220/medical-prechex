@@ -1,5 +1,5 @@
 import { getSupabase } from "./supabase";
-import type { Appointment, AppointmentStatus } from "./types";
+import type { Appointment, AppointmentStatus, Patient } from "./types";
 
 function toAppt(row: Record<string, unknown>): Appointment {
   return {
@@ -20,6 +20,23 @@ function toAppt(row: Record<string, unknown>): Appointment {
     patientId:            row.patient_id as string | undefined,
     createdAt:            row.created_at as string,
   };
+}
+
+export async function searchPatients(query: string): Promise<Patient[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const { data, error } = await getSupabase()
+    .from("patients")
+    .select("id, name, phone, email")
+    .or(`name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`)
+    .limit(10);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(r => ({
+    id:    r.id    as string,
+    name:  r.name  as string,
+    phone: r.phone as string,
+    email: r.email as string,
+  }));
 }
 
 export async function getAllAppointments(): Promise<Appointment[]> {
@@ -91,7 +108,7 @@ export async function createAppointment(
   input: Omit<Appointment, "id" | "token" | "status" | "createdAt">
 ): Promise<Appointment> {
   const clinicId  = await findOrCreateClinic(input.clinicName);
-  const patientId = await findOrCreatePatient(input.patientName, input.phone ?? "", input.email ?? "", clinicId);
+  const patientId = input.patientId ?? await findOrCreatePatient(input.patientName, input.phone ?? "", input.email ?? "", clinicId);
 
   const { data, error } = await getSupabase()
     .from("appointments")

@@ -9,6 +9,13 @@ export type AppointmentStatus =
 
 export type CommunicationChannel = "sms" | "email" | "line" | "manual";
 
+export interface Patient {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+}
+
 export interface Appointment {
   id: string;
   token: string;
