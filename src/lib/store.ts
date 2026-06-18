@@ -16,6 +16,8 @@ function toAppt(row: Record<string, unknown>): Appointment {
     status:               row.status as AppointmentStatus,
     consentAt:            row.consent_at as string | undefined,
     checkedInAt:          row.checked_in_at as string | undefined,
+    clinicId:             row.clinic_id as string | undefined,
+    patientId:            row.patient_id as string | undefined,
     createdAt:            row.created_at as string,
   };
 }
@@ -42,9 +44,55 @@ export async function getAppointment(token: string): Promise<Appointment | undef
   return data ? toAppt(data) : undefined;
 }
 
+async function findOrCreateClinic(clinicName: string): Promise<string> {
+  const sb = getSupabase();
+  const { data: existing } = await sb
+    .from("clinics")
+    .select("id")
+    .eq("name", clinicName)
+    .maybeSingle();
+  if (existing) return existing.id as string;
+  const { data, error } = await sb
+    .from("clinics")
+    .insert({ name: clinicName })
+    .select("id")
+    .single();
+  if (error) throw new Error(`clinic insert failed: ${error.message}`);
+  return data.id as string;
+}
+
+async function findOrCreatePatient(
+  patientName: string,
+  phone: string,
+  email: string,
+  clinicId: string,
+): Promise<string> {
+  const sb = getSupabase();
+  let existingId: string | null = null;
+  if (phone) {
+    const { data } = await sb.from("patients").select("id").eq("phone", phone).maybeSingle();
+    if (data) existingId = data.id as string;
+  }
+  if (!existingId && email) {
+    const { data } = await sb.from("patients").select("id").eq("email", email).maybeSingle();
+    if (data) existingId = data.id as string;
+  }
+  if (existingId) return existingId;
+  const { data, error } = await sb
+    .from("patients")
+    .insert({ name: patientName, phone: phone ?? "", email: email ?? "", clinic_id: clinicId })
+    .select("id")
+    .single();
+  if (error) throw new Error(`patient insert failed: ${error.message}`);
+  return data.id as string;
+}
+
 export async function createAppointment(
   input: Omit<Appointment, "id" | "token" | "status" | "createdAt">
 ): Promise<Appointment> {
+  const clinicId  = await findOrCreateClinic(input.clinicName);
+  const patientId = await findOrCreatePatient(input.patientName, input.phone ?? "", input.email ?? "", clinicId);
+
   const { data, error } = await getSupabase()
     .from("appointments")
     .insert({
@@ -58,6 +106,8 @@ export async function createAppointment(
       description:           input.description,
       cancellation_policy:   input.cancellationPolicy,
       status:                "confirmation_pending",
+      clinic_id:             clinicId,
+      patient_id:            patientId,
     })
     .select()
     .single();

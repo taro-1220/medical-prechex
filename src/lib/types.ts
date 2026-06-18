@@ -24,5 +24,7 @@ export interface Appointment {
   consentAt?: string;
   checkedInAt?: string;
   cancelledAt?: string;
+  clinicId?: string;
+  patientId?: string;
   createdAt: string;
 }
