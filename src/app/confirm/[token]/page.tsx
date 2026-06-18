@@ -56,10 +56,10 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#0B1629] text-white flex items-center justify-center px-6">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
         <div className="text-center max-w-sm">
           <p className="text-4xl mb-4">⚠️</p>
-          <p className="text-white/60">{error}</p>
+          <p className="text-gray-500">{error}</p>
         </div>
       </div>
     );
@@ -67,23 +67,23 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
 
   if (!appt) {
     return (
-      <div className="min-h-screen bg-[#0B1629] text-white flex items-center justify-center">
-        <p className="text-white/30 text-sm">読み込み中...</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-400 text-sm">読み込み中...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0B1629] text-white">
-      <header className="border-b border-white/10 px-6 py-4 text-center">
-        <span className="text-lg font-black">PreChex</span>
-        <p className="text-xs text-white/40 mt-0.5">予約確認</p>
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <header className="border-b border-gray-200 bg-white px-6 py-4 text-center">
+        <span className="text-lg font-black text-teal-700">PreChex</span>
+        <p className="text-xs text-gray-400 mt-0.5">予約確認</p>
       </header>
 
       <div className="max-w-lg mx-auto px-6 py-8 space-y-6">
         {/* 予約情報 */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">予約内容</p>
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">予約内容</p>
           <div className="space-y-3">
             {[
               { label: "クリニック", value: appt.clinicName },
@@ -92,17 +92,17 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
               { label: "内容", value: appt.description },
             ].map((row) => (
               <div key={row.label} className="flex gap-4">
-                <span className="text-sm text-white/40 w-20 shrink-0">{row.label}</span>
-                <span className="text-sm font-bold">{row.value}</span>
+                <span className="text-sm text-gray-400 w-20 shrink-0">{row.label}</span>
+                <span className="text-sm font-bold text-gray-900">{row.value}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* キャンセルポリシー */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
-          <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-3">キャンセルポリシー</p>
-          <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">{appt.cancellationPolicy}</p>
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">キャンセルポリシー</p>
+          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{appt.cancellationPolicy}</p>
         </div>
 
         {/* 同意 */}
@@ -111,9 +111,9 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
             type="checkbox"
             checked={consented}
             onChange={(e) => setConsented(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded accent-blue-500 shrink-0"
+            className="mt-0.5 h-4 w-4 rounded accent-teal-600 shrink-0"
           />
-          <span className="text-sm text-white/70 leading-relaxed">
+          <span className="text-sm text-gray-700 leading-relaxed">
             予約内容およびキャンセルポリシーを確認しました
           </span>
         </label>
@@ -122,12 +122,12 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
         <button
           onClick={handleConfirm}
           disabled={!consented || submitting}
-          className="w-full py-4 rounded-2xl bg-blue-600 font-bold text-base hover:bg-blue-500 transition disabled:opacity-30 disabled:cursor-not-allowed"
+          className="w-full py-4 rounded-2xl bg-teal-600 text-white font-bold text-base hover:bg-teal-700 transition disabled:opacity-30 disabled:cursor-not-allowed"
         >
           {submitting ? "確認中..." : "予約内容を確認して確定"}
         </button>
 
-        <p className="text-center text-xs text-white/30 leading-relaxed">
+        <p className="text-center text-xs text-gray-400 leading-relaxed">
           確定後にQR来院チケットが発行されます。<br />
           来院時に受付でご提示ください。
         </p>

@@ -37,31 +37,31 @@ export default function OnboardingGuide({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#0d1e35] p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
-          <p className="text-xs font-bold text-white/40 uppercase tracking-widest">PreChex 使い方ガイド</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">PreChex 使い方ガイド</p>
           <div className="flex gap-1.5">
             {STEPS.map((_, i) => (
-              <span key={i} className={`block w-2 h-2 rounded-full ${i === step ? "bg-blue-400" : "bg-white/20"}`} />
+              <span key={i} className={`block w-2 h-2 rounded-full ${i === step ? "bg-teal-500" : "bg-gray-200"}`} />
             ))}
           </div>
         </div>
 
-        <p className="text-xs font-bold text-blue-400 mb-2">STEP {current.n}</p>
-        <h2 className="text-lg font-black mb-3">{current.title}</h2>
-        <p className="text-sm text-white/60 leading-relaxed mb-8">{current.desc}</p>
+        <p className="text-xs font-bold text-teal-600 mb-2">STEP {current.n}</p>
+        <h2 className="text-lg font-black text-gray-900 mb-3">{current.title}</h2>
+        <p className="text-sm text-gray-500 leading-relaxed mb-8">{current.desc}</p>
 
         <div className="flex gap-3">
           <button
             onClick={finish}
-            className="flex-1 py-2.5 rounded-xl border border-white/20 text-sm text-white/50 hover:bg-white/5 transition"
+            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-500 hover:bg-gray-50 transition"
           >
             スキップ
           </button>
           <button
             onClick={() => isLast ? finish() : setStep(s => s + 1)}
-            className="flex-1 py-2.5 rounded-xl bg-blue-600 font-bold text-sm hover:bg-blue-500 transition"
+            className="flex-1 py-2.5 rounded-xl bg-teal-600 text-white font-bold text-sm hover:bg-teal-700 transition"
           >
             {isLast ? "完了" : "次へ"}
           </button>
