@@ -74,6 +74,6 @@
 - IDENTITY_MODEL.md: 患者ID設計
 
 ## 将来の再利用先
-- 美容クリニック・エステ向けPrechex
-- ホテル・旅館向けPrechex
-- パーソナルトレーニング・ゴルフスクール向けPrechex
+- 美容クリニック・エステ向けmedipre
+- ホテル・旅館向けmedipre
+- パーソナルトレーニング・ゴルフスクール向けmedipre

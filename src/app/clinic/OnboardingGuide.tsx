@@ -40,7 +40,7 @@ export default function OnboardingGuide({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">PreChex 使い方ガイド</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">medipre 使い方ガイド</p>
           <div className="flex gap-1.5">
             {STEPS.map((_, i) => (
               <span key={i} className={`block w-2 h-2 rounded-full ${i === step ? "bg-teal-500" : "bg-gray-200"}`} />

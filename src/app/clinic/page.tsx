@@ -97,7 +97,7 @@ export default function ClinicPage() {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <header className="border-b border-gray-200 bg-white px-6 py-4 flex items-center justify-between">
         <div>
-          <Link href="/" className="text-gray-400 text-sm hover:text-gray-900 transition">← PreChex</Link>
+          <Link href="/" className="text-gray-400 text-sm hover:text-gray-900 transition">← medipre</Link>
           <h1 className="text-xl font-black mt-1 text-gray-900">クリニック管理画面</h1>
         </div>
         <div className="flex items-center gap-2">

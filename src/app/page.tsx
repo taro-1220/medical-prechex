@@ -20,7 +20,7 @@ export default function Home() {
     <main className="min-h-screen bg-white text-gray-900">
       {/* Nav */}
       <nav className="fixed top-0 w-full z-50 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <span className="text-xl font-black tracking-tight text-teal-700">PreChex</span>
+        <span className="text-xl font-black tracking-tight text-teal-700">medipre</span>
         <div className="flex gap-6 text-sm text-gray-500">
           <a href="#features" className="hover:text-gray-900 transition">特徴</a>
           <a href="#howto" className="hover:text-gray-900 transition">仕組み</a>
@@ -85,7 +85,7 @@ export default function Home() {
       </section>
 
       <footer className="border-t border-gray-200 py-8 px-6 text-center text-sm text-gray-400">
-        © 2026 PreChex. 医療向け予約保証プラットフォーム
+        © 2026 medipre. 医療向け予約保証プラットフォーム
       </footer>
     </main>
   );

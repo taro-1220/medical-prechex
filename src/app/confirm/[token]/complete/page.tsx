@@ -64,7 +64,7 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <header className="border-b border-gray-200 bg-white px-6 py-4 text-center">
-        <span className="text-lg font-black text-teal-700">PreChex</span>
+        <span className="text-lg font-black text-teal-700">medipre</span>
       </header>
 
       <div className="max-w-sm mx-auto px-6 py-8 space-y-6">

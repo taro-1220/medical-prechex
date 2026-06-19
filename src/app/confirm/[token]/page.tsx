@@ -76,7 +76,7 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <header className="border-b border-gray-200 bg-white px-6 py-4 text-center">
-        <span className="text-lg font-black text-teal-700">PreChex</span>
+        <span className="text-lg font-black text-teal-700">medipre</span>
         <p className="text-xs text-gray-400 mt-0.5">予約確認</p>
       </header>
 
