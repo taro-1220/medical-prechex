@@ -29,7 +29,7 @@ export default function ClinicNewPage() {
   const [confirmUrl, setConfirmUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<"sms" | "line" | "email">("sms");
+  const [activeTab, setActiveTab] = useState<"sms" | "line" | "email">("line");
   const [copiedTpl, setCopiedTpl] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -72,7 +72,7 @@ export default function ClinicNewPage() {
       body: JSON.stringify({ ...form, communicationChannel: "manual", ...(selectedPatientId ? { patientId: selectedPatientId } : {}) }),
     });
     const appt = await res.json();
-    setConfirmUrl(`${location.origin}/confirm/${appt.token}`);
+    setConfirmUrl(`https://www.medipre.jp/confirm/${appt.token}`);
     setLoading(false);
   };
 
@@ -96,7 +96,7 @@ export default function ClinicNewPage() {
 
     const templates = {
       sms: `【${form.clinicName}】${form.patientName} 様\n予約確認をお願いします。\n${confirmUrl}`,
-      line: `【${form.clinicName}】${form.patientName} 様\n\nご予約の確認をお願いします。\n予約内容：${form.description}（${apptDate}）\n\n${confirmUrl}`,
+      line: `【${form.clinicName}】${form.patientName} 様\n\nご予約いただきありがとうございます。\n以下のURLからご予約内容をご確認・ご同意ください。\n\n■ 予約日時：${apptDate}\n■ 予約内容：${form.description}\n\n${confirmUrl}\n\nURLを開いてご同意いただくと、来院用QRチケットが発行されます。受付スタッフにQRをご提示ください。\n\n─\nmedipre（メディプリ）／${form.clinicName}`,
       email: `件名：【予約確認】${form.description} ご確認のお願い\n\n${form.patientName} 様\n\nご予約の確認をお願いします。\n以下のURLからご確認ください。\n\n${confirmUrl}\n\n${form.clinicName}`,
     };
 
@@ -150,7 +150,7 @@ export default function ClinicNewPage() {
               onClick={() => copyTemplate(templates[activeTab])}
               className="w-full py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition"
             >
-              {copiedTpl ? "コピーしました ✓" : `${TAB_LABELS[activeTab]} 用本文をコピー`}
+              {copiedTpl ? "コピーしました ✓" : `${TAB_LABELS[activeTab]}文面をコピー`}
             </button>
           </div>
 
