@@ -146,12 +146,22 @@ export default function ClinicNewPage() {
               {templates[activeTab]}
             </pre>
 
-            <button
-              onClick={() => copyTemplate(templates[activeTab])}
-              className="w-full py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition"
-            >
-              {copiedTpl ? "コピーしました ✓" : `${TAB_LABELS[activeTab]}文面をコピー`}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => copyTemplate(templates[activeTab])}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition"
+              >
+                {copiedTpl ? "コピーしました ✓" : `${TAB_LABELS[activeTab]}文面をコピー`}
+              </button>
+              {activeTab === "line" && (
+                <button
+                  onClick={() => window.open(`https://line.me/R/msg/text/?${encodeURIComponent(templates.line)}`, "_blank")}
+                  className="flex-1 py-2.5 rounded-xl bg-[#06C755] text-white text-sm font-bold hover:opacity-90 transition"
+                >
+                  LINEで送る
+                </button>
+              )}
+            </div>
           </div>
 
           <button
