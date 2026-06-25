@@ -34,7 +34,7 @@ export default function Home() {
       <section className="flex flex-col items-center justify-center min-h-screen px-6 text-center pt-16">
         <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-4 py-1.5 mb-8">
           <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-teal-700">医療向け予約保証プラットフォーム</span>
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-teal-700">予約確認・同意取得・来院確認</span>
         </div>
         <h1 className="text-5xl md:text-7xl font-black leading-tight tracking-tight mb-6 text-gray-900">
           予約確認・同意取得・<br />
@@ -85,7 +85,7 @@ export default function Home() {
       </section>
 
       <footer className="border-t border-gray-200 py-8 px-6 text-center text-sm text-gray-400">
-        © 2026 medipre. 医療向け予約保証プラットフォーム
+        © 2026 medipre. 予約確認・同意取得・来院確認
       </footer>
     </main>
   );

@@ -96,7 +96,7 @@ export default function ClinicNewPage() {
 
     const templates = {
       sms: `【${form.clinicName}】${form.patientName} 様\n予約確認をお願いします。\n${confirmUrl}`,
-      line: `【${form.clinicName}】${form.patientName} 様\n\nご予約いただきありがとうございます。\n以下のURLからご予約内容をご確認・ご同意ください。\n\n■ 予約日時：${apptDate}\n■ 予約内容：${form.description}\n\n${confirmUrl}\n\nURLを開いてご同意いただくと、来院用QRチケットが発行されます。受付スタッフにQRをご提示ください。\n\n─\nmedipre（メディプリ）／${form.clinicName}`,
+      line: `【${form.clinicName}】\n\n${form.patientName}様\n\nご予約ありがとうございます。\n\nご来院前に予約内容の確認と同意のお手続きをお願いいたします。\n\n▼確認はこちら\n${confirmUrl}\n\n確認完了後、受付用QRチケットが表示されます。\nご来院時に受付スタッフへご提示ください。\n\n――――――\nmedipre（メディプリ）`,
       email: `件名：【予約確認】${form.description} ご確認のお願い\n\n${form.patientName} 様\n\nご予約の確認をお願いします。\n以下のURLからご確認ください。\n\n${confirmUrl}\n\n${form.clinicName}`,
     };
 
