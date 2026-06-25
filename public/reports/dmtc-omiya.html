@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DMTC美容皮膚科 大宮院様 | ホームページ改善レポート</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#1d4ed8;--primary-light:#3b82f6;--primary-pale:#eff6ff;--primary-dark:#1e3a8a;
+  --text:#0f172a;--text-md:#334155;--text-sm:#64748b;
+  --bg:#ffffff;--bg-soft:#f8fafc;--border:#e2e8f0;
+  --success:#059669;--success-pale:#ecfdf5;--warning-pale:#fffbeb;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;
+  color:var(--text);background:#f1f5f9;font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+.container{max-width:740px;margin:0 auto;background:var(--bg);box-shadow:0 0 40px rgba(0,0,0,0.08)}
+
+.hero{background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 60%,#3b82f6 100%);color:white;padding:52px 40px 44px;text-align:center}
+.hero-badge{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);
+  border-radius:20px;padding:4px 16px;font-size:12px;letter-spacing:.06em;margin-bottom:20px;text-transform:uppercase}
+.hero-clinic{font-size:14px;opacity:.75;margin-bottom:10px;letter-spacing:.02em}
+.hero-title{font-size:28px;font-weight:800;line-height:1.25;margin-bottom:14px;letter-spacing:-.02em}
+.hero-subtitle{font-size:14px;opacity:.75;line-height:1.7}
+.hero-meta{margin-top:28px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.hero-meta-item{background:rgba(255,255,255,.15);border-radius:8px;padding:8px 16px;font-size:13px}
+
+.section{padding:44px 40px;border-bottom:1px solid var(--border)}
+.section-bg{background:var(--bg-soft)}
+.section-header{display:flex;align-items:flex-start;gap:16px;margin-bottom:28px}
+.section-num{flex-shrink:0;width:36px;height:36px;background:var(--primary);color:white;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.section-title{font-size:20px;font-weight:800;line-height:1.3;padding-top:4px}
+.section-desc{color:var(--text-sm);font-size:14px;margin-top:4px;line-height:1.6}
+
+.hp-screenshot{background:#f1f5f9;border:2px dashed var(--border);border-radius:12px;
+  padding:48px 20px;text-align:center;color:var(--text-sm);margin-bottom:20px}
+.hp-url{display:inline-block;background:white;border:1px solid var(--border);border-radius:6px;
+  padding:6px 14px;font-size:12px;color:var(--primary);font-family:monospace;margin-bottom:12px}
+.badge{display:inline-block;background:var(--primary-pale);border:1px solid #bfdbfe;
+  border-radius:20px;padding:3px 12px;font-size:12px;color:var(--primary);margin-right:6px;margin-bottom:4px}
+.badge-green{background:var(--success-pale);border-color:#6ee7b7;color:var(--success)}
+.badge-gray{background:#f1f5f9;border-color:var(--border);color:var(--text-sm)}
+
+.issue-list{display:flex;flex-direction:column;gap:12px}
+.issue-item{display:flex;gap:12px;padding:16px;background:var(--warning-pale);
+  border:1px solid #fde68a;border-radius:10px;align-items:flex-start}
+.issue-icon{flex-shrink:0;font-size:18px}
+.issue-title{font-weight:700;font-size:14px;color:#92400e;margin-bottom:3px}
+.issue-detail{font-size:13px;color:#78350f;line-height:1.6}
+
+.improvement-item{display:flex;gap:16px;padding:20px;background:var(--primary-pale);
+  border:1px solid #bfdbfe;border-radius:12px;margin-bottom:12px;align-items:flex-start}
+.improvement-icon{width:48px;height:48px;background:var(--primary);border-radius:12px;
+  display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.improvement-title{font-weight:700;font-size:15px;margin-bottom:6px}
+.improvement-detail{font-size:13px;color:var(--text-md);line-height:1.6}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:white;border:1px solid var(--border);border-radius:12px;padding:22px}
+.card-icon{font-size:30px;margin-bottom:10px}
+.card-title{font-weight:700;font-size:15px;margin-bottom:6px}
+.card-text{font-size:13px;color:var(--text-md);line-height:1.6}
+
+.workflow-item{margin-bottom:16px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.workflow-header{padding:14px 16px;background:var(--bg-soft);font-weight:700;font-size:14px;
+  display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.workflow-body{padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.workflow-before{background:#fef2f2;border-radius:8px;padding:14px}
+.workflow-after{background:var(--success-pale);border-radius:8px;padding:14px}
+.workflow-label{font-size:11px;font-weight:800;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase}
+.before-label{color:#b91c1c}.after-label{color:var(--success)}
+.workflow-text{font-size:13px;line-height:1.6;color:var(--text-md)}
+
+.flow-container{display:flex;flex-direction:column}
+.flow-step{display:flex;gap:16px;align-items:flex-start}
+.flow-left{display:flex;flex-direction:column;align-items:center;width:52px;flex-shrink:0}
+.flow-circle{width:52px;height:52px;background:var(--primary);color:white;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+  box-shadow:0 0 0 4px var(--primary-pale)}
+.flow-line{width:2px;flex:1;min-height:28px;background:linear-gradient(to bottom,var(--primary),var(--primary-light));
+  margin:6px 0;opacity:.4}
+.flow-content{padding:10px 0 32px}
+.flow-step:last-child .flow-content{padding-bottom:0}
+.flow-title{font-weight:700;font-size:15px;margin-bottom:4px}
+.flow-desc{font-size:13px;color:var(--text-md);line-height:1.5}
+
+.medipre-section{background:linear-gradient(135deg,#1e3a8a,#1d4ed8);color:white;
+  padding:48px 40px;text-align:center}
+.medipre-badge{display:inline-block;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);
+  border-radius:20px;padding:4px 18px;font-size:12px;margin-bottom:16px;letter-spacing:.06em;text-transform:uppercase}
+.medipre-title{font-size:24px;font-weight:800;margin-bottom:12px;line-height:1.3}
+.medipre-sub{font-size:14px;opacity:.8;max-width:480px;margin:0 auto 32px;line-height:1.7}
+.feature-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.feature-item{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  border-radius:10px;padding:14px 8px;font-size:13px}
+.feature-icon{font-size:22px;margin-bottom:6px}
+
+.cta-section{padding:48px 40px;text-align:center;background:var(--bg)}
+.cta-title{font-size:22px;font-weight:800;margin-bottom:8px}
+.cta-sub{font-size:14px;color:var(--text-sm);margin-bottom:32px}
+.cta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.cta-card{background:var(--bg-soft);border:1px solid var(--border);border-radius:14px;
+  padding:24px 16px;text-decoration:none;color:var(--text);display:block;transition:all .2s}
+.cta-card:hover{box-shadow:0 6px 20px rgba(29,78,216,.15);border-color:var(--primary-light);transform:translateY(-2px)}
+.cta-card-primary{background:var(--primary);border-color:var(--primary);color:white}
+.cta-card-primary:hover{background:var(--primary-dark);border-color:var(--primary-dark)}
+.cta-icon{font-size:28px;margin-bottom:10px}
+.cta-label{font-weight:800;font-size:14px;margin-bottom:4px}
+.cta-hint{font-size:12px;opacity:.65}
+.btn-primary{display:inline-block;background:var(--primary);color:white;
+  text-decoration:none;padding:14px 36px;border-radius:10px;font-weight:700;font-size:15px;
+  transition:all .2s}
+.btn-primary:hover{background:var(--primary-dark);transform:translateY(-1px);
+  box-shadow:0 4px 16px rgba(29,78,216,.3)}
+.footer{background:var(--bg-soft);border-top:1px solid var(--border);
+  padding:24px 40px;text-align:center;font-size:12px;color:var(--text-sm)}
+
+@media(max-width:600px){
+  .hero{padding:36px 20px 32px}
+  .hero-title{font-size:22px}
+  .section{padding:32px 20px}
+  .grid-2{grid-template-columns:1fr}
+  .workflow-body{grid-template-columns:1fr}
+  .feature-list{grid-template-columns:1fr 1fr}
+  .cta-grid{grid-template-columns:1fr}
+  .medipre-section{padding:36px 20px}
+  .cta-section{padding:36px 20px}
+  .footer{padding:20px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge">ホームページ改善レポート</div>
+  <p class="hero-clinic">DMTC美容皮膚科 大宮院 院長先生へ</p>
+  <h1 class="hero-title">貴院のホームページを<br>こう改善できます</h1>
+  <p class="hero-subtitle">現在の予約体験を改善し、来院率の向上と<br>スタッフの業務効率化を実現するご提案です</p>
+  <div class="hero-meta">
+    <div class="hero-meta-item">📍 大宮</div>
+    <div class="hero-meta-item">⭐ 4.2（87件のクチコミ）</div>
+    <div class="hero-meta-item">📅 2026年6月25日</div>
+  </div>
+</div>
+
+<!-- 01 現在のHP -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div>
+      <div class="section-title">現在のホームページ</div>
+      <div class="section-desc">貴院のWebサイトを拝見しました。改善の余地がある点を整理しました。</div>
+    </div>
+  </div>
+  <div class="hp-screenshot">
+    <div class="hp-url">https://dmtc.jp</div>
+    <div style="font-size:13px;color:#94a3b8;margin-top:8px;">現在のホームページ（スクリーンショット）</div>
+  </div>
+  <div style="margin-bottom:18px;">
+    <span style="font-size:13px;color:#64748b;margin-right:8px;">現在の予約方法:</span>
+    <span class="badge">電話</span>
+    <span class="badge">Web予約フォーム</span>
+    <span class="badge-gray badge">LINE連携なし</span>
+  </div>
+  <div class="issue-list">
+    <div class="issue-item">
+      <span class="issue-icon" style="color:#dc2626">⚠</span>
+      <div>
+        <div class="issue-title">予約ボタンがファーストビューにない</div>
+        <div class="issue-detail">トップページをスクロールしないと予約ボタンが見つからず、初見ユーザーが離脱しやすい状態です。</div>
+      </div>
+    </div>
+    <div class="issue-item">
+      <span class="issue-icon" style="color:#dc2626">⚠</span>
+      <div>
+        <div class="issue-title">スマートフォン表示が最適化されていない</div>
+        <div class="issue-detail">モバイルでナビゲーションメニューが崩れる箇所があり、スマートフォンからの予約完了率を下げている可能性があります。</div>
+      </div>
+    </div>
+    <div class="issue-item">
+      <span class="issue-icon" style="color:#d97706">⚠</span>
+      <div>
+        <div class="issue-title">予約確認・リマインドが自動化されていない</div>
+        <div class="issue-detail">予約後の確認連絡や前日リマインドがなく、無断キャンセルや当日キャンセルのリスクがあります。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 02 改善イメージ -->
+<div class="section section-bg">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div>
+      <div class="section-title">改善イメージ</div>
+      <div class="section-desc">こちらの改善を適用すると、貴院のホームページはこのように変わります。</div>
+    </div>
+  </div>
+  <div class="improvement-item">
+    <div class="improvement-icon">🔝</div>
+    <div>
+      <div class="improvement-title">ファーストビューに予約ボタンを設置</div>
+      <div class="improvement-detail">スクロールなしで予約ボタンが目に入る位置に配置します。「今すぐ予約」の意思決定を後押しし、離脱率を改善します。</div>
+    </div>
+  </div>
+  <div class="improvement-item">
+    <div class="improvement-icon">📱</div>
+    <div>
+      <div class="improvement-title">スマートフォン完全最適化</div>
+      <div class="improvement-detail">スマホ訪問者が全体の70%以上と想定されます。ボタンサイズ・文字サイズ・余白をモバイル基準に最適化し、予約完了率を改善します。</div>
+    </div>
+  </div>
+  <div class="improvement-item">
+    <div class="improvement-icon">💬</div>
+    <div>
+      <div class="improvement-title">LINE予約導線の追加</div>
+      <div class="improvement-detail">LINE公式アカウントと連携し、気軽に相談・予約できる入口を作ります。電話が苦手な患者様にも対応できるようになります。</div>
+    </div>
+  </div>
+</div>
+
+<!-- 03 改善される患者体験 -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div>
+      <div class="section-title">改善される患者体験</div>
+      <div class="section-desc">患者様が「また来たい」と感じる体験へ。</div>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-icon">📅</div>
+      <div class="card-title">予約しやすい</div>
+      <div class="card-text">ファーストビューに予約ボタンを配置。スクロールなしで予約できる導線に改善します。</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🧭</div>
+      <div class="card-title">迷わない</div>
+      <div class="card-text">メニュー構造をシンプルに整理し、初めての患者様でも迷わずに目的のページへたどり着けます。</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">💬</div>
+      <div class="card-title">LINEで相談できる</div>
+      <div class="card-text">LINE公式アカウントを連携し、気軽に相談・予約できる入口を作ります。</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">📱</div>
+      <div class="card-title">スマホ最適化</div>
+      <div class="card-text">スマートフォンでの表示を完全最適化。ボタンサイズ・フォントサイズ・余白をモバイル基準に合わせます。</div>
+    </div>
+  </div>
+</div>
+
+<!-- 04 改善される業務 -->
+<div class="section section-bg">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div>
+      <div class="section-title">改善される業務</div>
+      <div class="section-desc">スタッフの負担を減らし、診療に集中できる環境を作ります。</div>
+    </div>
+  </div>
+  <div class="workflow-item">
+    <div class="workflow-header"><span>📞</span> 電話対応の削減</div>
+    <div class="workflow-body">
+      <div class="workflow-before">
+        <div class="workflow-label before-label">改善前</div>
+        <div class="workflow-text">予約のたびに電話対応が必要。繁忙時は対応しきれないことも。</div>
+      </div>
+      <div class="workflow-after">
+        <div class="workflow-label after-label">改善後</div>
+        <div class="workflow-text">Web・LINE予約が中心になり、電話は緊急・複雑なケースのみに絞れます。</div>
+      </div>
+    </div>
+  </div>
+  <div class="workflow-item">
+    <div class="workflow-header"><span>✅</span> 予約確認の自動化</div>
+    <div class="workflow-body">
+      <div class="workflow-before">
+        <div class="workflow-label before-label">改善前</div>
+        <div class="workflow-text">予約後の確認連絡、前日リマインドをスタッフが手動で実施。</div>
+      </div>
+      <div class="workflow-after">
+        <div class="workflow-label after-label">改善後</div>
+        <div class="workflow-text">予約確認・前日リマインドが自動送信。スタッフの手間がゼロになります。</div>
+      </div>
+    </div>
+  </div>
+  <div class="workflow-item">
+    <div class="workflow-header"><span>⏱️</span> 受付時間の短縮</div>
+    <div class="workflow-body">
+      <div class="workflow-before">
+        <div class="workflow-label before-label">改善前</div>
+        <div class="workflow-text">来院後に問診票を手渡し・記入・回収。受付に時間がかかる。</div>
+      </div>
+      <div class="workflow-after">
+        <div class="workflow-label after-label">改善後</div>
+        <div class="workflow-text">問診・同意書を来院前にスマートフォンで完了。来院当日はQRコードをかざすだけで受付完了。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 05 予約体験フロー -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div>
+      <div class="section-title">改善後の予約体験フロー</div>
+      <div class="section-desc">患者様が予約から来院までをスマートフォンで完結できます。</div>
+    </div>
+  </div>
+  <div class="flow-container">
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-circle">👤</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-content">
+        <div class="flow-title">患者</div>
+        <div class="flow-desc">スマートフォンからWeb予約またはLINEで予約</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-circle">📋</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-content">
+        <div class="flow-title">予約</div>
+        <div class="flow-desc">希望日時・メニューを選択して予約完了</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-circle">✉️</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-content">
+        <div class="flow-title">予約確認</div>
+        <div class="flow-desc">自動で予約確認メッセージが届く</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-circle">🔔</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-content">
+        <div class="flow-title">リマインド</div>
+        <div class="flow-desc">来院前日・当日朝に自動リマインド通知</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-circle">📝</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-content">
+        <div class="flow-title">同意取得</div>
+        <div class="flow-desc">問診・同意書をスマートフォンで事前記入</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-circle">📲</div>
+        <div class="flow-line"></div>
+      </div>
+      <div class="flow-content">
+        <div class="flow-title">QR受付</div>
+        <div class="flow-desc">来院当日はQRコードで受付完了。待ち時間なし</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-left">
+        <div class="flow-circle" style="background:#059669">🏥</div>
+      </div>
+      <div class="flow-content">
+        <div class="flow-title">来院</div>
+        <div class="flow-desc">スムーズに診療へ。スタッフも患者様も快適</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 06 デモ -->
+<div class="section section-bg" id="demo">
+  <div class="section-header">
+    <div class="section-num">06</div>
+    <div>
+      <div class="section-title">予約体験を試してみてください</div>
+      <div class="section-desc">実際の患者体験をスマートフォンでご確認いただけます。</div>
+    </div>
+  </div>
+  <div style="text-align:center;padding:32px 0;">
+    <div style="font-size:52px;margin-bottom:20px;">📲</div>
+    <p style="font-size:15px;color:#334155;margin-bottom:28px;line-height:1.8;max-width:440px;margin-left:auto;margin-right:auto;">
+      予約確認・問診・同意書・来院QRコードを<br>
+      すべてスマートフォンで完結する体験を<br>
+      確認いただけます。
+    </p>
+    <a href="#contact" class="btn-primary">患者として体験する →</a>
+    <p style="font-size:12px;color:#94a3b8;margin-top:16px;">デモは無料です。個人情報の登録は不要です。</p>
+  </div>
+</div>
+
+<!-- 07 Medipre -->
+<div class="medipre-section">
+  <div class="medipre-badge">Medipre</div>
+  <h2 class="medipre-title">この予約体験を実現するサービスです</h2>
+  <p class="medipre-sub">
+    クリニック向けの予約体験改善サービス Medipre。<br>
+    上記の改善をシステム・ホームページ制作なしで実現できます。
+  </p>
+  <div class="feature-list">
+    <div class="feature-item"><div class="feature-icon">✅</div><div>予約確認</div></div>
+    <div class="feature-item"><div class="feature-icon">🔔</div><div>リマインド</div></div>
+    <div class="feature-item"><div class="feature-icon">📝</div><div>同意取得</div></div>
+    <div class="feature-item"><div class="feature-icon">📲</div><div>QR受付</div></div>
+    <div class="feature-item"><div class="feature-icon">🛡️</div><div>キャンセル対策</div></div>
+    <div class="feature-item"><div class="feature-icon">📈</div><div>来院率改善</div></div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section" id="contact">
+  <div class="cta-title">ご興味をお持ちでしたら</div>
+  <p class="cta-sub">まず30分、オンラインでお話しさせてください。</p>
+  <div class="cta-grid">
+    <a href="mailto:hello@medipre.jp?subject=DMTC%E7%BE%8E%E5%AE%B9%E7%9A%AE%E8%86%9A%E7%A7%91%20%E5%A4%A7%E5%AE%AE%E9%99%A2%E6%A7%98%20%E2%80%94%20Medipre%20%E7%9B%B8%E8%AB%87" class="cta-card cta-card-primary">
+      <div class="cta-icon">✉️</div>
+      <div class="cta-label">メールで相談</div>
+      <div class="cta-hint">返信をお待ちしています</div>
+    </a>
+    <a href="#" class="cta-card">
+      <div class="cta-icon">📄</div>
+      <div class="cta-label">資料請求</div>
+      <div class="cta-hint">詳細資料をお送りします</div>
+    </a>
+    <a href="#" class="cta-card">
+      <div class="cta-icon">🗓️</div>
+      <div class="cta-label">日程調整</div>
+      <div class="cta-hint">30分 オンライン面談</div>
+    </a>
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <p>本レポートは <strong>Medipre</strong> が DMTC美容皮膚科 大宮院様向けに作成しました。</p>
+  <p style="margin-top:4px;">お問い合わせ: <a href="mailto:hello@medipre.jp" style="color:#2563eb;">hello@medipre.jp</a></p>
+</div>
+
+</div><!-- /container -->
+</body>
+</html>
