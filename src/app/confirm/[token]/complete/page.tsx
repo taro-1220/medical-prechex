@@ -67,7 +67,7 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
         <span className="text-lg font-black text-teal-700">medipre</span>
       </header>
 
-      <div className="max-w-sm mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-sm mx-auto px-6 py-4 space-y-4">
         {/* チケットヘッダー */}
         <div className="text-center">
           <p className="text-xs font-bold uppercase tracking-widest text-teal-600 mb-2">Ticket</p>
@@ -79,7 +79,7 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
           {[
             { label: "予約確認済" },
             { label: "同意取得済" },
-            { label: "来院用QR" },
+            { label: "受付提示用QR" },
           ].map((b) => (
             <span key={b.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-bold">
               <span className="text-teal-500">✓</span> {b.label}
@@ -88,18 +88,18 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
         </div>
 
         {/* QR */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 flex flex-col items-center gap-4">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 flex flex-col items-center gap-3">
           <img
             src={qrUrl}
-            alt="来院用QRコード"
+            alt="受付提示用QRコード"
             width={200}
             height={200}
             className="rounded-xl"
           />
-          <p className="text-sm font-bold text-gray-700">受付スタッフにこのQRを提示してください</p>
-          <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-center space-y-1">
-            <p className="text-xs text-amber-700 font-bold">この画面は来院受付用ではありません</p>
-            <p className="text-xs text-gray-400">読み取っただけでは受付完了になりません</p>
+          <p className="text-sm text-gray-600">ご来院当日、この画面を受付スタッフへご提示ください。</p>
+          <div className="w-full rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 space-y-1">
+            <p className="text-xs text-amber-800 font-bold">受付では、この画面をスタッフへご提示ください。</p>
+            <p className="text-xs text-amber-700">受付スタッフがQRを確認して来院受付を行います。</p>
           </div>
         </div>
 
@@ -120,7 +120,7 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
         </div>
 
         <p className="text-center text-xs text-gray-400 pb-4">
-          このチケットは予約確認・同意取得済みの証明です
+          このQRは予約確認・同意取得が完了していることを示します。
         </p>
       </div>
     </div>
