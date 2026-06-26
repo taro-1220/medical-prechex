@@ -11,10 +11,10 @@ function formatDate(iso: string) {
 }
 
 const INVALID_REASON: Partial<Record<AppointmentStatus, string>> = {
-  confirmation_pending: "患者の確認待ち",
-  cancelled: "キャンセル済み",
-  expired: "期限切れ",
-  completed: "診察完了済み",
+  confirmation_pending: "患者がまだ予約確認を完了していません",
+  cancelled: "この予約はキャンセルされています",
+  expired: "予約確認の期限が過ぎています",
+  completed: "この予約は診察完了済みです",
 };
 
 type PageState = "loading" | "confirm" | "done" | "invalid" | "not_found";
@@ -78,9 +78,9 @@ export default function ClinicCheckinPage({ params }: { params: Promise<{ token:
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
         <div className="text-center max-w-sm">
-          <p className="text-4xl mb-4">⚠️</p>
-          <p className="font-bold text-gray-900 mb-2">受付できません</p>
-          <p className="text-sm text-gray-500">予約番号を確認してください</p>
+          <p className="text-4xl mb-4">🔍</p>
+          <p className="font-bold text-gray-900 mb-2">予約が見つかりません</p>
+          <p className="text-sm text-gray-500">QRが正しく読み取れていないか、存在しない予約です。予約一覧から確認してください。</p>
           <Link href="/clinic" className="mt-6 inline-block text-sm text-teal-600 hover:underline">← 予約一覧</Link>
         </div>
       </div>
@@ -93,10 +93,9 @@ export default function ClinicCheckinPage({ params }: { params: Promise<{ token:
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
         <div className="text-center max-w-sm">
           <p className="text-4xl mb-4">✕</p>
-          <p className="font-bold text-gray-900 mb-2">受付できません</p>
-          {reason && <p className="text-sm text-gray-500 mb-1">{reason}</p>}
-          <p className="text-xs text-gray-400">予約番号を確認してください</p>
-          <Link href="/clinic" className="mt-6 inline-block text-sm text-teal-600 hover:underline">← 予約一覧</Link>
+          <p className="font-bold text-gray-900 mb-2">来院受付できません</p>
+          {reason && <p className="text-sm text-gray-700 mb-3">{reason}</p>}
+          <Link href="/clinic" className="mt-2 inline-block text-sm text-teal-600 hover:underline">← 予約一覧へ戻る</Link>
         </div>
       </div>
     );

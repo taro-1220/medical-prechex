@@ -9,10 +9,12 @@ function formatDate(iso: string) {
   });
 }
 
+type ErrorType = "not_found" | "load_failed";
+
 export default function CompletePage({ params }: { params: Promise<{ token: string }> }) {
   const [token, setToken] = useState<string | null>(null);
   const [appt, setAppt] = useState<Appointment | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<ErrorType | null>(null);
 
   useEffect(() => {
     params.then(({ token: t }) => setToken(t));
@@ -22,16 +24,33 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
     if (!token) return;
     fetch(`/api/appointments/${token}`)
       .then(async (res) => {
-        if (!res.ok) { setError("予約が見つかりません"); return; }
+        if (res.status === 404) { setErrorType("not_found"); return; }
+        if (!res.ok) { setErrorType("load_failed"); return; }
         setAppt(await res.json());
       })
-      .catch(() => setError("読み込みに失敗しました"));
+      .catch(() => setErrorType("load_failed"));
   }, [token]);
 
-  if (error) {
+  if (errorType === "not_found") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
-        <div className="text-center"><p className="text-4xl mb-4">⚠️</p><p className="text-gray-500">チケットを確認できません</p></div>
+        <div className="text-center max-w-sm">
+          <p className="text-4xl mb-4">🔍</p>
+          <p className="font-bold text-gray-900 mb-2">予約が見つかりません</p>
+          <p className="text-sm text-gray-500">URLをご確認いただくか、クリニックへお問い合わせください。</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (errorType === "load_failed") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+        <div className="text-center max-w-sm">
+          <p className="text-4xl mb-4">⚠️</p>
+          <p className="font-bold text-gray-900 mb-2">読み込みに失敗しました</p>
+          <p className="text-sm text-gray-500">しばらく経ってから再度お試しください。</p>
+        </div>
       </div>
     );
   }
@@ -40,6 +59,30 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-400 text-sm">読み込み中...</p>
+      </div>
+    );
+  }
+
+  if (appt.status === "cancelled") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+        <div className="text-center max-w-sm">
+          <p className="text-4xl mb-4">✕</p>
+          <p className="font-bold text-gray-900 mb-2">この予約はキャンセルされています</p>
+          <p className="text-sm text-gray-500">ご不明な点はクリニックへお問い合わせください。</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (appt.status === "expired") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+        <div className="text-center max-w-sm">
+          <p className="text-4xl mb-4">⏱</p>
+          <p className="font-bold text-gray-900 mb-2">確認期限が過ぎています</p>
+          <p className="text-sm text-gray-500">クリニックへお問い合わせのうえ、再度ご予約ください。</p>
+        </div>
       </div>
     );
   }
@@ -59,11 +102,11 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
   }
 
   const qrData = encodeURIComponent(`${window.location.origin}/confirm/${appt.token}/complete`);
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}&bgcolor=ffffff&color=0f766e&margin=16`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=236x236&data=${qrData}&bgcolor=ffffff&color=0f766e&margin=16`;
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
-      <header className="border-b border-gray-200 bg-white px-6 py-4 text-center">
+      <header className="border-b border-gray-200 bg-white px-6 py-3 text-center">
         <span className="text-lg font-black text-teal-700">medipre</span>
       </header>
 
@@ -79,7 +122,7 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
           {[
             { label: "予約確認済" },
             { label: "同意取得済" },
-            { label: "受付提示用QR" },
+            { label: "QRチケット発行済" },
           ].map((b) => (
             <span key={b.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-bold">
               <span className="text-teal-500">✓</span> {b.label}
@@ -92,14 +135,14 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
           <img
             src={qrUrl}
             alt="受付提示用QRコード"
-            width={200}
-            height={200}
+            width={236}
+            height={236}
             className="rounded-xl"
           />
-          <p className="text-sm text-gray-600">ご来院当日、この画面を受付スタッフへご提示ください。</p>
+          <p className="text-sm text-gray-600 text-center">ご来院当日、この画面を受付スタッフへご提示ください。</p>
           <div className="w-full rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 space-y-1">
             <p className="text-xs text-amber-800 font-bold">受付では、この画面をスタッフへご提示ください。</p>
-            <p className="text-xs text-amber-700">受付スタッフがQRを確認して来院受付を行います。</p>
+            <p className="text-xs text-amber-700">受付はスタッフが行います。</p>
           </div>
         </div>
 
