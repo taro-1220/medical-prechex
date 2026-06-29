@@ -108,6 +108,9 @@ export default function ClinicPage() {
           >
             ?
           </button>
+          <Link href="/clinic/checkin" className="px-4 py-2 bg-emerald-600 rounded-xl font-bold text-sm text-white hover:bg-emerald-700 transition">
+            QR受付
+          </Link>
           <Link href="/clinic/new" className="px-4 py-2 bg-teal-600 rounded-xl font-bold text-sm text-white hover:bg-teal-700 transition">
             ＋ 新規予約
           </Link>
