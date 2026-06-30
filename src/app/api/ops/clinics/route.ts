@@ -17,19 +17,10 @@ export async function GET(req: NextRequest) {
 
   const sb = getSupabase();
 
-  const [clinicsRes, apptRes, patientRes, onboardingRes] = await Promise.all([
-    sb.from("clinics")
-      .select("id, name, slug, phone, email, address, status, created_at")
-      .order("created_at", { ascending: false }),
-    sb.from("appointments")
-      .select("clinic_id, appointment_at")
-      .not("clinic_id", "is", null),
-    sb.from("patients")
-      .select("clinic_id")
-      .not("clinic_id", "is", null),
-    sb.from("onboarding_progress") // TODO: Phase2テーブル。存在しない場合は data=null になりフォールバック
-      .select("clinic_id, activated_at"),
-  ]);
+  const clinicsRes    = await sb.from("clinics").select("id, name, slug, phone, email, address, status, created_at").order("created_at", { ascending: false });
+  const apptRes       = await sb.from("appointments").select("clinic_id, appointment_at").not("clinic_id", "is", null);
+  const patientRes    = await sb.from("patients").select("clinic_id").not("clinic_id", "is", null);
+  const onboardingRes = await sb.from("onboarding_progress").select("clinic_id, activated_at"); // TODO: Phase2テーブル。存在しない場合は data=null になりフォールバック
 
   const todayStr = new Date().toISOString().slice(0, 10);
 

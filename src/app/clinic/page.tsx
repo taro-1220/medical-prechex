@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Appointment, AppointmentStatus } from "@/lib/types";
+import type { Appointment, AppointmentStatus, Clinic } from "@/lib/types";
+import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken } from "@/lib/clinic-auth";
 import OnboardingGuide, { GUIDE_KEY } from "./OnboardingGuide";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
@@ -35,15 +37,30 @@ const isVisited = (s: AppointmentStatus) => s === "checked_in";
 const isCancelled = (s: AppointmentStatus) => s === "cancelled" || s === "expired";
 
 export default function ClinicPage() {
+  const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
+  const [clinic, setClinic]   = useState<Clinic | null>(null);
+  const [clinics, setClinics] = useState<Clinic[]>([]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem(GUIDE_KEY)) {
       setShowGuide(true);
     }
   }, []);
+
+  useEffect(() => {
+    (async () => {
+      const user = await getCurrentUser();
+      if (!user) { router.replace("/login"); return; }
+      const cs = await getUserClinics();
+      if (cs.length === 0) { router.replace("/clinic/create"); return; }
+      const current = await getCurrentClinic();
+      setClinics(cs);
+      setClinic(current ?? cs[0]);
+    })();
+  }, [router]);
 
   const load = async () => {
     try {
@@ -98,7 +115,26 @@ export default function ClinicPage() {
       <header className="border-b border-gray-200 bg-white px-6 py-4 flex items-center justify-between">
         <div>
           <Link href="/" className="text-gray-400 text-sm hover:text-gray-900 transition">← medipre</Link>
-          <h1 className="text-xl font-black mt-1 text-gray-900">クリニック管理画面</h1>
+          <h1 className="text-xl font-black mt-1 text-gray-900">{clinic?.name ?? "クリニック管理画面"}</h1>
+          {clinics.length > 1 && (
+            <select
+              value={clinic?.id ?? ""}
+              onChange={async e => {
+                const c = clinics.find(x => x.id === e.target.value);
+                if (!c) return;
+                const token = await getAccessToken();
+                await fetch("/api/clinic/select", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ clinicId: c.id }),
+                });
+                setClinic(c);
+              }}
+              className="mt-1 text-sm border border-gray-200 rounded-lg px-2 py-1 text-gray-700"
+            >
+              {clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button

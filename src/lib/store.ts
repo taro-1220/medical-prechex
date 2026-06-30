@@ -40,6 +40,7 @@ export async function searchPatients(query: string): Promise<Patient[]> {
 }
 
 export async function getAllAppointments(): Promise<Appointment[]> {
+  // TODO: next phase — .eq("clinic_id", clinicId) でテナント分離
   const { data, error } = await getSupabase()
     .from("appointments")
     .select("*")
