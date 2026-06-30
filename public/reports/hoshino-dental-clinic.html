@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ほしの歯科・矯正歯科クリニック様 | ホームページ改善提案</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#0e7490;--primary-light:#22d3ee;--primary-pale:#ecfeff;--primary-dark:#0c4a6e;
+  --navy:#1e293b;--navy-light:#334155;
+  --text:#0f172a;--text-md:#334155;--text-sm:#64748b;
+  --bg:#ffffff;--bg-soft:#f8fafc;--border:#e2e8f0;
+  --success:#059669;--success-pale:#ecfdf5;
+  --warn:#d97706;--warn-pale:#fffbeb;--warn-border:#fde68a;
+  --danger:#dc2626;--danger-pale:#fef2f2;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,sans-serif;
+  color:var(--text);background:#f1f5f9;font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;background:var(--bg);box-shadow:0 0 48px rgba(0,0,0,0.08)}
+
+/* ── Hero ── */
+.hero{background:linear-gradient(135deg,#0c4a6e 0%,#0e7490 55%,#0891b2 100%);color:white;padding:56px 44px 48px;text-align:center}
+.hero-badge{display:inline-block;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);
+  border-radius:20px;padding:5px 18px;font-size:11px;letter-spacing:.1em;margin-bottom:22px;text-transform:uppercase}
+.hero-to{font-size:14px;opacity:.75;margin-bottom:10px;letter-spacing:.02em}
+.hero-h1{font-size:30px;font-weight:800;line-height:1.25;margin-bottom:14px;letter-spacing:-.03em}
+.hero-sub{font-size:14px;opacity:.78;line-height:1.7;max-width:480px;margin:0 auto}
+.hero-meta{margin-top:30px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.hero-chip{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px 16px;font-size:13px}
+
+/* ── Section base ── */
+.sec{padding:48px 44px;border-bottom:1px solid var(--border)}
+.sec-soft{background:var(--bg-soft)}
+.sec-hd{display:flex;align-items:flex-start;gap:16px;margin-bottom:28px}
+.sec-num{flex-shrink:0;width:36px;height:36px;background:var(--primary);color:white;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.sec-ttl{font-size:20px;font-weight:800;line-height:1.3;padding-top:4px}
+.sec-desc{color:var(--text-sm);font-size:13px;margin-top:4px;line-height:1.6}
+
+/* ── HP preview ── */
+.hp-box{background:#f1f5f9;border:2px dashed var(--border);border-radius:12px;padding:40px 20px;text-align:center;margin-bottom:20px}
+.hp-url{display:inline-block;background:white;border:1px solid var(--border);border-radius:6px;
+  padding:5px 14px;font-size:12px;color:var(--primary);font-family:monospace;margin-bottom:10px}
+.tag{display:inline-block;border-radius:20px;padding:3px 12px;font-size:12px;margin:2px}
+.tag-blue{background:var(--primary-pale);border:1px solid #a5f3fc;color:var(--primary)}
+.tag-green{background:var(--success-pale);border:1px solid #6ee7b7;color:var(--success)}
+.tag-gray{background:#f1f5f9;border:1px solid var(--border);color:var(--text-sm)}
+
+/* ── Issue / Point list ── */
+.issue{display:flex;gap:12px;padding:16px;border-radius:10px;align-items:flex-start;margin-bottom:10px}
+.issue-warn{background:var(--warn-pale);border:1px solid var(--warn-border)}
+.issue-ok{background:var(--success-pale);border:1px solid #6ee7b7}
+.issue-icon{flex-shrink:0;font-size:18px;margin-top:2px}
+.issue-ttl{font-weight:700;font-size:14px;margin-bottom:3px}
+.issue-warn .issue-ttl{color:#92400e}
+.issue-ok .issue-ttl{color:#065f46}
+.issue-body{font-size:13px;line-height:1.6}
+.issue-warn .issue-body{color:#78350f}
+.issue-ok .issue-body{color:#065f46}
+
+/* ── Redesign Mockup ── */
+.mock-wrap{border:2px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:8px}
+.mock-bar{background:#e2e8f0;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-sm)}
+.mock-dots{display:flex;gap:5px}
+.mock-dot{width:10px;height:10px;border-radius:50%}
+
+/* A案 mockup */
+.ma-hero{background:linear-gradient(135deg,#ecfeff,#cffafe);border-bottom:1px solid #a5f3fc;padding:36px 28px 32px;text-align:center}
+.ma-badge{display:inline-block;background:#0e7490;color:white;border-radius:4px;padding:3px 12px;font-size:11px;font-weight:700;letter-spacing:.05em;margin-bottom:14px}
+.ma-h1{font-size:22px;font-weight:800;color:#0c4a6e;line-height:1.3;margin-bottom:8px}
+.ma-sub{font-size:13px;color:#0e7490;margin-bottom:20px}
+.ma-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.ma-btn-p{background:#0e7490;color:white;border:none;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer}
+.ma-btn-s{background:white;color:#0e7490;border:2px solid #0e7490;border-radius:8px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer}
+.ma-nav{background:white;border-bottom:1px solid #e2e8f0;padding:0 28px;display:flex;gap:0;overflow-x:auto}
+.ma-nav-item{padding:12px 16px;font-size:12px;font-weight:600;color:#64748b;white-space:nowrap;border-bottom:2px solid transparent}
+.ma-nav-item.active{color:#0e7490;border-bottom-color:#0e7490}
+.ma-sec{padding:24px 28px;border-bottom:1px solid #f1f5f9}
+.ma-sec-ttl{font-size:14px;font-weight:800;color:#0c4a6e;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.ma-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ma-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center}
+.ma-card-icon{font-size:22px;margin-bottom:6px}
+.ma-card-ttl{font-size:12px;font-weight:700;color:#0c4a6e;margin-bottom:4px}
+.ma-card-body{font-size:11px;color:#64748b;line-height:1.5}
+.ma-tel{background:#0e7490;color:white;border-radius:8px;padding:12px 28px;text-align:center;margin:0 28px 20px}
+.ma-tel-num{font-size:20px;font-weight:800;letter-spacing:.04em}
+.ma-tel-sub{font-size:11px;opacity:.8;margin-top:2px}
+
+/* B案 mockup */
+.mb-hero{background:#1e293b;padding:40px 28px 36px;text-align:center}
+.mb-badge{display:inline-block;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);
+  border-radius:20px;padding:4px 14px;font-size:10px;color:rgba(255,255,255,.8);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
+.mb-h1{font-size:22px;font-weight:800;color:white;line-height:1.3;margin-bottom:8px;letter-spacing:-.02em}
+.mb-sub{font-size:12px;color:rgba(255,255,255,.65);margin-bottom:22px;line-height:1.6}
+.mb-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.mb-btn-p{background:#f59e0b;color:#1e293b;border:none;border-radius:8px;padding:11px 24px;font-size:13px;font-weight:800;cursor:pointer}
+.mb-btn-s{background:transparent;color:white;border:1.5px solid rgba(255,255,255,.4);border-radius:8px;padding:11px 24px;font-size:13px;font-weight:600;cursor:pointer}
+.mb-nav{background:#0f172a;padding:0 28px;display:flex;gap:0;overflow-x:auto;border-bottom:1px solid rgba(255,255,255,.1)}
+.mb-nav-item{padding:13px 16px;font-size:12px;color:rgba(255,255,255,.5);white-space:nowrap}
+.mb-nav-item.active{color:#f59e0b;border-bottom:2px solid #f59e0b}
+.mb-sec{padding:24px 28px;background:white;border-bottom:1px solid #f1f5f9}
+.mb-sec-ttl{font-size:14px;font-weight:800;color:#1e293b;margin-bottom:12px;padding-left:10px;border-left:3px solid #f59e0b}
+.mb-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.mb-card{background:#f8fafc;border-radius:10px;padding:16px;text-align:center}
+.mb-card-icon{font-size:22px;margin-bottom:6px}
+.mb-card-ttl{font-size:12px;font-weight:700;color:#1e293b;margin-bottom:4px}
+.mb-card-body{font-size:11px;color:#64748b;line-height:1.5}
+.mb-tel{background:#1e293b;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mb-tel-num{font-size:18px;font-weight:800;color:white;letter-spacing:.04em}
+.mb-tel-badge{background:#f59e0b;color:#1e293b;font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px}
+.mb-review{background:#fafaf9;padding:16px 28px;border-top:1px solid #e2e8f0}
+.mb-stars{color:#f59e0b;font-size:14px;letter-spacing:2px}
+.mb-review-text{font-size:12px;color:#64748b;margin-top:4px}
+
+/* ── Before/After ── */
+.ba-item{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:12px}
+.ba-hd{padding:14px 16px;background:var(--bg-soft);font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.ba-body{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.ba-col{padding:16px}
+.ba-before{background:#fef2f2}
+.ba-after{background:var(--success-pale);border-left:1px solid var(--border)}
+.ba-lbl{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.ba-before .ba-lbl{color:#b91c1c}
+.ba-after .ba-lbl{color:var(--success)}
+.ba-txt{font-size:12px;line-height:1.6;color:var(--text-md)}
+
+/* ── Improvement report ── */
+.rpt-item{padding:22px 0;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:flex-start}
+.rpt-item:last-child{border-bottom:none}
+.rpt-icon{width:44px;height:44px;border-radius:12px;background:var(--primary-pale);border:1px solid #a5f3fc;
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.rpt-ttl{font-weight:800;font-size:15px;margin-bottom:4px}
+.rpt-body{font-size:13px;color:var(--text-md);line-height:1.65}
+.rpt-grade{display:inline-block;font-size:11px;font-weight:700;border-radius:4px;padding:2px 8px;margin-left:8px}
+.grade-c{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.grade-b{background:#fffbeb;color:#d97706;border:1px solid #fde68a}
+.grade-a{background:var(--success-pale);color:var(--success);border:1px solid #6ee7b7}
+
+/* ── Medipre CTA ── */
+.cta-wrap{background:linear-gradient(135deg,#1e293b,#0c4a6e);color:white;padding:52px 44px;text-align:center}
+.cta-badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+  border-radius:20px;padding:4px 18px;font-size:11px;letter-spacing:.08em;margin-bottom:18px;text-transform:uppercase}
+.cta-h2{font-size:24px;font-weight:800;line-height:1.3;margin-bottom:10px}
+.cta-sub{font-size:14px;opacity:.78;line-height:1.7;max-width:500px;margin:0 auto 36px}
+.cta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:36px}
+.cta-card{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:18px 12px}
+.cta-card-icon{font-size:24px;margin-bottom:8px}
+.cta-card-ttl{font-weight:700;font-size:13px;margin-bottom:4px}
+.cta-card-body{font-size:11px;opacity:.7;line-height:1.5}
+.cta-btn{display:inline-block;background:#f59e0b;color:#1e293b;text-decoration:none;
+  padding:15px 40px;border-radius:10px;font-weight:800;font-size:15px}
+
+/* ── Footer ── */
+.foot{background:var(--bg-soft);border-top:1px solid var(--border);padding:24px 44px;
+  text-align:center;font-size:12px;color:var(--text-sm)}
+
+/* ── Responsive ── */
+@media(max-width:600px){
+  .hero,.sec,.cta-wrap{padding-left:20px;padding-right:20px}
+  .hero-h1{font-size:24px}
+  .cta-grid,.mb-grid{grid-template-columns:1fr 1fr}
+  .ma-grid{grid-template-columns:1fr 1fr}
+  .ba-body{grid-template-columns:1fr}
+  .ba-after{border-left:none;border-top:1px solid var(--border)}
+  .mb-tel{flex-direction:column;text-align:center}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ===== HERO ===== -->
+<div class="hero">
+  <div class="hero-badge">貴院専用 ホームページ改善提案</div>
+  <p class="hero-to">ほしの歯科・矯正歯科クリニック 院長 星野恒 先生へ</p>
+  <h1 class="hero-h1">貴院のホームページを<br>こう変えれば、予約が増えます</h1>
+  <p class="hero-sub">現行サイトを詳しく拝見し、穴守稲荷エリアの競合状況も踏まえて、貴院専用の改善案を2パターン作成しました。</p>
+  <div class="hero-meta">
+    <div class="hero-chip">📍 穴守稲荷駅 徒歩1分</div>
+    <div class="hero-chip">🦷 矯正歯科・一般歯科・予防</div>
+    <div class="hero-chip">📅 2026年6月</div>
+  </div>
+</div>
+
+<!-- ===== 01 現行HP調査 ===== -->
+<div class="sec">
+  <div class="sec-hd">
+    <div class="sec-num">01</div>
+    <div>
+      <div class="sec-ttl">現行ホームページ調査結果</div>
+      <div class="sec-desc">hoshino-dental-clinic.com を拝見した所見です。</div>
+    </div>
+  </div>
+
+  <div class="hp-box">
+    <div class="hp-url">https://hoshino-dental-clinic.com</div>
+    <div style="font-size:13px;color:#94a3b8;margin-top:8px;">2026年6月 調査時点</div>
+  </div>
+
+  <div style="margin-bottom:20px;">
+    <span style="font-size:13px;color:var(--text-sm);margin-right:8px;">確認できた予約導線：</span>
+    <span class="tag tag-blue">電話（03-6423-6400）</span>
+    <span class="tag tag-blue">Web予約（矯正相談）</span>
+    <span class="tag tag-blue">Web予約（初・再診）</span>
+    <span class="tag tag-gray">LINE予約なし</span>
+    <span class="tag tag-gray">スマホ電話タップ未確認</span>
+  </div>
+
+  <div class="issue issue-ok">
+    <span class="issue-icon">✓</span>
+    <div>
+      <div class="issue-ttl">日曜・祝日診療で差別化できている</div>
+      <div class="issue-body">日曜午前診療は穴守稲荷エリアで希少です。働く世代・ファミリー層への強いアピールポイントです。</div>
+    </div>
+  </div>
+  <div class="issue issue-ok">
+    <span class="issue-icon">✓</span>
+    <div>
+      <div class="issue-ttl">マウスピース矯正の症例写真がある</div>
+      <div class="issue-body">「6ヶ月・55万円」という具体的なBefore/Afterは患者の意思決定を助ける良い要素です。</div>
+    </div>
+  </div>
+  <div class="issue issue-ok">
+    <span class="issue-icon">✓</span>
+    <div>
+      <div class="issue-ttl">院長の診療哲学が伝わる</div>
+      <div class="issue-body">「患者様の歯を大切に残す」「予防中心」という方針は信頼感の核心です。ただ、現在はやや奥に埋もれています。</div>
+    </div>
+  </div>
+  <div class="issue issue-warn">
+    <span class="issue-icon">⚠</span>
+    <div>
+      <div class="issue-ttl">ファーストビューが「矯正専門院」に見える</div>
+      <div class="issue-body">「6か月で見た目が良くなる歯並び治療」がトップに来るため、虫歯・歯周病・小児歯科で来院したい患者が「自分には関係ない」と感じて離脱しやすい構成です。</div>
+    </div>
+  </div>
+  <div class="issue issue-warn">
+    <span class="issue-icon">⚠</span>
+    <div>
+      <div class="issue-ttl">一般歯科・予防・小児歯科の訴求がほぼない</div>
+      <div class="issue-body">診療案内がナビゲーションにあるものの、トップページで診療科目の全体像が見えません。虫歯・定期検診・お子様連れで来院したい患者層を取り逃がしています。</div>
+    </div>
+  </div>
+  <div class="issue issue-warn">
+    <span class="issue-icon">⚠</span>
+    <div>
+      <div class="issue-ttl">患者の声・口コミが見当たらない</div>
+      <div class="issue-body">Googleマップ等の外部評価を活用していません。「通ってよかった」という生の声は初診患者の不安を和らげる最重要要素です。</div>
+    </div>
+  </div>
+  <div class="issue issue-warn">
+    <span class="issue-icon">⚠</span>
+    <div>
+      <div class="issue-ttl">予約ボタンのラベルが患者視点でない</div>
+      <div class="issue-body">「無料矯正相談の方」「初・再診の方」という分類は医院側の都合です。初めて来る患者は「どちらを押せばいいか」迷います。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 02 A案 ===== -->
+<div class="sec sec-soft">
+  <div class="sec-hd">
+    <div class="sec-num">02</div>
+    <div>
+      <div class="sec-ttl">改善案 A — 現在の医院らしさを活かす</div>
+      <div class="sec-desc">現行サイトの雰囲気・色調を活かしつつ、導線と情報設計を整理します。</div>
+    </div>
+  </div>
+
+  <div class="mock-wrap">
+    <div class="mock-bar">
+      <div class="mock-dots">
+        <div class="mock-dot" style="background:#fc5f57"></div>
+        <div class="mock-dot" style="background:#febd2f"></div>
+        <div class="mock-dot" style="background:#27c840"></div>
+      </div>
+      <span>hoshino-dental-clinic.com（A案イメージ）</span>
+    </div>
+
+    <!-- A案 ナビ -->
+    <div class="ma-nav">
+      <div class="ma-nav-item active">ホーム</div>
+      <div class="ma-nav-item">診療メニュー</div>
+      <div class="ma-nav-item">矯正歯科</div>
+      <div class="ma-nav-item">院長・スタッフ</div>
+      <div class="ma-nav-item">アクセス</div>
+    </div>
+
+    <!-- A案 Hero -->
+    <div class="ma-hero">
+      <div class="ma-badge">穴守稲荷駅 徒歩1分 ● 日曜診療</div>
+      <div class="ma-h1">地域のかかりつけ歯科として、<br>お口の健康を一緒に守ります</div>
+      <div class="ma-sub">虫歯・歯周病・予防ケア・矯正まで、幅広く対応しています</div>
+      <div class="ma-btns">
+        <button class="ma-btn-p">📅 初めての方・予約はこちら</button>
+        <button class="ma-btn-s">矯正相談（無料）</button>
+      </div>
+    </div>
+
+    <!-- A案 診療メニュー -->
+    <div class="ma-sec">
+      <div class="ma-sec-ttl">🦷 診療メニュー</div>
+      <div class="ma-grid">
+        <div class="ma-card">
+          <div class="ma-card-icon">😁</div>
+          <div class="ma-card-ttl">一般歯科</div>
+          <div class="ma-card-body">虫歯・歯周病の治療。痛みに配慮した処置</div>
+        </div>
+        <div class="ma-card">
+          <div class="ma-card-icon">🧹</div>
+          <div class="ma-card-ttl">予防・クリーニング</div>
+          <div class="ma-card-body">定期検診・PMTC・歯石除去</div>
+        </div>
+        <div class="ma-card">
+          <div class="ma-card-icon">😊</div>
+          <div class="ma-card-ttl">矯正歯科</div>
+          <div class="ma-card-body">マウスピース矯正。6ヶ月〜対応</div>
+        </div>
+        <div class="ma-card">
+          <div class="ma-card-icon">👶</div>
+          <div class="ma-card-ttl">小児歯科</div>
+          <div class="ma-card-body">お子さまの歯を守る予防ケア</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A案 院長メッセージ -->
+    <div class="ma-sec" style="background:#f0fdfa">
+      <div class="ma-sec-ttl" style="color:#065f46">👨‍⚕️ 院長 星野恒より</div>
+      <div style="font-size:12px;color:#134e4a;line-height:1.7;">
+        「歯を削らない・抜かない」を基本姿勢に、予防中心の診療を続けています。<br>
+        患者様一人ひとりのお口の状態・ライフスタイルに合わせた提案を心がけています。
+      </div>
+    </div>
+
+    <!-- A案 電話 -->
+    <div class="ma-tel">
+      <div class="ma-tel-num">📞 03-6423-6400</div>
+      <div class="ma-tel-sub">受付時間 月火木金土 9:30〜19:00 ／ 日祝 9:30〜13:00</div>
+    </div>
+  </div>
+
+  <p style="font-size:12px;color:var(--text-sm);text-align:center;margin-top:8px;">
+    ▲ A案のトップページ構成イメージ（実際の制作時はデザインを詳細調整します）
+  </p>
+</div>
+
+<!-- ===== 03 B案 ===== -->
+<div class="sec">
+  <div class="sec-hd">
+    <div class="sec-num">03</div>
+    <div>
+      <div class="sec-ttl">改善案 B — 洗練されたリニューアル案</div>
+      <div class="sec-desc">ブランドカラーを刷新し、より高い安心感と予約転換率を狙います。</div>
+    </div>
+  </div>
+
+  <div class="mock-wrap">
+    <div class="mock-bar">
+      <div class="mock-dots">
+        <div class="mock-dot" style="background:#fc5f57"></div>
+        <div class="mock-dot" style="background:#febd2f"></div>
+        <div class="mock-dot" style="background:#27c840"></div>
+      </div>
+      <span>hoshino-dental-clinic.com（B案イメージ）</span>
+    </div>
+
+    <!-- B案 ナビ -->
+    <div class="mb-nav">
+      <div class="mb-nav-item active">HOME</div>
+      <div class="mb-nav-item">診療案内</div>
+      <div class="mb-nav-item">矯正</div>
+      <div class="mb-nav-item">院長</div>
+      <div class="mb-nav-item">予約</div>
+    </div>
+
+    <!-- B案 Hero -->
+    <div class="mb-hero">
+      <div class="mb-badge">Anamori-inari Station 1min</div>
+      <div class="mb-h1">「また行きたい」と思える<br>歯科クリニックへ</div>
+      <div class="mb-sub">予防から矯正まで、一人ひとりに合った提案を。<br>日曜・祝日もお気軽にご来院ください。</div>
+      <div class="mb-btns">
+        <button class="mb-btn-p">今すぐ予約する →</button>
+        <button class="mb-btn-s">矯正相談（無料）</button>
+      </div>
+    </div>
+
+    <!-- B案 電話バー -->
+    <div class="mb-tel">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="mb-tel-num">📞 03-6423-6400</div>
+        <div class="mb-tel-badge">タップで発信</div>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.6);">月火木金土 9:30〜19:00 ／ 日祝 9:30〜13:00</div>
+    </div>
+
+    <!-- B案 診療 -->
+    <div class="mb-sec">
+      <div class="mb-sec-ttl">診療案内</div>
+      <div class="mb-grid">
+        <div class="mb-card">
+          <div class="mb-card-icon">😁</div>
+          <div class="mb-card-ttl">一般歯科</div>
+          <div class="mb-card-body">虫歯・歯周病・知覚過敏</div>
+        </div>
+        <div class="mb-card">
+          <div class="mb-card-icon">🧹</div>
+          <div class="mb-card-ttl">予防・PMTC</div>
+          <div class="mb-card-body">定期クリーニング</div>
+        </div>
+        <div class="mb-card">
+          <div class="mb-card-icon">😊</div>
+          <div class="mb-card-ttl">矯正歯科</div>
+          <div class="mb-card-body">マウスピース矯正</div>
+        </div>
+        <div class="mb-card">
+          <div class="mb-card-icon">👶</div>
+          <div class="mb-card-ttl">小児歯科</div>
+          <div class="mb-card-body">お子さまの虫歯予防</div>
+        </div>
+        <div class="mb-card">
+          <div class="mb-card-icon">✨</div>
+          <div class="mb-card-ttl">ホワイトニング</div>
+          <div class="mb-card-body">オフィス・ホーム</div>
+        </div>
+        <div class="mb-card">
+          <div class="mb-card-icon">🦷</div>
+          <div class="mb-card-ttl">インプラント相談</div>
+          <div class="mb-card-body">欠損補綴の選択肢</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B案 口コミ -->
+    <div class="mb-review">
+      <div class="mb-stars">★★★★★</div>
+      <div style="font-size:13px;color:#1e293b;font-weight:700;margin-top:6px;">「先生が丁寧に説明してくれて安心できました」</div>
+      <div class="mb-review-text">30代 女性 ／ 矯正治療中 ／ Google クチコミより</div>
+    </div>
+  </div>
+
+  <p style="font-size:12px;color:var(--text-sm);text-align:center;margin-top:8px;">
+    ▲ B案のトップページ構成イメージ（実際の制作時はデザインを詳細調整します）
+  </p>
+</div>
+
+<!-- ===== 04 改善前後 ===== -->
+<div class="sec sec-soft">
+  <div class="sec-hd">
+    <div class="sec-num">04</div>
+    <div>
+      <div class="sec-ttl">改善理由レポート</div>
+      <div class="sec-desc">6つの観点で、現状と改善後を比較しました。</div>
+    </div>
+  </div>
+
+  <!-- 予約導線 -->
+  <div class="ba-item">
+    <div class="ba-hd">📅 予約導線<span class="rpt-grade grade-c">要改善</span></div>
+    <div class="ba-body">
+      <div class="ba-col ba-before">
+        <div class="ba-lbl">現状</div>
+        <div class="ba-txt">「無料矯正相談の方」「初・再診の方」の2ボタン。どちらを押すか迷う。一般歯科患者向けの導線が不明確。</div>
+      </div>
+      <div class="ba-col ba-after">
+        <div class="ba-lbl">改善後</div>
+        <div class="ba-txt">「初めての方・予約はこちら」を1ボタンに統合してFVに配置。矯正相談はサブCTAへ。患者が迷わない動線。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 電話導線 -->
+  <div class="ba-item">
+    <div class="ba-hd">📞 電話導線<span class="rpt-grade grade-b">改善余地あり</span></div>
+    <div class="ba-body">
+      <div class="ba-col ba-before">
+        <div class="ba-txt">電話番号はヘッダーに表示されているが、スマホでのタップ発信（tel:リンク）対応が未確認。</div>
+      </div>
+      <div class="ba-col ba-after">
+        <div class="ba-txt">電話番号をtap-to-call対応に。フッターにも常時表示。診療時間を電話番号の直下に明示。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- スマホ導線 -->
+  <div class="ba-item">
+    <div class="ba-hd">📱 スマホ導線<span class="rpt-grade grade-b">改善余地あり</span></div>
+    <div class="ba-body">
+      <div class="ba-col ba-before">
+        <div class="ba-txt">レスポンシブ対応はあるが、タブレット以上を想定した設計。スマホファーストの最適化が不足。</div>
+      </div>
+      <div class="ba-col ba-after">
+        <div class="ba-txt">スマホ画面幅で最初に見える要素を優先設計。ボタンサイズ最低48px。ナビは簡潔に。フローティング電話ボタンを設置。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 診療科導線 -->
+  <div class="ba-item">
+    <div class="ba-hd">🦷 診療科導線<span class="rpt-grade grade-c">要改善</span></div>
+    <div class="ba-body">
+      <div class="ba-col ba-before">
+        <div class="ba-txt">トップで見える診療科は実質「矯正」のみ。一般歯科・予防・小児歯科を求める患者がサイトを離れる可能性が高い。</div>
+      </div>
+      <div class="ba-col ba-after">
+        <div class="ba-txt">トップに診療カードグリッドを設置（一般・予防・矯正・小児・ホワイトニング）。各科目から詳細ページへのリンクを確保。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ファーストビュー -->
+  <div class="ba-item">
+    <div class="ba-hd">👁 ファーストビュー<span class="rpt-grade grade-c">要改善</span></div>
+    <div class="ba-body">
+      <div class="ba-col ba-before">
+        <div class="ba-txt">「6か月で見た目が良くなる歯並び治療」がメインコピー。矯正に興味がない患者には刺さらない。</div>
+      </div>
+      <div class="ba-col ba-after">
+        <div class="ba-txt">「かかりつけ歯科」「お口の健康を守る」などのより広い価値提案をメインコピーに。矯正はサブ訴求へ移動。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 安心感 -->
+  <div class="ba-item">
+    <div class="ba-hd">🤝 安心感・信頼要素<span class="rpt-grade grade-b">改善余地あり</span></div>
+    <div class="ba-body">
+      <div class="ba-col ba-before">
+        <div class="ba-txt">症例写真2例・院長紹介はあるが、患者の声・口コミ・スタッフ紹介がない。院内設備が非表示。</div>
+      </div>
+      <div class="ba-col ba-after">
+        <div class="ba-txt">Google口コミの抜粋を掲載。院長の顔写真＋メッセージを上部に。院内設備写真を追加。スタッフ一言紹介を設置。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 05 Medipre CTA ===== -->
+<div class="cta-wrap">
+  <div class="cta-badge">Medipre — 予約体験改善サービス</div>
+  <h2 class="cta-h2">ホームページ改善の先に、<br>もう一段階の仕組みがあります</h2>
+  <p class="cta-sub">ホームページで予約が増えた後、「予約確認・リマインド・事前同意・来院確認」の自動化で、スタッフ負担を減らしながらキャンセルを減らす仕組みをご提案します。</p>
+  <div class="cta-grid">
+    <div class="cta-card">
+      <div class="cta-card-icon">📩</div>
+      <div class="cta-card-ttl">予約リマインド</div>
+      <div class="cta-card-body">前日・当日朝に自動送信。無断キャンセルを抑制</div>
+    </div>
+    <div class="cta-card">
+      <div class="cta-card-icon">📋</div>
+      <div class="cta-card-ttl">事前問診・同意</div>
+      <div class="cta-card-body">来院前に問診票・同意書を完結。受付時間を短縮</div>
+    </div>
+    <div class="cta-card">
+      <div class="cta-card-icon">📱</div>
+      <div class="cta-card-ttl">QR受付</div>
+      <div class="cta-card-body">QRコードで当日受付。密を避け、スタッフ呼び止め不要</div>
+    </div>
+  </div>
+  <a href="mailto:taro.kaneko1220@gmail.com?subject=ほしの歯科・矯正歯科クリニック HP改善についてのお問い合わせ" class="cta-btn">詳しく話を聞いてみる →</a>
+</div>
+
+<div class="foot">
+  <p>本資料は Medipre が貴院のホームページを拝見して作成した専用改善提案です。</p>
+  <p style="margin-top:6px;">お問い合わせ: taro.kaneko1220@gmail.com</p>
+</div>
+
+</div><!-- /wrap -->
+</body>
+</html>
