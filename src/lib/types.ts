@@ -1,3 +1,26 @@
+export type ClinicRole = "owner" | "manager" | "staff";
+
+export interface Clinic {
+  id: string;
+  name: string;
+  slug: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClinicUser {
+  id: string;
+  clinicId: string;
+  userId: string;
+  role: ClinicRole;
+  selected: boolean;
+  createdAt: string;
+}
+
 export type AppointmentStatus =
   | "confirmation_pending"
   | "confirmed"
@@ -14,6 +37,33 @@ export interface Patient {
   name: string;
   phone: string;
   email: string;
+}
+
+export interface ClinicProfile {
+  id: string;
+  clinicId: string;
+  clinicDisplayName: string;
+  directorName: string;
+  phone: string;
+  email: string;
+  postalCode: string;
+  address: string;
+  websiteUrl: string;
+  cancellationPolicy: string;
+  defaultMessage: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OnboardingProgress {
+  id: string;
+  clinicId: string;
+  profileCompleted: boolean;
+  policyCompleted: boolean;
+  notificationCompleted: boolean;
+  activatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Appointment {
