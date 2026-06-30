@@ -43,6 +43,7 @@ export default function ClinicPage() {
   const [showGuide, setShowGuide] = useState(false);
   const [clinic, setClinic]   = useState<Clinic | null>(null);
   const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [activatedAt, setActivatedAt] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem(GUIDE_KEY)) {
@@ -59,6 +60,17 @@ export default function ClinicPage() {
       const current = await getCurrentClinic();
       setClinics(cs);
       setClinic(current ?? cs[0]);
+      const cid = current?.id ?? cs[0].id;
+      const token = await getAccessToken();
+      const obRes = await fetch(`/api/clinic/onboarding?clinic_id=${cid}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (obRes.ok) {
+        const { progress } = await obRes.json();
+        setActivatedAt(progress?.activatedAt ?? null);
+      } else {
+        setActivatedAt(null);
+      }
     })();
   }, [router]);
 
@@ -153,6 +165,14 @@ export default function ClinicPage() {
         </div>
       </header>
       {showGuide && <OnboardingGuide onClose={() => setShowGuide(false)} />}
+      {activatedAt === null && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between">
+          <p className="text-sm text-amber-800 font-medium">初期設定が完了していません</p>
+          <Link href="/clinic/onboarding" className="px-4 py-1.5 bg-amber-500 rounded-lg text-white text-sm font-bold hover:bg-amber-600 transition">
+            初期設定へ
+          </Link>
+        </div>
+      )}
 
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Summary */}
