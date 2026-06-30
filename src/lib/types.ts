@@ -37,6 +37,7 @@ export interface Patient {
   name: string;
   phone: string;
   email: string;
+  userId?: string | null; // Phase2+: populated on LINE login / email OTP
 }
 
 export interface ClinicProfile {
