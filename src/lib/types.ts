@@ -86,3 +86,15 @@ export interface Appointment {
   patientId?: string;
   createdAt: string;
 }
+
+export interface ConsentSummary {
+  clinicName: string;
+  consentedAt: string;
+}
+
+export interface PatientMeResponse {
+  patient: Patient;
+  nextAppointment: Appointment | null;
+  appointmentHistory: Appointment[];
+  consentHistory: ConsentSummary[];
+}
