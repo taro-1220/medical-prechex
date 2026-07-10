@@ -17,6 +17,7 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
   const [error, setError] = useState<string | null>(null);
   const [consented, setConsented] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [policyOpen, setPolicyOpen] = useState(false);
 
   useEffect(() => {
     params.then(({ token: t }) => setToken(t));
@@ -73,6 +74,8 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
     );
   }
 
+  const hasPolicy = appt.cancellationPolicy.trim().length > 0;
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <header className="border-b border-gray-200 bg-white px-6 py-4 text-center">
@@ -99,12 +102,6 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
           </div>
         </div>
 
-        {/* キャンセルポリシー */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">キャンセルポリシー</p>
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{appt.cancellationPolicy}</p>
-        </div>
-
         {/* 同意 */}
         <label className="flex items-start gap-3 cursor-pointer">
           <input
@@ -114,7 +111,21 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
             className="mt-0.5 h-4 w-4 rounded accent-teal-600 shrink-0"
           />
           <span className="text-sm text-gray-700 leading-relaxed">
-            予約内容およびキャンセルポリシーを確認しました
+            {hasPolicy ? (
+              <>
+                予約内容および
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setPolicyOpen(true); }}
+                  className="text-teal-600 font-bold underline underline-offset-2 hover:text-teal-700"
+                >
+                  「予約時の確認事項」
+                </button>
+                を確認しました
+              </>
+            ) : (
+              "予約内容を確認しました"
+            )}
           </span>
         </label>
 
@@ -132,6 +143,38 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
           来院時に受付でご提示ください。
         </p>
       </div>
+
+      {/* 予約時の確認事項モーダル */}
+      {policyOpen && hasPolicy && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="予約時の確認事項"
+        >
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setPolicyOpen(false)}
+          />
+          <div className="relative w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-h-[85vh] sm:mx-6">
+            <div className="px-6 pt-5 pb-3 border-b border-gray-100">
+              <p className="text-base font-bold text-gray-900">予約時の確認事項</p>
+            </div>
+            <div className="px-6 py-4 overflow-y-auto">
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{appt.cancellationPolicy}</p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setPolicyOpen(false)}
+                className="w-full py-3 rounded-2xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 transition"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
