@@ -1,8 +1,12 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import type { Patient } from "@/lib/types";
-import { getCurrentClinic } from "@/lib/clinic-auth";
+import type { MessageChannel, Patient, TemplateWithMeta } from "@/lib/types";
+import { getAccessToken, getCurrentClinic } from "@/lib/clinic-auth";
+import { DEFAULT_TEMPLATES, renderTemplate, findUnresolvedPlaceholders } from "@/lib/message-templates";
+
+const CHANNELS: MessageChannel[] = ["sms", "line", "email"];
+const TAB_LABELS: Record<MessageChannel, string> = { sms: "SMS", line: "LINE", email: "メール" };
 
 const DEFAULT_POLICY =
   "予約日の前日までのキャンセルは無料です。当日キャンセルおよび無断キャンセルには、予約確認対象額の全額をご請求する場合があります。";
@@ -28,14 +32,21 @@ const EMPTY_FORM: FormState = {
 export default function ClinicNewPage() {
   // クリニック名（既存予約から取得、初回のみ入力）
   const [clinicName, setClinicName] = useState("");
+  const [clinicId, setClinicId] = useState<string | null>(null);
   const [clinicResolved, setClinicResolved] = useState(false);
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [confirmUrl, setConfirmUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<"sms" | "line" | "email">("line");
+  const [activeTab, setActiveTab] = useState<MessageChannel>("line");
   const [copiedTpl, setCopiedTpl] = useState(false);
+
+  // 医院のテンプレート（保存済み or フォールバック）。今回限りの編集は bodies に閉じ、
+  // templateMetas（医院共通テンプレート）自体は書き換えない。
+  const [templateMetas, setTemplateMetas] = useState<Record<MessageChannel, TemplateWithMeta> | null>(null);
+  const [templatesLoadError, setTemplatesLoadError] = useState(false);
+  const [bodies, setBodies] = useState<Record<MessageChannel, string> | null>(null);
 
   // 患者検索
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,11 +62,51 @@ export default function ClinicNewPage() {
       .then(c => {
         if (c) {
           setClinicName(c.name);
+          setClinicId(c.id);
           setClinicResolved(true);
         }
       })
       .catch(() => {});
   }, []);
+
+  // 保存済みの予約確認ポリシーを初期値として反映（空の場合のみDEFAULT_POLICYのまま）
+  useEffect(() => {
+    if (!clinicId) return;
+    (async () => {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/onboarding?clinic_id=${clinicId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) return;
+      const { profile } = await res.json();
+      if (profile?.cancellationPolicy) {
+        setForm(prev => ({ ...prev, cancellationPolicy: profile.cancellationPolicy }));
+      }
+    })().catch(() => {});
+  }, [clinicId]);
+
+  // 送信用テンプレート（SMS/LINE/メール）を医院設定から取得
+  useEffect(() => {
+    if (!clinicId) return;
+    (async () => {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/templates?clinic_id=${clinicId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) { setTemplatesLoadError(true); return; }
+      const { templates }: { templates: TemplateWithMeta[] } = await res.json();
+      setTemplateMetas(Object.fromEntries(templates.map(t => [t.channel, t])) as Record<MessageChannel, TemplateWithMeta>);
+    })().catch(() => setTemplatesLoadError(true));
+  }, [clinicId]);
+
+  const getMeta = (channel: MessageChannel): TemplateWithMeta =>
+    templateMetas?.[channel] ?? {
+      channel,
+      subject: DEFAULT_TEMPLATES[channel].subject,
+      body: DEFAULT_TEMPLATES[channel].body,
+      source: "default",
+      updatedAt: null,
+    };
 
   const set = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(prev => ({ ...prev, [key]: e.target.value }));
@@ -127,7 +178,12 @@ export default function ClinicNewPage() {
       }),
     });
     const appt = await res.json();
-    setConfirmUrl(`https://www.medipre.jp/confirm/${appt.token}`);
+    const url = `https://www.medipre.jp/confirm/${appt.token}`;
+    setConfirmUrl(url);
+
+    const vars = { patientName: form.patientName, clinicName, confirmUrl: url, description: form.description };
+    setBodies(Object.fromEntries(CHANNELS.map(ch => [ch, renderTemplate(getMeta(ch).body, vars)])) as Record<MessageChannel, string>);
+
     setLoading(false);
   };
 
@@ -147,18 +203,18 @@ export default function ClinicNewPage() {
   const noResults = searchQuery.length >= 2 && searchDone && patients.length === 0 && !selectedPatient;
 
   // ─── 確認URL発行後の画面 ───────────────────────────────
-  if (confirmUrl) {
+  if (confirmUrl && bodies) {
     const apptDate = form.appointmentAt
       ? new Date(form.appointmentAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
       : "";
 
-    const templates = {
-      sms: `【${clinicName}】${form.patientName} 様\n予約確認をお願いします。\n${confirmUrl}`,
-      line: `【${clinicName}】\n\n${form.patientName}様\n\nご予約ありがとうございます。\n\nご来院前に予約内容の確認と同意のお手続きをお願いいたします。\n\n▼確認はこちら\n${confirmUrl}\n\n確認完了後、受付用QRチケットが表示されます。\nご来院時に受付スタッフへご提示ください。\n\n――――――\nmedipre（メディプリ）`,
-      email: `件名：【予約確認】${form.description} ご確認のお願い\n\n${form.patientName} 様\n\nご予約の確認をお願いします。\n以下のURLからご確認ください。\n\n${confirmUrl}\n\n${clinicName}`,
-    };
-
-    const TAB_LABELS: Record<"sms" | "line" | "email", string> = { sms: "SMS", line: "LINE", email: "メール" };
+    const activeMeta = getMeta(activeTab);
+    const renderedSubject = activeTab === "email" && activeMeta.subject
+      ? renderTemplate(activeMeta.subject, { patientName: form.patientName, clinicName, confirmUrl, description: form.description })
+      : null;
+    const activeBody = bodies[activeTab];
+    const unresolved = findUnresolvedPlaceholders(`${renderedSubject ?? ""}\n${activeBody}`);
+    const copyText = activeTab === "email" && renderedSubject ? `件名：${renderedSubject}\n\n${activeBody}` : activeBody;
 
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6 py-10">
@@ -187,10 +243,14 @@ export default function ClinicNewPage() {
               <p className="text-xs font-bold uppercase tracking-widest text-gray-400">送信用テンプレート</p>
               <span className="text-xs text-gray-400 border border-gray-200 rounded-full px-2.5 py-0.5">自動送信ではありません</span>
             </div>
-            <p className="text-xs text-gray-400 mb-4">本文をコピーして手動で送信してください</p>
+            <p className="text-xs text-gray-400 mb-1">本文をコピーして手動で送信してください（今回だけの編集も可能です）</p>
+            {templatesLoadError && (
+              <p className="text-xs text-amber-600 mb-1">テンプレートの読み込みに失敗したため、初期文を表示しています</p>
+            )}
+            <Link href="/clinic/templates" className="text-xs text-teal-600 hover:underline">医院共通のテンプレートを編集する →</Link>
 
-            <div className="flex gap-1 mb-4">
-              {(["sms", "line", "email"] as const).map((ch) => (
+            <div className="flex gap-1 mt-3 mb-4">
+              {CHANNELS.map((ch) => (
                 <button
                   key={ch}
                   onClick={() => setActiveTab(ch)}
@@ -201,21 +261,38 @@ export default function ClinicNewPage() {
               ))}
             </div>
 
-            <pre className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 whitespace-pre-wrap break-all leading-relaxed mb-4 select-all font-sans">
-              {templates[activeTab]}
-            </pre>
+            {renderedSubject !== null && (
+              <p className="text-xs text-gray-500 mb-2">件名: <span className="text-gray-700 font-bold">{renderedSubject}</span></p>
+            )}
+
+            <textarea
+              value={activeBody}
+              onChange={(e) => setBodies(prev => prev ? { ...prev, [activeTab]: e.target.value } : prev)}
+              rows={8}
+              className="w-full text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 whitespace-pre-wrap leading-relaxed mb-2 font-sans focus:outline-none focus:ring-2 focus:ring-teal-500 resize-y"
+            />
+
+            {unresolved.length > 0 && (
+              <p className="text-xs text-red-600 mb-3">⚠ 未置換のプレースホルダーがあります（{unresolved.join(", ")}）。コピー・送信前に内容をご確認ください。</p>
+            )}
+
+            {activeTab === "line" && (
+              <p className="text-xs text-gray-400 mb-3">送信元は、この端末でログイン中のLINEアカウントです。</p>
+            )}
 
             <div className="flex gap-2">
               <button
-                onClick={() => copyTemplate(templates[activeTab])}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition"
+                onClick={() => copyTemplate(copyText)}
+                disabled={unresolved.length > 0}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {copiedTpl ? "コピーしました ✓" : `${TAB_LABELS[activeTab]}文面をコピー`}
               </button>
               {activeTab === "line" && (
                 <button
-                  onClick={() => window.open(`https://line.me/R/msg/text/?${encodeURIComponent(templates.line)}`, "_blank")}
-                  className="flex-1 py-2.5 rounded-xl bg-[#06C755] text-white text-sm font-bold hover:opacity-90 transition"
+                  onClick={() => window.open(`https://line.me/R/msg/text/?${encodeURIComponent(bodies.line)}`, "_blank")}
+                  disabled={unresolved.length > 0}
+                  className="flex-1 py-2.5 rounded-xl bg-[#06C755] text-white text-sm font-bold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   LINEで送る
                 </button>
@@ -226,6 +303,7 @@ export default function ClinicNewPage() {
           <button
             onClick={() => {
               setConfirmUrl(null);
+              setBodies(null);
               setForm(EMPTY_FORM);
               setSearchQuery("");
               setSelectedPatient(null);

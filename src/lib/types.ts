@@ -98,3 +98,25 @@ export interface PatientMeResponse {
   appointmentHistory: Appointment[];
   consentHistory: ConsentSummary[];
 }
+
+export type MessageChannel = "sms" | "line" | "email";
+
+export interface MessageTemplate {
+  clinicId: string;
+  channel: MessageChannel;
+  subject: string | null;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// GET /api/clinic/templates が返す、フォールバック解決込みの1チャネル分
+export type TemplateSource = "custom" | "legacy_default_message" | "default";
+
+export interface TemplateWithMeta {
+  channel: MessageChannel;
+  subject: string | null;
+  body: string;
+  source: TemplateSource;
+  updatedAt: string | null;
+}

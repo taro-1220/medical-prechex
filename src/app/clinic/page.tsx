@@ -156,6 +156,9 @@ export default function ClinicPage() {
           >
             ?
           </button>
+          <Link href="/clinic/templates" className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition">
+            テンプレート設定
+          </Link>
           <Link href="/clinic/checkin" className="px-4 py-2 bg-emerald-600 rounded-xl font-bold text-sm text-white hover:bg-emerald-700 transition">
             QR受付
           </Link>
