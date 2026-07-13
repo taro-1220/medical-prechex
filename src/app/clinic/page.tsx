@@ -215,6 +215,9 @@ export default function ClinicPage() {
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${STATUS_COLOR[a.status]}`}>
                       {STATUS_LABEL[a.status]}
                     </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${a.lineSentAt ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-400"}`}>
+                      {a.lineSentAt ? "🟢 LINE送信済み" : "○ LINE未送信"}
+                    </span>
                     <span className="text-gray-400 text-xs">{formatDate(a.appointmentAt)}</span>
                     <span className="text-gray-300 text-xs font-mono">#{a.id.slice(0, 8)}</span>
                   </div>

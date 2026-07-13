@@ -42,6 +42,13 @@ export default function ClinicNewPage() {
   const [activeTab, setActiveTab] = useState<MessageChannel>("line");
   const [copiedTpl, setCopiedTpl] = useState(false);
 
+  // 送信申告（「送信しました」押下の記録）。送信成否の自動取得はしない
+  const [apptToken, setApptToken] = useState<string | null>(null);
+  const [sentAt, setSentAt] = useState<Record<MessageChannel, string | null>>({ sms: null, line: null, email: null });
+  const [confirmChannel, setConfirmChannel] = useState<MessageChannel | null>(null);
+  const [marking, setMarking] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
   // 医院のテンプレート（保存済み or フォールバック）。今回限りの編集は bodies に閉じ、
   // templateMetas（医院共通テンプレート）自体は書き換えない。
   const [templateMetas, setTemplateMetas] = useState<Record<MessageChannel, TemplateWithMeta> | null>(null);
@@ -180,6 +187,8 @@ export default function ClinicNewPage() {
     const appt = await res.json();
     const url = `https://www.medipre.jp/confirm/${appt.token}`;
     setConfirmUrl(url);
+    setApptToken(appt.token);
+    setSentAt({ sms: null, line: null, email: null });
 
     const vars = { patientName: form.patientName, clinicName, confirmUrl: url, description: form.description };
     setBodies(Object.fromEntries(CHANNELS.map(ch => [ch, renderTemplate(getMeta(ch).body, vars)])) as Record<MessageChannel, string>);
@@ -200,6 +209,34 @@ export default function ClinicNewPage() {
     setTimeout(() => setCopiedTpl(false), 2000);
   };
 
+  const showToast = (type: "success" | "error", message: string) => {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const markSent = async (channel: MessageChannel) => {
+    if (!apptToken || marking) return;
+    setMarking(true);
+    try {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/appointments/${apptToken}/mark-sent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ channel }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const { sentAt: at } = await res.json();
+      setSentAt(prev => ({ ...prev, [channel]: at }));
+      setConfirmChannel(null);
+      showToast("success", `✅ ${TAB_LABELS[channel]}送信済みとして記録しました`);
+    } catch {
+      // 失敗時は送信済みUIへ変更しない。モーダルを開いたままにして再試行できるようにする
+      showToast("error", "記録に失敗しました。通信環境を確認して再試行してください");
+    } finally {
+      setMarking(false);
+    }
+  };
+
   const noResults = searchQuery.length >= 2 && searchDone && patients.length === 0 && !selectedPatient;
 
   // ─── 確認URL発行後の画面 ───────────────────────────────
@@ -216,8 +253,38 @@ export default function ClinicNewPage() {
     const unresolved = findUnresolvedPlaceholders(`${renderedSubject ?? ""}\n${activeBody}`);
     const copyText = activeTab === "email" && renderedSubject ? `件名：${renderedSubject}\n\n${activeBody}` : activeBody;
 
+    const activeSentAt = sentAt[activeTab];
+
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6 py-10">
+        {toast && (
+          <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-bold ${toast.type === "success" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
+            {toast.message}
+          </div>
+        )}
+        {confirmChannel && (
+          <div className="fixed inset-0 z-40 bg-black/40 flex items-start justify-center pt-20 px-6">
+            <div className="w-full max-w-sm rounded-2xl bg-white shadow-xl p-6 text-center">
+              <p className="font-bold text-gray-900 mb-4">{TAB_LABELS[confirmChannel]}で送信できましたか？</p>
+              <div className="space-y-2">
+                <button
+                  onClick={() => markSent(confirmChannel)}
+                  disabled={marking}
+                  className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition disabled:opacity-50"
+                >
+                  {marking ? "記録中..." : "送信しました"}
+                </button>
+                <button
+                  onClick={() => setConfirmChannel(null)}
+                  disabled={marking}
+                  className="w-full py-3 rounded-xl border border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition disabled:opacity-50"
+                >
+                  まだです
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="w-full max-w-lg space-y-4">
           <div className="text-center mb-2">
             <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center mx-auto mb-4">
@@ -238,7 +305,14 @@ export default function ClinicNewPage() {
             </button>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+          <div className={`rounded-2xl border shadow-sm p-6 ${activeSentAt ? "border-emerald-200 bg-[#F0FFF6]" : "border-gray-200 bg-white"}`}>
+            {activeSentAt && (
+              <div className="mb-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">
+                  ✓ {TAB_LABELS[activeTab]}送信済み
+                </span>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs font-bold uppercase tracking-widest text-gray-400">送信用テンプレート</p>
               <span className="text-xs text-gray-400 border border-gray-200 rounded-full px-2.5 py-0.5">自動送信ではありません</span>
@@ -254,9 +328,13 @@ export default function ClinicNewPage() {
                 <button
                   key={ch}
                   onClick={() => setActiveTab(ch)}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${activeTab === ch ? "bg-teal-600 text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${
+                    activeTab === ch
+                      ? sentAt[ch] ? "bg-emerald-600 text-white" : "bg-teal-600 text-white"
+                      : sentAt[ch] ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  }`}
                 >
-                  {TAB_LABELS[ch]}
+                  {sentAt[ch] ? `✓ ${TAB_LABELS[ch]}送信済み` : TAB_LABELS[ch]}
                 </button>
               ))}
             </div>
@@ -282,7 +360,10 @@ export default function ClinicNewPage() {
 
             <div className="flex gap-2">
               <button
-                onClick={() => copyTemplate(copyText)}
+                onClick={() => {
+                  copyTemplate(copyText);
+                  if (activeTab !== "line") setConfirmChannel(activeTab);
+                }}
                 disabled={unresolved.length > 0}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
@@ -290,11 +371,14 @@ export default function ClinicNewPage() {
               </button>
               {activeTab === "line" && (
                 <button
-                  onClick={() => window.open(`https://line.me/R/msg/text/?${encodeURIComponent(bodies.line)}`, "_blank")}
+                  onClick={() => {
+                    window.open(`https://line.me/R/msg/text/?${encodeURIComponent(bodies.line)}`, "_blank");
+                    setConfirmChannel("line");
+                  }}
                   disabled={unresolved.length > 0}
                   className="flex-1 py-2.5 rounded-xl bg-[#06C755] text-white text-sm font-bold hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  LINEで送る
+                  {sentAt.line ? "もう一度LINEで送る" : "LINEで送る"}
                 </button>
               )}
             </div>
@@ -309,6 +393,10 @@ export default function ClinicNewPage() {
               setSelectedPatient(null);
               setPatients([]);
               setSearchDone(false);
+              setApptToken(null);
+              setSentAt({ sms: null, line: null, email: null });
+              setConfirmChannel(null);
+              setToast(null);
             }}
             className="w-full py-3 rounded-2xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-100 transition text-sm"
           >
