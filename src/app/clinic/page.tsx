@@ -215,9 +215,15 @@ export default function ClinicPage() {
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${STATUS_COLOR[a.status]}`}>
                       {STATUS_LABEL[a.status]}
                     </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${a.lineSentAt ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-400"}`}>
-                      {a.lineSentAt ? "🟢 LINE送信済み" : "○ LINE未送信"}
-                    </span>
+                    {(() => {
+                      // 送信申告済み媒体（自動検知ではなくスタッフ申告の記録）
+                      const sentChannels = [a.lineSentAt && "LINE", a.smsSentAt && "SMS", a.emailSentAt && "メール"].filter(Boolean);
+                      return (
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${sentChannels.length ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-400"}`}>
+                          {sentChannels.length ? `🟢 送信済み（${sentChannels.join("・")}）` : "○ 未送信"}
+                        </span>
+                      );
+                    })()}
                     <span className="text-gray-400 text-xs">{formatDate(a.appointmentAt)}</span>
                     <span className="text-gray-300 text-xs font-mono">#{a.id.slice(0, 8)}</span>
                   </div>

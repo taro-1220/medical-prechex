@@ -307,9 +307,12 @@ export default function ClinicNewPage() {
 
           <div className={`rounded-2xl border shadow-sm p-6 ${activeSentAt ? "border-emerald-200 bg-[#F0FFF6]" : "border-gray-200 bg-white"}`}>
             {activeSentAt && (
-              <div className="mb-2">
+              <div className="mb-2 flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">
                   ✓ {TAB_LABELS[activeTab]}送信済み
+                </span>
+                <span className="text-xs text-emerald-700">
+                  {new Date(activeSentAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })} に記録
                 </span>
               </div>
             )}
