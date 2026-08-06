@@ -76,7 +76,10 @@ export default function ClinicPage() {
 
   const load = async () => {
     try {
-      const res = await fetch("/api/appointments");
+      const token = await getAccessToken();
+      const res = await fetch("/api/appointments", {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       if (!res.ok) { setAppointments([]); return; }
       const data = await res.json();
       setAppointments(Array.isArray(data) ? data : []);

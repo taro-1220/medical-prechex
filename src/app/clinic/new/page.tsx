@@ -126,8 +126,11 @@ export default function ClinicNewPage() {
       setSearchDone(false);
       return;
     }
-    const timer = setTimeout(() => {
-      fetch(`/api/patients/search?q=${encodeURIComponent(searchQuery)}`)
+    const timer = setTimeout(async () => {
+      const token = await getAccessToken();
+      fetch(`/api/patients/search?q=${encodeURIComponent(searchQuery)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
         .then(r => r.json())
         .then(data => {
           if (Array.isArray(data)) {
@@ -174,12 +177,14 @@ export default function ClinicNewPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const token = await getAccessToken();
     const res = await fetch("/api/appointments", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({
         ...form,
         clinicName,
+        ...(clinicId ? { clinicId } : {}),
         communicationChannel: "manual",
         ...(selectedPatient ? { patientId: selectedPatient.id } : {}),
       }),

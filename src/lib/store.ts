@@ -25,12 +25,14 @@ function toAppt(row: Record<string, unknown>): Appointment {
   };
 }
 
-export async function searchPatients(query: string): Promise<Patient[]> {
+export async function searchPatients(query: string, clinicIds: string[]): Promise<Patient[]> {
   const q = query.trim();
   if (q.length < 2) return [];
+  if (clinicIds.length === 0) return [];
   const { data, error } = await getSupabase()
     .from("patients")
     .select("id, name, phone, email")
+    .in("clinic_id", clinicIds)
     .or(`name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`)
     .limit(10);
   if (error) throw new Error(error.message);
@@ -42,11 +44,12 @@ export async function searchPatients(query: string): Promise<Patient[]> {
   }));
 }
 
-export async function getAllAppointments(): Promise<Appointment[]> {
-  // TODO: next phase — .eq("clinic_id", clinicId) でテナント分離
+export async function getAllAppointments(clinicIds: string[]): Promise<Appointment[]> {
+  if (clinicIds.length === 0) return [];
   const { data, error } = await getSupabase()
     .from("appointments")
     .select("*")
+    .in("clinic_id", clinicIds)
     .order("created_at", { ascending: false });
   if (error) {
     console.error("[appointments] getAll error", { code: error.code, message: error.message });
@@ -65,23 +68,6 @@ export async function getAppointment(token: string): Promise<Appointment | undef
   return data ? toAppt(data) : undefined;
 }
 
-async function findOrCreateClinic(clinicName: string): Promise<string> {
-  const sb = getSupabase();
-  const { data: existing } = await sb
-    .from("clinics")
-    .select("id")
-    .eq("name", clinicName)
-    .maybeSingle();
-  if (existing) return existing.id as string;
-  const { data, error } = await sb
-    .from("clinics")
-    .insert({ name: clinicName })
-    .select("id")
-    .single();
-  if (error) throw new Error(`clinic insert failed: ${error.message}`);
-  return data.id as string;
-}
-
 async function findOrCreatePatient(
   patientName: string,
   phone: string,
@@ -90,12 +76,13 @@ async function findOrCreatePatient(
 ): Promise<string> {
   const sb = getSupabase();
   let existingId: string | null = null;
+  // 患者照合は医院単位で行う（他院の同一電話/メール患者を跨いで共有しない）
   if (phone) {
-    const { data } = await sb.from("patients").select("id").eq("phone", phone).maybeSingle();
+    const { data } = await sb.from("patients").select("id").eq("clinic_id", clinicId).eq("phone", phone).maybeSingle();
     if (data) existingId = data.id as string;
   }
   if (!existingId && email) {
-    const { data } = await sb.from("patients").select("id").eq("email", email).maybeSingle();
+    const { data } = await sb.from("patients").select("id").eq("clinic_id", clinicId).eq("email", email).maybeSingle();
     if (data) existingId = data.id as string;
   }
   if (existingId) return existingId;
@@ -109,16 +96,22 @@ async function findOrCreatePatient(
 }
 
 export async function createAppointment(
-  input: Omit<Appointment, "id" | "token" | "status" | "createdAt">
+  input: Omit<Appointment, "id" | "token" | "status" | "createdAt">,
+  clinicId: string,
 ): Promise<Appointment> {
-  const clinicId  = await findOrCreateClinic(input.clinicName);
+  const sb = getSupabase();
+  // clinic_name は認可済み clinicId から取得する（クライアント入力を表示名として信用しない）
+  const { data: clinic } = await sb.from("clinics").select("name").eq("id", clinicId).maybeSingle();
+  const clinicName = (clinic?.name as string | undefined) ?? input.clinicName;
+
+  // patientId は API 層で clinicId 所属を検証済みのものだけが渡る想定。未指定なら医院単位で照合/作成
   const patientId = input.patientId ?? await findOrCreatePatient(input.patientName, input.phone ?? "", input.email ?? "", clinicId);
 
-  const { data, error } = await getSupabase()
+  const { data, error } = await sb
     .from("appointments")
     .insert({
       token:                 crypto.randomUUID(),
-      clinic_name:           input.clinicName,
+      clinic_name:           clinicName,
       patient_name:          input.patientName,
       phone:                 input.phone ?? "",
       email:                 input.email ?? "",
