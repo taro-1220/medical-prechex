@@ -38,6 +38,34 @@ export interface Patient {
   phone: string;
   email: string;
   userId?: string | null; // Phase2+: populated on LINE login / email OTP
+  createdAt?: string;
+}
+
+// 医院スタッフ向け患者一覧の1行（集計値つき、PIIは氏名/連絡先のみ）
+export interface PatientListItem {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  appointmentCount: number;
+  lastAppointmentAt: string | null;
+  latestStatus: AppointmentStatus | null;
+}
+
+// 患者単位の同意履歴（consent_logs を予約経由で取得）
+export interface PatientConsentLog {
+  id: string;
+  appointmentId: string;
+  consentedAt: string;
+  appointmentAt: string;
+  policyText: string;
+}
+
+// 患者詳細（患者1件＋予約履歴＋同意履歴）
+export interface PatientDetail {
+  patient: Patient;
+  appointments: Appointment[];
+  consents: PatientConsentLog[];
 }
 
 export interface ClinicProfile {

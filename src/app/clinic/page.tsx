@@ -159,6 +159,9 @@ export default function ClinicPage() {
           >
             ?
           </button>
+          <Link href="/clinic/patients" className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition">
+            患者一覧
+          </Link>
           <Link href="/clinic/templates" className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition">
             テンプレート設定
           </Link>

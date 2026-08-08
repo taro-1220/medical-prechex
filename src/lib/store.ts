@@ -1,5 +1,12 @@
 import { getSupabase } from "./supabase";
-import type { Appointment, AppointmentStatus, Patient } from "./types";
+import type {
+  Appointment,
+  AppointmentStatus,
+  Patient,
+  PatientListItem,
+  PatientConsentLog,
+  PatientDetail,
+} from "./types";
 
 function toAppt(row: Record<string, unknown>): Appointment {
   return {
@@ -42,6 +49,117 @@ export async function searchPatients(query: string, clinicIds: string[]): Promis
     phone: r.phone as string,
     email: r.email as string,
   }));
+}
+
+// 医院スタッフ向け患者一覧。患者(自院)＋予約集計を2クエリで取得しJSで集約（N+1回避）
+export async function getClinicPatients(clinicIds: string[], q?: string): Promise<PatientListItem[]> {
+  if (clinicIds.length === 0) return [];
+  const sb = getSupabase();
+
+  let query = sb.from("patients").select("id, name, phone, email").in("clinic_id", clinicIds);
+  const term = (q ?? "").trim();
+  if (term.length >= 1) {
+    query = query.or(`name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%`);
+  }
+  const { data: patients, error } = await query;
+  if (error) throw new Error(error.message);
+  const list = patients ?? [];
+  if (list.length === 0) return [];
+
+  const ids = list.map(p => p.id as string);
+  const { data: appts, error: aErr } = await sb
+    .from("appointments")
+    .select("patient_id, appointment_at, status")
+    .in("patient_id", ids)
+    .in("clinic_id", clinicIds);
+  if (aErr) throw new Error(aErr.message);
+
+  const agg = new Map<string, { count: number; last: string | null; status: AppointmentStatus | null }>();
+  for (const a of appts ?? []) {
+    const pid = a.patient_id as string;
+    const cur = agg.get(pid) ?? { count: 0, last: null, status: null };
+    cur.count++;
+    const at = a.appointment_at as string;
+    if (cur.last === null || new Date(at).getTime() > new Date(cur.last).getTime()) {
+      cur.last = at;
+      cur.status = a.status as AppointmentStatus;
+    }
+    agg.set(pid, cur);
+  }
+
+  return list
+    .map(p => {
+      const g = agg.get(p.id as string);
+      return {
+        id:                p.id as string,
+        name:              p.name as string,
+        phone:             p.phone as string,
+        email:             p.email as string,
+        appointmentCount:  g?.count ?? 0,
+        lastAppointmentAt: g?.last ?? null,
+        latestStatus:      g?.status ?? null,
+      };
+    })
+    .sort((a, b) => {
+      const av = a.lastAppointmentAt ? new Date(a.lastAppointmentAt).getTime() : 0;
+      const bv = b.lastAppointmentAt ? new Date(b.lastAppointmentAt).getTime() : 0;
+      return bv - av;
+    });
+}
+
+// 患者詳細。他院患者・不存在は null（呼び出し側で404化）。予約・同意は新しい順
+export async function getClinicPatientDetail(patientId: string, clinicIds: string[]): Promise<PatientDetail | null> {
+  if (clinicIds.length === 0) return null;
+  const sb = getSupabase();
+
+  const { data: p, error } = await sb
+    .from("patients")
+    .select("id, name, phone, email, clinic_id, user_id, created_at")
+    .eq("id", patientId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!p || !clinicIds.includes(p.clinic_id as string)) return null;
+  const clinicId = p.clinic_id as string;
+
+  const { data: apptRows, error: aErr } = await sb
+    .from("appointments")
+    .select("*")
+    .eq("patient_id", patientId)
+    .eq("clinic_id", clinicId)
+    .order("appointment_at", { ascending: false });
+  if (aErr) throw new Error(aErr.message);
+  const appointments = (apptRows ?? []).map(toAppt);
+
+  let consents: PatientConsentLog[] = [];
+  const apptIds = appointments.map(a => a.id);
+  if (apptIds.length > 0) {
+    const { data: logs, error: cErr } = await sb
+      .from("consent_logs")
+      .select("id, appointment_id, consented_at, appointment_at, policy_text")
+      .in("appointment_id", apptIds)
+      .order("consented_at", { ascending: false });
+    if (cErr) throw new Error(cErr.message);
+    consents = (logs ?? []).map(l => ({
+      id:            l.id as string,
+      appointmentId: l.appointment_id as string,
+      consentedAt:   l.consented_at as string,
+      appointmentAt: l.appointment_at as string,
+      policyText:    l.policy_text as string,
+    }));
+  }
+
+  return {
+    patient: {
+      id:        p.id as string,
+      name:      p.name as string,
+      phone:     p.phone as string,
+      email:     p.email as string,
+      userId:    (p.user_id as string | null) ?? null,
+      createdAt: p.created_at as string,
+    },
+    appointments,
+    consents,
+  };
 }
 
 export async function getAllAppointments(clinicIds: string[]): Promise<Appointment[]> {
