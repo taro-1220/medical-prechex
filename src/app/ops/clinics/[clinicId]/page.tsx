@@ -4,25 +4,56 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getAccessToken } from "@/lib/clinic-auth";
 
+type OpsAppointment = {
+  id: string; patientName: string; appointmentAt: string; status: string;
+  description: string; confirmedAt: string | null;
+  lineSentAt: string | null; smsSentAt: string | null; emailSentAt: string | null;
+};
+
 type ClinicDetail = {
   clinic: {
     id: string; name: string; slug: string | null; phone: string | null;
     email: string | null; address: string | null; status: string;
     createdAt: string; updatedAt: string;
   };
-  onboarding:       Record<string, unknown> | null;
-  clinicProfile:    Record<string, unknown> | null;
-  appointmentCount: number;
-  patientCount:     number;
-  emailSentCount:   number | null;
-  lineSentCount:    number | null;
-  lastLoginAt:      string | null;
-  users:            Array<{ user_id: string; role: string; updated_at: string }>;
+  onboarding:         Record<string, unknown> | null;
+  clinicProfile:      Record<string, unknown> | null;
+  cancellationPolicy: string | null;
+  appointmentCount:   number;
+  confirmedCount:     number;
+  unconfirmedCount:   number;
+  patientCount:       number;
+  lineSentCount:      number;
+  smsSentCount:       number;
+  emailSentCount:     number;
+  templateChannels:   string[];
+  hasTemplates:       boolean;
+  users:              Array<{ user_id: string; role: string }>;
+  appointments:       OpsAppointment[];
 };
+
+const STATUS_LABEL: Record<string, string> = {
+  confirmation_pending: "確認待ち", confirmed: "確認済み", ticket_issued: "確認済み",
+  checked_in: "来院済み", completed: "完了", cancelled: "キャンセル", expired: "期限切れ",
+};
+
+const ROLE_LABEL: Record<string, string> = { owner: "オーナー", manager: "マネージャ", staff: "スタッフ" };
+
+const CHANNEL_LABEL: Record<string, string> = { line: "LINE", sms: "SMS", email: "メール" };
 
 function fmt(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("ja-JP", { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function SentBadges({ line, sms, email }: { line: string | null; sms: string | null; email: string | null }) {
+  const items = [line && "LINE", sms && "SMS", email && "メール"].filter(Boolean) as string[];
+  if (items.length === 0) return <span className="text-xs text-gray-400">送信記録なし</span>;
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">
+      送信済み（{items.join("・")}）
+    </span>
+  );
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
@@ -74,7 +105,12 @@ export default function OpsClinicDetailPage({ params }: { params: Promise<{ clin
     );
   }
 
-  const { clinic, onboarding, clinicProfile, appointmentCount, patientCount, emailSentCount, lineSentCount, lastLoginAt } = detail;
+  const {
+    clinic, onboarding, clinicProfile, cancellationPolicy,
+    appointmentCount, confirmedCount, unconfirmedCount, patientCount,
+    lineSentCount, smsSentCount, emailSentCount, templateChannels, hasTemplates,
+    users, appointments,
+  } = detail;
   const activatedAt = (onboarding?.activated_at ?? clinicProfile?.activated_at) as string | null ?? null;
 
   return (
@@ -134,32 +170,85 @@ export default function OpsClinicDetailPage({ params }: { params: Promise<{ clin
           <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">利用指標</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: "予約数",    value: appointmentCount, measured: true },
-              { label: "患者数",    value: patientCount,     measured: true },
-              { label: "メール送信", value: emailSentCount,  measured: emailSentCount !== null },
-              { label: "LINE送信",  value: lineSentCount,   measured: lineSentCount !== null },
+              { label: "患者数",     value: patientCount },
+              { label: "予約数",     value: appointmentCount },
+              { label: "確認済み",   value: confirmedCount },
+              { label: "未確認",     value: unconfirmedCount },
+              { label: "確認率",     value: appointmentCount > 0 ? `${Math.round(confirmedCount / appointmentCount * 100)}%` : "—" },
+              { label: "LINE送信",   value: lineSentCount },
+              { label: "SMS送信",    value: smsSentCount },
+              { label: "メール送信",  value: emailSentCount },
             ].map(s => (
               <div key={s.label} className="text-center border border-gray-100 rounded-xl p-4">
                 <p className="text-xs text-gray-500 mb-1">{s.label}</p>
-                {s.measured
-                  ? <p className="text-2xl font-black text-gray-900">{s.value}</p>
-                  : <p className="text-sm text-gray-300">未計測</p>
-                }
+                <p className="text-2xl font-black text-gray-900">{s.value}</p>
               </div>
             ))}
           </div>
         </div>
 
-        {/* ログイン情報 */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 space-y-3">
-          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">ログイン情報</p>
-          <div className="flex gap-4">
-            <span className="text-sm text-gray-400 w-32 shrink-0">最終ログイン</span>
-            {lastLoginAt
-              ? <span className="text-sm font-bold text-gray-900">{fmt(lastLoginAt)}</span>
-              : <span className="text-sm text-gray-300">未取得</span>
+        {/* テンプレート設定・キャンセルポリシー */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 space-y-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">運用設定</p>
+          <div className="flex gap-4 items-center">
+            <span className="text-sm text-gray-400 w-32 shrink-0">テンプレート</span>
+            {hasTemplates
+              ? <span className="text-sm font-bold text-gray-900">設定あり（{templateChannels.map(c => CHANNEL_LABEL[c] ?? c).join("・")}）</span>
+              : <span className="text-sm text-gray-400">未設定（既定テンプレートを使用）</span>
             }
           </div>
+          <div className="flex gap-4">
+            <span className="text-sm text-gray-400 w-32 shrink-0">キャンセルポリシー</span>
+            {cancellationPolicy
+              ? <span className="text-sm text-gray-800 whitespace-pre-wrap break-words">{cancellationPolicy}</span>
+              : <span className="text-sm text-gray-400">未設定</span>
+            }
+          </div>
+        </div>
+
+        {/* 所属ユーザー */}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">所属ユーザー（{users.length}名）</p>
+          {users.length === 0 ? (
+            <p className="text-sm text-gray-400">ユーザーがいません</p>
+          ) : (
+            <ul className="space-y-2">
+              {users.map(u => (
+                <li key={u.user_id} className="flex items-center justify-between gap-3 text-sm border-b border-gray-50 pb-2 last:border-0">
+                  <span className="font-mono text-xs text-gray-500 break-all">{u.user_id}</span>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 shrink-0">{ROLE_LABEL[u.role] ?? u.role}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* 予約履歴 */}
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">予約履歴（{appointments.length}件）</p>
+          {appointments.length === 0 ? (
+            <p className="text-sm text-gray-400 rounded-2xl border border-dashed border-gray-200 py-8 text-center">予約はありません</p>
+          ) : (
+            <div className="space-y-3">
+              {appointments.map(a => (
+                <div key={a.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${a.confirmedAt ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"}`}>
+                      {a.confirmedAt ? "確認済" : "未確認"}
+                    </span>
+                    <span className="text-xs text-gray-500">{STATUS_LABEL[a.status] ?? a.status}</span>
+                    <span className="text-sm font-bold text-gray-900">{fmt(a.appointmentAt)}</span>
+                    <span className="text-sm text-gray-700 break-words">{a.patientName}</span>
+                    {a.description && <span className="text-xs text-gray-400 break-words">{a.description}</span>}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
+                    <span>患者確認: {a.confirmedAt ? fmt(a.confirmedAt) : "未確認"}</span>
+                    <SentBadges line={a.lineSentAt} sms={a.smsSentAt} email={a.emailSentAt} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

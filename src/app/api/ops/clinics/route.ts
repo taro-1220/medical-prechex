@@ -7,6 +7,9 @@ function isOpsAdmin(email: string): boolean {
   return allowed.includes(email.toLowerCase());
 }
 
+// 患者が確認URLで同意したものを「確認済み」とみなす（consent_at が唯一の確定シグナル）
+const isConfirmed = (consentAt: unknown) => consentAt != null;
+
 export async function GET(req: NextRequest) {
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,58 +20,108 @@ export async function GET(req: NextRequest) {
 
   const sb = getSupabase();
 
-  const clinicsRes    = await sb.from("clinics").select("id, name, slug, phone, email, address, status, created_at").order("created_at", { ascending: false });
-  const apptRes       = await sb.from("appointments").select("clinic_id, appointment_at").not("clinic_id", "is", null);
-  const patientRes    = await sb.from("patients").select("clinic_id").not("clinic_id", "is", null);
-  const onboardingRes = await sb.from("onboarding_progress").select("clinic_id, activated_at"); // TODO: Phase2テーブル。存在しない場合は data=null になりフォールバック
+  const [clinicsRes, apptRes, patientRes, onboardingRes] = await Promise.all([
+    sb.from("clinics").select("id, name, slug, status, created_at").order("created_at", { ascending: false }),
+    sb.from("appointments")
+      .select("clinic_id, appointment_at, status, consent_at, line_sent_at, sms_sent_at, email_sent_at, created_at")
+      .not("clinic_id", "is", null),
+    sb.from("patients").select("clinic_id").not("clinic_id", "is", null),
+    sb.from("onboarding_progress").select("clinic_id, activated_at"),
+  ]);
+
+  if (clinicsRes.error) return NextResponse.json({ error: "internal_error" }, { status: 500 });
+
+  const clinicRows = clinicsRes.data ?? [];
+  const appts = apptRes.data ?? [];
+  const patients = patientRes.data ?? [];
+  const nameById: Record<string, string> = {};
+  for (const c of clinicRows) nameById[c.id as string] = c.name as string;
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
-  const apptCountMap: Record<string, number> = {};
-  let todayAppointments = 0;
-  for (const r of apptRes.data ?? []) {
+  // 医院別集計
+  type Agg = { appt: number; confirmed: number; last: string | null; line: number; sms: number; email: number };
+  const agg: Record<string, Agg> = {};
+  let totalAppointments = 0, confirmedAppointments = 0, todayAppointments = 0;
+  let lineSentCount = 0, smsSentCount = 0, emailSentCount = 0;
+  for (const r of appts) {
     const cid = r.clinic_id as string;
-    apptCountMap[cid] = (apptCountMap[cid] ?? 0) + 1;
-    if ((r.appointment_at as string)?.startsWith(todayStr)) todayAppointments++;
+    const a = agg[cid] ?? { appt: 0, confirmed: 0, last: null, line: 0, sms: 0, email: 0 };
+    a.appt++; totalAppointments++;
+    const at = r.appointment_at as string;
+    if (a.last === null || new Date(at).getTime() > new Date(a.last).getTime()) a.last = at;
+    if (isConfirmed(r.consent_at)) { a.confirmed++; confirmedAppointments++; }
+    if (r.line_sent_at)  { a.line++;  lineSentCount++; }
+    if (r.sms_sent_at)   { a.sms++;   smsSentCount++; }
+    if (r.email_sent_at) { a.email++; emailSentCount++; }
+    if (at?.startsWith(todayStr)) todayAppointments++;
+    agg[cid] = a;
   }
 
   const patientCountMap: Record<string, number> = {};
-  for (const r of patientRes.data ?? []) {
+  for (const r of patients) {
     const cid = r.clinic_id as string;
     patientCountMap[cid] = (patientCountMap[cid] ?? 0) + 1;
   }
 
-  const activatedAtMap: Record<string, string | null> = {};
-  for (const r of onboardingRes.data ?? []) {
-    activatedAtMap[r.clinic_id as string] = r.activated_at as string | null;
-  }
+  const activatedMap: Record<string, string | null> = {};
+  for (const r of onboardingRes.data ?? []) activatedMap[r.clinic_id as string] = r.activated_at as string | null;
 
-  const clinics = (clinicsRes.data ?? []).map(c => ({
-    id:               c.id,
-    name:             c.name,
-    slug:             c.slug,
-    phone:            c.phone,
-    email:            c.email,
-    address:          c.address,
-    status:           c.status,
-    createdAt:        c.created_at,
-    activatedAt:      activatedAtMap[c.id as string] ?? null,
-    appointmentCount: apptCountMap[c.id as string] ?? 0,
-    patientCount:     patientCountMap[c.id as string] ?? 0,
-    emailSentCount:   null, // TODO: implement when email_logs table exists
-    lineSentCount:    null, // TODO: implement when line_logs table exists
-    lastLoginAt:      null, // TODO: implement when clinic_users.last_login_at is added
-  }));
+  const clinics = clinicRows.map(c => {
+    const id = c.id as string;
+    const a = agg[id];
+    return {
+      id,
+      name:              c.name,
+      slug:              c.slug ?? null,
+      status:            c.status,
+      createdAt:         c.created_at,
+      activatedAt:       activatedMap[id] ?? null,
+      appointmentCount:  a?.appt ?? 0,
+      confirmedCount:    a?.confirmed ?? 0,
+      patientCount:      patientCountMap[id] ?? 0,
+      lastAppointmentAt: a?.last ?? null,
+      lineSentCount:     a?.line ?? 0,
+      smsSentCount:      a?.sms ?? 0,
+      emailSentCount:    a?.email ?? 0,
+    };
+  });
 
   const activeClinics = clinics.filter(c => c.activatedAt).length;
+
+  // 直近の予約（PII非露出: 患者名は返さず、医院名・日時・状態のみ）
+  const recentAppointments = [...appts]
+    .sort((x, y) => new Date(y.created_at as string).getTime() - new Date(x.created_at as string).getTime())
+    .slice(0, 8)
+    .map(r => ({
+      clinicName:    nameById[r.clinic_id as string] ?? "—",
+      appointmentAt: r.appointment_at as string,
+      status:        r.status as string,
+      confirmed:     isConfirmed(r.consent_at),
+      createdAt:     r.created_at as string,
+    }));
+
+  const recentClinics = clinicRows.slice(0, 8).map(c => ({
+    id:        c.id,
+    name:      c.name,
+    status:    c.status,
+    createdAt: c.created_at,
+    activated: (activatedMap[c.id as string] ?? null) != null,
+  }));
+
   const summary = {
-    totalClinics:      clinics.length,
+    totalClinics:          clinics.length,
     activeClinics,
-    pendingClinics:    clinics.length - activeClinics,
+    pendingClinics:        clinics.length - activeClinics,
+    totalPatients:         patients.length,
+    totalAppointments,
+    confirmedAppointments,
+    unconfirmedAppointments: totalAppointments - confirmedAppointments,
+    lineSentCount,
+    smsSentCount,
+    emailSentCount,
     todayAppointments,
-    todayEmailSent:    0, // TODO
-    todayLineSent:     0, // TODO
   };
 
-  return NextResponse.json({ summary, clinics });
+  return NextResponse.json({ summary, clinics, recentAppointments, recentClinics });
 }
