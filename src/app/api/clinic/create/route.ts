@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   const { data: clinic, error: cErr } = await getSupabase()
     .from("clinics")
-    .insert({ name: name.trim(), phone: phone || null, email: email || null, address: address || null })
+    .insert({ name: name.trim(), phone: phone ?? "", email: email ?? "", address: address ?? "" })
     .select("id, name, slug, phone, email, address, status, created_at, updated_at")
     .single();
   if (cErr) return NextResponse.json({ error: cErr.message }, { status: 500 });
