@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>まごめの歯科・矯正歯科さま｜ホームページ改善のご提案（A案）</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#0F1B2D;      /* 表紙・見出し帯 */
+    --night-2:#16253B;
+    --paper:#FFFFFF;
+    --stone:#F3F5F7;
+    --ink:#1B1F23;
+    --ink-2:#4B5560;
+    --line:#DDE3E9;
+    --pine:#338189;       /* 改善案側の色（A案と同一トークン） */
+    --mist:#f0f4f5;
+    --sun:#eeb96d;
+    --sun-ink:#915a0b;
+    --sun-hover:#f5c580;
+    --red:#B4453A;
+    --serif:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho","YuMincho",serif;
+    --sans:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+    --w:1080px;
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.9;font-feature-settings:"palt";-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  :focus-visible{outline:3px solid var(--sun);outline-offset:3px;border-radius:4px}
+  .wrap{max-width:var(--w);margin:0 auto;padding:0 24px}
+  h1,h2,h3{font-family:var(--serif);font-weight:600;letter-spacing:.02em;margin:0}
+  .eyebrow{font-size:12px;letter-spacing:.22em;font-weight:700;color:var(--sun)}
+  .num{font-family:var(--serif);font-variant-numeric:tabular-nums}
+  section{padding:88px 0}
+  .sec-head{margin-bottom:40px;max-width:720px}
+  .sec-head h2{font-size:clamp(26px,3vw,34px);line-height:1.45;margin-top:10px}
+  .sec-head p{margin:12px 0 0;color:var(--ink-2);font-size:15px}
+  .btn{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border-radius:999px;font-weight:700;font-size:15px;line-height:1;transition:transform .15s,background .15s;white-space:nowrap}
+  .btn:hover{transform:translateY(-1px)}
+  .btn-sun{background:var(--sun);color:var(--sun-ink)}
+  .btn-sun:hover{background:var(--sun-hover)}
+  .btn-ghost{border:1.5px solid rgba(255,255,255,.55);color:#fff}
+  .btn-ghost:hover{background:rgba(255,255,255,.1)}
+  .btn-line{border:1.5px solid var(--night);color:var(--night)}
+  .btn-line:hover{background:var(--stone)}
+  .btn svg{width:18px;height:18px}
+
+  /* ---------- 表紙 ---------- */
+  .cover{background:radial-gradient(90% 70% at 90% 0%,#22385A 0%,transparent 60%),var(--night);color:#fff;padding:0;overflow:hidden;position:relative}
+  .cover .wrap{min-height:92vh;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding-top:40px;padding-bottom:40px}
+  .cover-top{position:absolute;left:0;right:0;top:0;padding:22px 0;font-size:13px;opacity:.85}
+  .cover-top .wrap{min-height:0;display:flex;flex-wrap:wrap;gap:4px 16px;justify-content:space-between;align-items:center;padding-top:0;padding-bottom:0}
+  .cover h1{font-size:clamp(34px,4.6vw,56px);line-height:1.35;color:#fff}
+  .cover h1 span{display:block;font-size:.5em;letter-spacing:.14em;font-family:var(--sans);font-weight:500;color:rgba(255,255,255,.75);margin-bottom:18px}
+  .cover .lead{margin:22px 0 0;font-size:16px;color:rgba(255,255,255,.8);max-width:520px}
+  .cover .meta{display:flex;gap:28px;margin-top:34px;flex-wrap:wrap;font-size:13px;color:rgba(255,255,255,.7)}
+  .cover .meta b{display:block;color:#fff;font-size:15px;font-family:var(--serif)}
+  .cover .btns{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}
+  .cover-stats{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:var(--r);padding:22px 22px 20px;backdrop-filter:blur(6px)}
+  .stat .v{font-family:var(--serif);font-size:38px;line-height:1;color:#fff}
+  .stat .v small{font-size:16px;opacity:.7;margin-left:4px}
+  .stat .k{margin-top:8px;font-size:13px;color:rgba(255,255,255,.75)}
+  .cover-foot{position:absolute;left:0;right:0;bottom:0;padding:18px 0;font-size:12px;color:rgba(255,255,255,.55)}
+  .cover-foot .wrap{min-height:0;padding-top:0;padding-bottom:0;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+  /* ---------- 4つの発見 ---------- */
+  .findings{background:var(--stone)}
+  .f-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  .f{background:var(--paper);border-radius:var(--r);border:1px solid var(--line);padding:28px 28px 26px;display:grid;grid-template-rows:auto auto 1fr auto;gap:12px}
+  .f .tag{font-size:12px;letter-spacing:.18em;font-weight:700;color:var(--night);display:flex;align-items:center;gap:10px}
+  .f .tag i{width:28px;height:28px;border-radius:8px;background:var(--night);color:#fff;display:grid;place-items:center;font-style:normal;font-family:var(--serif);font-size:14px}
+  .f h3{font-size:21px;line-height:1.5}
+  .f p{margin:0;font-size:14.5px;color:var(--ink-2)}
+  .f .fact{display:flex;gap:18px;flex-wrap:wrap;padding-top:14px;border-top:1px dashed var(--line);font-size:13px}
+  .f .fact b{display:block;font-family:var(--serif);font-size:24px;color:var(--night);line-height:1.1}
+  .f .fact small{color:var(--ink-2)}
+  .f .fix{margin-top:2px;padding:12px 14px;border-radius:10px;background:var(--mist);color:var(--pine);font-size:13.5px;font-weight:700;display:flex;gap:10px;align-items:flex-start}
+  .f .fix svg{flex:none;width:18px;height:18px;margin-top:4px}
+
+  /* ---------- 設計判断の対照表 ---------- */
+  .why table{width:100%;border-collapse:separate;border-spacing:0;font-size:14.5px;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  .why th,.why td{padding:16px 18px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+  .why tr:last-child td{border-bottom:0}
+  .why thead th{background:var(--night);color:#fff;font-weight:700;font-size:13px;letter-spacing:.08em}
+  .why td:first-child{font-weight:700;white-space:nowrap;background:var(--stone);width:150px}
+  .why td.now{color:var(--ink-2)}
+  .why td.now b{color:var(--red);font-weight:700}
+  .why td.next b{color:var(--pine)}
+  .why .src{display:block;font-size:12px;color:var(--ink-2);margin-top:4px}
+
+  /* ---------- 改善イメージ ---------- */
+  .preview{background:var(--night);color:#fff}
+  .preview .sec-head h2{color:#fff}
+  .preview .sec-head p{color:rgba(255,255,255,.75)}
+  .preview .eyebrow{color:var(--sun)}
+  .frame{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 40px 80px -40px rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.15)}
+  .frame .bar{height:40px;background:#E9ECF0;display:flex;align-items:center;gap:8px;padding:0 14px;color:#8A94A0;font-size:12px}
+  .frame .bar i{width:10px;height:10px;border-radius:50%;background:#C9D0D8;display:inline-block}
+  .frame .bar span{margin-left:12px;background:#fff;border-radius:6px;padding:3px 12px;flex:1;max-width:520px;color:#5B6572}
+  .frame iframe{width:100%;height:760px;border:0;display:block;background:#fff}
+  .frame .print-shot{display:none;width:100%;height:auto}
+  .preview-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;align-items:center}
+  .preview-actions p{margin:0;font-size:13px;color:rgba(255,255,255,.65)}
+  .kept{margin-top:56px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .kept div{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:var(--r);padding:20px 22px;font-size:14px}
+  .kept b{display:block;font-family:var(--serif);font-size:16px;margin-bottom:6px;color:#fff}
+  .kept span{color:rgba(255,255,255,.75)}
+
+  /* ---------- 正直に：扱わないこと ---------- */
+  .honest{background:var(--paper)}
+  .h-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  .h-box{border:1px solid var(--line);border-radius:var(--r);padding:26px 28px}
+  .h-box h3{font-family:var(--sans);font-size:16px;font-weight:700;margin-bottom:12px}
+  .h-box ul{margin:0;padding-left:18px;font-size:14.5px;color:var(--ink-2)}
+  .h-box li{margin:6px 0}
+
+  /* ---------- 進め方 ---------- */
+  .steps{background:var(--stone)}
+  .s-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:s}
+  .s{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:26px 24px;position:relative}
+  .s::before{counter-increment:s;content:"0" counter(s);font-family:var(--serif);font-size:34px;color:var(--night);opacity:.25;position:absolute;right:20px;top:14px;line-height:1}
+  .s h3{font-family:var(--sans);font-size:16px;font-weight:700;padding-right:56px}
+  .s p{margin:8px 0 0;font-size:14px;color:var(--ink-2)}
+  .s .t{display:inline-block;margin-top:12px;font-size:12px;letter-spacing:.1em;color:var(--pine);font-weight:700;background:var(--mist);padding:4px 10px;border-radius:999px}
+
+  /* ---------- CTA / footer ---------- */
+  .cta{padding:0 0 88px;background:var(--stone)}
+  .cta-box{background:var(--night);color:#fff;border-radius:22px;padding:52px 56px;display:grid;grid-template-columns:1.2fr 1fr;gap:32px;align-items:center}
+  .cta-box h2{font-size:clamp(24px,2.6vw,32px);color:#fff}
+  .cta-box p{margin:12px 0 0;opacity:.8;font-size:15px}
+  .cta-actions{display:flex;flex-direction:column;gap:12px;align-items:flex-end}
+  footer{padding:32px 0;font-size:12.5px;color:var(--ink-2);border-top:1px solid var(--line)}
+  footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+  @media (max-width:900px){
+    .cover .wrap{grid-template-columns:1fr;min-height:0;padding-top:96px;padding-bottom:80px}
+    .f-grid,.h-grid,.s-grid,.kept{grid-template-columns:1fr}
+    .cta-box{grid-template-columns:1fr;padding:34px 26px}
+    .cta-actions{align-items:flex-start}
+    section{padding:60px 0}
+    .why table,.why thead,.why tbody,.why tr,.why td,.why th{display:block}
+    .why thead{display:none}
+    .why td{border-bottom:0}
+    .why td:first-child{width:auto;background:var(--night);color:#fff;border-radius:10px 10px 0 0;margin-top:14px}
+    .why td.now::before{content:"現状：";font-weight:700;color:var(--red)}
+    .why td.next::before{content:"改善案：";font-weight:700;color:var(--pine)}
+    .why tr{display:block;border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden}
+    .why table{border:0}
+    .frame iframe{height:520px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}html{scroll-behavior:auto}}
+  @media print{
+    .cover .wrap{min-height:0}
+    .frame iframe{display:none}
+    .frame .print-shot{display:block}
+    section,.cover,.cta{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+<!-- 表紙 -->
+<div class="cover" id="top">
+  <div class="cover-top"><div class="wrap"><span>Medipre ／ ホームページ診断と改善のご提案</span><span>2026年8月</span></div></div>
+  <div class="wrap">
+    <div>
+      <p class="eyebrow">PROPOSAL A</p>
+      <h1><span>まごめの歯科・矯正歯科 さま</span>先生ご自身の言葉と設備を、<br>トップページまで連れてくる。</h1>
+      <p class="lead">貴院サイト全31ページを1ページずつ確認し、数え直した事実から組み立てた改善案です。「何を足すか」ではなく、<b>すでに貴院にあるのに、訪問者に届いていないもの</b>を前に出すことに絞りました。</p>
+      <div class="meta">
+        <div><b>対象</b>magomenoshika-clinic.jp 全31ページ</div>
+        <div><b>方法</b>実ページの取得・計数（推測値なし）</div>
+        <div><b>成果物</b>改善イメージ1ページ＋根拠</div>
+      </div>
+      <div class="btns">
+        <a class="btn btn-sun" href="#preview">改善イメージを先に見る</a>
+        <a class="btn btn-ghost" href="#findings">根拠から読む</a>
+      </div>
+    </div>
+    <div class="cover-stats" aria-label="診断の主要数値">
+      <div class="stat"><div class="v num">29<small>/31</small></div><div class="k">ページで canonical が2本重複</div></div><div class="stat"><div class="v num">146<small>/242</small></div><div class="k">画像の alt が空（60%）</div></div><div class="stat"><div class="v num">26<small>/31</small></div><div class="k">ページで説明文が途切れ</div></div><div class="stat"><div class="v num">0<small>件</small></div><div class="k">トップの写真のうち貴院撮影分（30枚すべてテーマ画像）</div></div>
+    </div>
+  </div>
+  <div class="cover-foot"><div class="wrap"><span>本資料の数値は取得時点の実測です。表現・順位・効果を保証するものではありません。</span><span>提案用・非公開</span></div></div>
+</div>
+
+<!-- 発見 -->
+<section class="findings" id="findings">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" style="color:var(--night)">FINDINGS</p>
+      <h2>改善案は、次の発見から逆算しました。</h2>
+      <p>技術的な指摘だけなら他社さまでも出せます。今回はそれに加えて「貴院の強みが、どこで見えなくなっているか」を、ページの中身と公開情報から確認しました。</p>
+    </div>
+    <div class="f-grid">
+      
+      <article class="f">
+        <div class="tag"><i>1</i>強みの所在</div>
+        <h3>院長の経歴と設備は、下層ページにしかない。</h3>
+        <p>「高山健嗣」「馬込小学校」「日本大学歯学部」「高山可奈子」「日本大学松戸歯学部」「日本矯正歯科学会　認定医」「東京矯正歯科学会」「EMSエアフロー」。いずれも貴院サイトに書かれていますが、/about/ と /greeting/ に置かれ、トップページには出てきません。</p>
+        <div class="fact"><div><b class="num">17<span style="font-size:14px">ページ</span></b><small>下層の医院紹介ページ</small></div><div><b class="num">8<span style="font-size:14px">点</span></b><small>実名の設備</small></div></div>
+        <div class="fix">改善案：ヒーロー直下に「衛生と設備」の帯、続けて院長を配置。実名をそのまま使います。</div>
+      </article>
+      
+      <article class="f">
+        <div class="tag"><i>2</i>写真の実態</div>
+        <h3>トップの写真30枚は、すべてテーマ同梱の素材でした。</h3>
+        <p>トップページの画像30枚のうちテーマ由来が30枚、貴院がアップロードした画像は0枚。加えて画像242枚のうち146枚は alt が空です。</p>
+        <div class="fact"><div><b class="num">30/30</b><small>テーマ画像</small></div><div><b class="num">146</b><small>alt が空</small></div></div>
+        <div class="fix">改善案：写真枠を実写前提に切り替え、撮影が難しい枠は写真なしの版にします。alt は院名・場面を含む文で入れます。</div>
+      </article>
+      
+      <article class="f">
+        <div class="tag"><i>3</i>導線と表記</div>
+        <h3>非表示の科目がリンク切れ、説明文が途切れている。</h3>
+        <p>コメントアウトで残っている3科目のリンク先が3つとも404です。説明文（meta description）は26ページで途切れています。</p>
+        <div class="fact"><div><b class="num">3</b><small>404 のリンク</small></div><div><b class="num">26<span style="font-size:14px">/31</span></b><small>説明文が途切れたページ</small></div></div>
+        <div class="fix">改善案：診療案内を「説明＋各ページ導線」のカードに。自由診療カードには内容・費用・期間・リスクへの導線を明記。</div>
+      </article>
+      
+      <article class="f">
+        <div class="tag"><i>4</i>来院前の体験</div>
+        <h3>GBPは説明文が未設定。口コミには「説明」をめぐる評価の差がある。</h3>
+        <p>Googleビジネスプロフィールは説明文が未設定、登録のある属性は2項目。口コミ（4.6・27件のうち5件を確認）。評価の低い口コミ1件には「説明」に関する記述があります。</p>
+        <div class="fact"><div><b class="num">未設定</b><small>GBP説明文</small></div><div><b class="num">5/27</b><small>確認できた口コミ</small></div></div>
+        <div class="fix">改善案：「はじめての方へ」で初診の流れを先に示す。丁寧さを宣言せず、流れで見せます。</div>
+      </article>
+      
+    </div>
+  </div>
+</section>
+
+<!-- なぜこの設計か -->
+<section class="why" id="why">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" style="color:var(--night)">WHY THIS DESIGN</p>
+      <h2>なぜ、このホームページにしたのか。</h2>
+      <p>改善イメージの各要素は、上の発見のいずれかに対応しています。対応関係を先に示します。</p>
+    </div>
+    <table>
+      <thead><tr><th>改善イメージの要素</th><th>現状（実測）</th><th>改善案でこうなる</th></tr></thead>
+      <tbody>
+        <tr><td>ヒーローの見出し</td><td class="now">トップページの h1 にテキストが無い（実測）。キャッチコピー「地元出身の先生による治療と衛生面にこだわった歯医者さん日本矯正歯科学会の認定医も在籍。」は本文中に存在</td><td class="next">「西大井の歯科医院院長は高山健嗣です」を横書き2行の大見出しに。事実3行に絞り、最初の3秒で貴院らしさが伝わる構成<span class="src">出所：発見1</span></td></tr><tr><td>衛生と設備の帯</td><td class="now">設備の実名は下層ページのみ。トップには出てこない</td><td class="next">EMSエアフロー／メディカルライトエアー／位相差顕微鏡／itero(アイテロ)／ミーレジェットウォッシャー を実名のまま帯で提示。誇張はせず、名称と一言の説明だけ<span class="src">出所：発見1</span></td></tr><tr><td>院長・副院長</td><td class="now">経歴は/about/ と /greeting/に文章で存在。トップから経歴が見えない</td><td class="next">出身校・学歴・資格を表形式で。院長の言葉は原文をそのまま引用（要約や創作はしない）<span class="src">出所：発見1</span></td></tr><tr><td>写真の使い方</td><td class="now">トップの写真30枚中30枚がテーマ画像、alt 空 146枚</td><td class="next">写真なしの版に切り替え。素材写真で埋めない<span class="src">出所：発見2</span></td></tr><tr><td>診療案内カード</td><td class="now">科目名の一覧。非表示科目のリンク先が404（3件）</td><td class="next">説明＋各ページ導線のカード。自由診療は「内容・費用・期間・リスク」への導線をカード上に明記<span class="src">出所：発見3</span></td></tr><tr><td>はじめての方へ</td><td class="now">口コミ5件中、評価2以下が1件</td><td class="next">初診の3ステップを明示し、相談時間の調整方法を予約時に伝えられる一文を添える<span class="src">出所：発見4</span></td></tr><tr><td>見えない部分</td><td class="now">canonical重複 29/31、説明文切れ 26/31、構造化データはBreadcrumbListのみ（歯科医院としての情報が0件）</td><td class="next">ページ雛形に canonical 1本・説明文120字以内・Dentist 構造化データを内蔵。デザインと同時に解消<span class="src">出所：技術診断</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 改善イメージ -->
+<section class="preview" id="preview">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">PROPOSAL A — PREVIEW</p>
+      <h2>改善イメージ（A案）</h2>
+      <p>下の画面はそのまま操作できます。写真枠は貴院の実写を前提にしています。文言は貴院サイトに実在する情報のみを使い、比較・最上級の表現は入れていません。</p>
+    </div>
+    <div class="frame">
+      <div class="bar"><i></i><i></i><i></i><span>magomenoshika-clinic.jp ／ 改善イメージ（A案）</span></div>
+      <iframe src="hp-a2c7460471-hp-a.html" title="改善イメージ（A案）" loading="lazy"></iframe>
+      <img class="print-shot" src="hp-a2c7460471-hp-a-hero.png" alt="改善イメージ（A案）">
+    </div>
+    <div class="preview-actions">
+      <a class="btn btn-sun" href="hp-a2c7460471-hp-a.html" target="_blank" rel="noopener">別ウィンドウで全画面表示</a>
+      <p>スマートフォンでも同じURLでご覧いただけます（縦書き見出しは横書きに切り替わります）。</p>
+    </div>
+    <div class="kept">
+      <div><b>残したもの</b><span>院名・電話番号・診療科目の名称・キャッチコピーの主旨。貴院が積み上げてきた情報はそのまま使います。</span></div>
+      <div><b>変えたもの</b><span>情報の順番と見せ方。下層に埋もれていた強みをトップへ、科目一覧を説明付きカードへ。</span></div>
+      <div><b>入れなかったもの</b><span>Google評価の数値表示、他院との比較、「地域No.1」等の表現。医療広告ガイドラインに沿い、患者さま向けページには載せません。</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 正直に -->
+<section class="honest" id="honest">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" style="color:var(--night)">SCOPE</p>
+      <h2>この提案で扱っていること、いないこと。</h2>
+    </div>
+    <div class="h-grid">
+      <div class="h-box">
+        <h3>確認できたこと（実測）</h3>
+        <ul>
+          <li>全31ページのHTMLを取得し、canonical・h1・構造化データ・説明文・画像alt・リンク先を計数</li><li>院長・設備の固有名詞は貴院サイトの原文と一致するもののみ使用</li><li>GBPの登録状況（説明文・写真枚数・属性）と口コミ5件の原文</li><li>電話番号・住所の表記ゆれ：全31ページで0件</li>
+        </ul>
+      </div>
+      <div class="h-box">
+        <h3>まだ確認していないこと</h3>
+        <ul>
+          <li>検索順位・アクセス数・予約数などの実績値（数値は取得できていません）</li><li>口コミ27件のうち22件（取得手段の上限により未確認）</li><li>撮影可能な院内写真の有無と点数（改善イメージの写真枠は仮）</li><li>診療時間・住所の最新値（改善イメージでは現サイトの記載を使用。反映前に確認します）</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 進め方 -->
+<section class="steps" id="steps">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow" style="color:var(--night)">NEXT</p>
+      <h2>ここからの進め方。</h2>
+      <p>まずは30分、画面を見ながら「ここは違う」「ここは残したい」をお聞かせください。修正は無料です。</p>
+    </div>
+    <div class="s-grid">
+      <div class="s"><h3>この改善イメージへのご意見</h3><p>残す・変える・入れないを一緒に決めます。写真の撮影可否もこの時に伺います。</p><span class="t">30分・オンライン可</span></div>
+      <div class="s"><h3>実データでの差し替え</h3><p>診療時間・住所・写真・院長の言葉を確定版に差し替え、スマートフォン表示を確認します。</p><span class="t">1〜2週間</span></div>
+      <div class="s"><h3>公開と見えない部分の修正</h3><p>canonical・説明文・構造化データ・404の整理を同時に反映。GBPの説明文もご一緒に整えます。</p><span class="t">公開後も確認</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="cta">
+  <div class="wrap">
+    <div class="cta-box">
+      <div>
+        <h2>改善イメージを見ながら、お話ししませんか。</h2>
+        <p>ご返信いただければ、候補日を3つお送りします。資料の数値の根拠（取得元ページ）もすべて開示します。</p>
+      </div>
+      <div class="cta-actions">
+        <a class="btn btn-sun" href="mailto:">メールで返信する</a>
+        <a class="btn btn-ghost" href="#preview">改善イメージへ戻る</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span>Medipre — ホームページ診断・改善提案</span>
+    <span>本ページは提案用の非公開URLです。検索エンジンには登録されません。</span>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,337 +1,488 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>まごめの歯科・矯正歯科｜馬込・大森の一般歯科・矯正歯科（日本矯正歯科学会認定医在籍）</title>
-<meta name="description" content="地元馬込出身の院長と、日本矯正歯科学会認定医が在籍する『まごめの歯科・矯正歯科』。クラスB滅菌機など衛生管理を徹底し、一般歯科から矯正歯科まで幅広く対応。馬込銀座バス停より徒歩0分。">
-<meta property="og:type" content="business.business">
-<meta property="og:title" content="見えないところまで、清潔に。｜まごめの歯科・矯正歯科">
-<meta property="og:description" content="地元出身の院長と矯正歯科学会認定医による、衛生管理にこだわった歯科医院。一般歯科・矯正歯科・予防歯科まで対応。">
-<meta property="og:image" content="https://magomenoshika-clinic.jp/wp/wp-content/themes/dental-web_2021/assets/images/page/greeting/img-staff-main_v2@2x.jpg">
+<title>まごめの歯科・矯正歯科｜改善イメージ（A案）</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700&family=Noto+Sans+JP:wght@400;500&display=swap">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":["Dentist","MedicalBusiness"],"name":"まごめの歯科・矯正歯科 馬込 歯医者/インビザライン/セラミック治療","address":{"@type":"PostalAddress","streetAddress":"〒140-0015 東京都品川区西大井４丁目２５−６ 3階 馬込駅 大森駅【歯医者/インビザライン/セラミック治療】"},"telephone":"+81 3-6451-8242","image":"https://magomenoshika-clinic.jp/wp/wp-content/themes/dental-web_2021/assets/images/page/greeting/img-staff-main_v2@2x.jpg"}</script>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --color-primary: #9FC7BF;
-    --color-bg: #FAF8F5;
-    --color-accent: #E3D5B8;
-    --color-text: #333333;
-    --color-border: #cbe1dd;
-    --color-subtle-bg: #f5f9f9;
-    --color-muted-text: #44746a;
-    --color-hover: #78b0a5;
-    --content-width: 1120px;
-    --section-spacing: 64px;
-    --heading-scale: 1.35;
-    --radius: 4px;
-    --radius-sm: 2px;
-    --radius-md: 4px;
-    --radius-lg: 6px;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
-    --shadow-md: 0 6px 16px rgba(0,0,0,.08);
-    --shadow-lg: 0 16px 40px rgba(0,0,0,.12);
-    --font-heading: "Noto Serif JP", serif;
-    --font-body: "Noto Sans JP", sans-serif;
-    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px;
-    --space-7: 40px; --space-8: 48px; --space-9: 64px; --space-10: 80px; --space-11: 96px; --space-12: 128px;
-    --text-xs: 12px; --text-sm: 14px; --text-base: 16px; --text-lg: 18px; --text-xl: 20px; --text-2xl: 24px;
-    --text-3xl: 30px; --text-4xl: 36px; --text-5xl: 48px; --text-6xl: 60px; --text-7xl: 72px;
+  :root{
+    --paper:#FFFFFF;
+    --mist:#f0f4f5;        /* 淡い緑白：セクション背景 */
+    --pine:#338189;        /* 深緑：ブランド主色 */
+    --pine-ink:#1e5a60;
+    --ink:#1B1F23;
+    --ink-2:#4B5560;
+    --line:#D8E2DC;
+    --sun:#eeb96d;         /* 予約CTAのみ */
+    --sun-ink:#915a0b;
+    --sun-hover:#f5c580;   /* CTA hover（ctaを明るく） */
+    --ph-base:#ecf3f4;   /* 写真枠の色面（mist の濃淡2段＋primary の低彩度ティント） */
+    --ph-base-2:#d3e2e4;
+    --ph-glow:#deeced;
+    --ph-shade:#c9dcde;
+    --serif:&quot;Noto Sans JP&quot;,&quot;Hiragino Kaku Gothic ProN&quot;,&quot;Yu Gothic&quot;,&quot;Meiryo&quot;,sans-serif;
+    --sans:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+    --w:1120px;
+    --r:14px;
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: var(--font-body); color: var(--color-text); background: var(--color-bg); line-height: 1.8; letter-spacing: 0.03em; font-size: var(--text-base); }
-  a { color: inherit; }
-  h1, h2, h3, .section-heading { font-family: var(--font-heading); line-height: 1.3; letter-spacing: 0.02em; text-align: left; }
-  .hp-photo { filter: none; border-radius: var(--radius); }
-  /* body-class: card-elevated */
-  .hp-card { background: #fff; border: none; box-shadow: var(--shadow-md); }
-  .hp-card { border-radius: var(--radius); padding: var(--space-5); font-size: var(--text-sm); }
-  .hp-card-icon { display: block; margin-bottom: var(--space-3); color: var(--color-accent); }
-  .hp-card-icon svg { width: 24px; height: 24px; }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.9;font-feature-settings:"palt";-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  img{max-width:100%;display:block}
+  :focus-visible{outline:3px solid var(--sun);outline-offset:3px;border-radius:4px}
+  .wrap{max-width:var(--w);margin:0 auto;padding:0 24px}
+  h1,h2,h3{font-family:var(--serif);font-weight:600;letter-spacing:.02em;margin:0}
+  .eyebrow{font-size:12px;letter-spacing:.22em;color:var(--pine);font-weight:700;text-transform:uppercase}
+  .lead{color:var(--ink-2)}
+  .btn{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border-radius:999px;font-weight:700;font-size:15px;line-height:1;transition:transform .15s ease,background .15s ease,box-shadow .15s ease;white-space:nowrap}
+  .btn:hover{transform:translateY(-1px)}
+  .btn-sun{background:var(--sun);color:var(--sun-ink);box-shadow:0 8px 20px -10px rgba(231,163,62,.9)}
+  .btn-sun:hover{background:var(--sun-hover)}
+  .btn-line{border:1.5px solid var(--pine);color:var(--pine);background:transparent}
+  .btn-line:hover{background:var(--mist)}
+  .btn svg{width:18px;height:18px}
 
-  .hp-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: color-mix(in srgb, var(--color-bg) 92%, #ffffff); border-bottom: 1px solid var(--color-border); position: sticky; top: 0; z-index: 20; flex-wrap: wrap; gap: 12px; }
-  .hp-header .hp-logo { font-weight: 700; font-size: var(--text-lg); font-family: var(--font-heading); }
-  .hp-header-actions { display: flex; align-items: center; gap: var(--space-4); margin-left: auto; }
-  .hp-header-phone { font-size: var(--text-sm); font-weight: 600; color: var(--color-text); text-decoration: none; white-space: nowrap; }
-  .hp-header-cta { display: inline-block; padding: 8px 20px; background: var(--color-accent); color: #fff; border-radius: var(--radius); text-decoration: none; font-weight: 700; font-size: var(--text-sm); white-space: nowrap; }
-  .hp-nav ul { list-style: none; display: flex; gap: 18px; margin: 0; padding: 0; flex-wrap: wrap; }
-  .hp-nav li { font-size: var(--text-sm); }
-  .nav-toggle { display: none; }
-  .nav-toggle-label { display: none; }
+  /* ---------- 写真スロット（本番は photo-pipeline の実写が入る） ---------- */
+  .ph{position:relative;overflow:hidden;background:
+      radial-gradient(120% 90% at 20% 10%,var(--ph-glow) 0%,transparent 60%),
+      radial-gradient(90% 90% at 90% 90%,var(--ph-shade) 0%,transparent 55%),
+      linear-gradient(160deg,var(--ph-base),var(--ph-base-2));}
+  .ph::after{content:attr(data-label);position:absolute;left:14px;bottom:12px;font-size:11px;letter-spacing:.08em;color:var(--pine-ink);background:rgba(255,255,255,.72);padding:4px 9px;border-radius:999px;backdrop-filter:blur(4px)}
+  .ph svg{position:absolute;inset:0;margin:auto;width:44px;height:44px;opacity:.28;color:var(--pine)}
+  .ph:not([data-label])::after{content:none}
 
-  /* ---- eyebrow（英語ラベル） ---- */
-  .section-eyebrow { display: flex; align-items: center; gap: 10px; font-size: var(--text-xs); letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-muted-text); margin: 0 0 8px; font-family: var(--font-body); font-weight: 600; }
-  .section-eyebrow::before { content: ""; display: inline-block; width: 24px; height: 1px; background: currentColor; flex-shrink: 0; }
+  /* ---------- Header ---------- */
+  header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line)}
+  .nav{display:flex;align-items:center;gap:28px;height:72px}
+  .logo{font-family:var(--serif);font-size:20px;font-weight:700;color:var(--pine-ink);letter-spacing:.04em}
+  .logo small{display:block;font-family:var(--sans);font-size:10.5px;letter-spacing:.2em;color:var(--ink-2);font-weight:500;line-height:1.2;margin-top:2px}
+  .menu{display:flex;gap:26px;margin-left:auto;font-size:14.5px;font-weight:500}
+  .menu a{position:relative;padding:6px 0}
+  .menu a::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--pine);transform:scaleX(0);transform-origin:left;transition:transform .2s}
+  .menu a:hover::after{transform:scaleX(1)}
+  .tel{font-family:var(--serif);font-size:20px;font-weight:700;letter-spacing:.04em;color:var(--pine-ink);line-height:1.1}
+  .tel small{display:block;font-family:var(--sans);font-size:10.5px;color:var(--ink-2);font-weight:500;letter-spacing:.14em}
+  .nav .btn{padding:12px 18px;font-size:14px}
 
-  /* ---- ヒーロー5型 ---- */
-  .hp-hero h1 { font-size: 48px; margin: 0 0 18px; word-break: auto-phrase; }
-  .hp-hero p { font-size: var(--text-base); margin: 0 0 28px; text-align: left; }
-  .hp-hero-cta { display: inline-block; padding: 14px 36px; background: var(--color-accent); color: #fff; border-radius: var(--radius); text-decoration: none; font-weight: 700; }
+  /* ---------- Hero ---------- */
+  .hero{position:relative;overflow:hidden;background:var(--paper)}
+  .hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:0;min-height:640px}
+  .hero-copy{display:flex;flex-direction:row;align-items:flex-start;gap:36px;padding:72px 0 64px}
+  .tate{writing-mode:vertical-rl;text-orientation:mixed;font-family:var(--serif);font-size:clamp(34px,4.2vw,50px);font-weight:600;line-height:1.55;letter-spacing:.14em;color:var(--pine-ink);height:520px;margin:0;animation:rise .9s cubic-bezier(.2,.7,.2,1) both}
+  .tate .thin{font-weight:500;color:var(--pine)}
+  .hero-side{padding-top:14px;max-width:360px;animation:rise .9s .15s cubic-bezier(.2,.7,.2,1) both}
+  .hero-side p{margin:14px 0 0;font-size:15.5px;color:var(--ink-2)}
+  .hero-side .btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
+  .hero-facts{display:flex;flex-direction:column;gap:12px;margin-top:34px;padding-top:26px;border-top:1px solid var(--line);font-size:13.5px}
+  .hero-facts li{display:flex;gap:10px;align-items:flex-start;list-style:none}
+  .hero-facts ul{margin:0;padding:0}
+  .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--pine);margin-top:11px}
+  .hero-photo{position:relative;margin:24px 0 24px 0;border-radius:var(--r) 0 0 var(--r);min-height:560px;animation:fade 1.2s ease both}
+  .hero-photo .badge{position:absolute;top:22px;left:22px;background:var(--paper);border-radius:12px;padding:12px 16px;box-shadow:0 12px 30px -14px rgba(18,54,42,.45);font-size:12.5px;line-height:1.5}
+  .hero-photo .badge b{display:block;font-family:var(--serif);font-size:15px;color:var(--pine-ink)}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
 
-  .hero-full-bleed { position: relative; min-height: 72vh; display: flex; align-items: flex-end; color: #fff; background: #1e3a5f; overflow: hidden; }
-  .hero-full-bleed .hero-media-cover { position: absolute; inset: 0; }
-  .hero-full-bleed .hero-media-cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.05), rgba(0,0,0,.55)); }
-  .hero-full-bleed .hero-media-cover img { width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
-  .hero-full-bleed .hero-overlay-content { position: relative; padding: 64px 6vw; max-width: var(--content-width); }
+  /* ---------- 衛生・設備バンド ---------- */
+  .band{background:var(--pine);color:#fff;padding:22px 0}
+  .band .wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  .band .label{font-family:var(--serif);font-size:15px;letter-spacing:.14em;padding-right:22px;border-right:1px solid rgba(255,255,255,.28);white-space:nowrap}
+  .band ul{display:flex;gap:10px 28px;flex-wrap:wrap;margin:0;padding:0;list-style:none;font-size:14px}
+  .band li{display:flex;align-items:center;gap:8px;opacity:.95}
+  .band li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--sun)}
 
-  .hero-split { background: var(--color-bg); }
-  .hero-split-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 5vw; align-items: center; max-width: var(--content-width); margin: 0 auto; padding: calc(var(--section-spacing) * .8) 24px; }
-  .hero-split-right .hero-split-inner { direction: rtl; }
-  .hero-split-right .hero-split-inner > * { direction: ltr; }
-  .hero-split-media img { width: 100%; display: block; object-fit: cover; aspect-ratio: 4/3; }
+  /* ---------- 共通セクション ---------- */
+  section{padding:96px 0}
+  .sec-head{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;margin-bottom:44px}
+  .sec-head h2{font-size:clamp(28px,3vw,36px);line-height:1.4;margin-top:10px}
+  .sec-head p{margin:0;max-width:520px;color:var(--ink-2);font-size:15px}
 
-  .hero-editorial { background: var(--color-bg); }
-  .hero-editorial-inner { max-width: var(--content-width); margin: 0 auto; padding: calc(var(--section-spacing) * 1.1) 24px calc(var(--section-spacing) * .6); }
-  .hero-eyebrow { font-size: var(--text-sm); letter-spacing: .22em; text-transform: uppercase; color: var(--color-accent); margin: 0 0 20px; }
-  .hero-editorial-headline { font-size: 60px; max-width: 22em; margin: 0 0 20px; text-wrap: balance; }
-  .hero-editorial-sub { max-width: 38em; }
-  .hero-editorial-figure { margin: 36px 0 28px 8vw; }
-  .hero-editorial-figure img { width: 100%; display: block; object-fit: cover; aspect-ratio: 21/9; }
+  /* ---------- 院長・副院長 ---------- */
+  .doctors{background:var(--mist)}
+  .doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+  .doc{background:var(--paper);border-radius:var(--r);overflow:hidden;display:grid;grid-template-columns:200px 1fr;border:1px solid var(--line)}
+  .doc .ph{min-height:100%}
+  .doc-body{padding:28px 28px 26px}
+  .doc-body .role{font-size:12px;letter-spacing:.2em;color:var(--pine);font-weight:700}
+  .doc-body h3{font-size:24px;margin-top:6px}
+  .doc-body h3 small{font-family:var(--sans);font-size:12px;color:var(--ink-2);margin-left:10px;letter-spacing:.1em;font-weight:500}
+  .doc-body dl{margin:16px 0 0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px}
+  .doc-body dt{color:var(--ink-2);white-space:nowrap}
+  .doc-body dd{margin:0}
+  .doc-body .quote{margin:18px 0 0;padding:14px 16px;border-left:3px solid var(--pine);background:var(--mist);font-size:14px;color:var(--pine-ink);border-radius:0 8px 8px 0}
+  .doc-body .quote span{display:block;font-size:11.5px;color:var(--ink-2);margin-top:4px}
 
-  .hero-minimal { background: var(--color-bg); text-align: center; }
-  /* 見出しと本文の寄せを必ず揃える（意図的に中央寄せにする唯一の箇所） */
-  .hero-minimal h1, .hero-minimal p { text-align: center; }
-  .hero-minimal-inner { max-width: calc(var(--content-width) * .72); margin: 0 auto; padding: calc(var(--section-spacing) * 1.6) 24px; }
+  /* ---------- 設備 ---------- */
+  .equip-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+  .equip{padding:22px 20px 20px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper);transition:box-shadow .2s,transform .2s}
+  .equip:hover{box-shadow:0 18px 40px -22px rgba(18,54,42,.35);transform:translateY(-2px)}
+  .equip .ico{width:44px;height:44px;border-radius:12px;background:var(--mist);display:grid;place-items:center;color:var(--pine);margin-bottom:14px}
+  .equip .ico svg{width:22px;height:22px}
+  .equip h3{font-family:var(--sans);font-size:15px;font-weight:700;line-height:1.5}
+  .equip p{margin:8px 0 0;font-size:13px;color:var(--ink-2);line-height:1.75}
 
-  /* ---- セクション ---- */
-  .hp-section { padding: var(--section-spacing) 24px; }
-  .hp-section:nth-of-type(even) { background: var(--color-subtle-bg); }
-  .hp-section-inner { max-width: var(--content-width); margin: 0 auto; }
-  .section-heading { font-size: 20px; margin: 0 0 18px; color: var(--color-primary); }
-  .section-body { margin: 0 0 20px; text-align: left; }
+  /* ---------- 診療案内 ---------- */
+  .treat{background:var(--paper)}
+  .treat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .card{border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--paper);display:flex;flex-direction:column;transition:box-shadow .2s,transform .2s}
+  .card:hover{box-shadow:0 18px 40px -22px rgba(18,54,42,.35);transform:translateY(-2px)}
+  .card .ph{aspect-ratio:16/10}
+  .card-body{padding:22px 22px 24px;flex:1;display:flex;flex-direction:column}
+  .card-body h3{font-family:var(--sans);font-size:17px;font-weight:700}
+  .card-body p{margin:8px 0 0;font-size:14px;color:var(--ink-2);flex:1}
+  .card-body a{margin-top:16px;font-size:13.5px;font-weight:700;color:var(--pine);display:inline-flex;gap:6px;align-items:center}
+  .card-body a svg{width:14px;height:14px;transition:transform .15s}
+  .card:hover .card-body a svg{transform:translateX(3px)}
+  .treat-more{margin-top:28px;text-align:center}
+  .treat-more .btn{font-size:14px}
 
-  .component-stats-band .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--space-5); text-align: center; }
-  .stat-cell { padding: var(--space-4) var(--space-2); border-top: 2px solid var(--color-accent); }
-  .stat-cell-text { border-top: 1px solid var(--color-border); font-size: var(--text-sm); color: var(--color-text); display: flex; align-items: center; justify-content: center; }
-  .stat-value { display: block; font-family: var(--font-heading); font-size: 36px; font-weight: 700; line-height: 1.1; color: var(--color-primary); }
-  .stat-label { display: block; font-size: var(--text-xs); margin-top: 8px; color: var(--color-muted-text); }
+  /* ---------- はじめての方へ ---------- */
+  .first{background:var(--mist)}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;counter-reset:step}
+  .step{background:var(--paper);border-radius:var(--r);padding:28px 26px 26px;border:1px solid var(--line);position:relative}
+  .step::before{counter-increment:step;content:"0" counter(step);font-family:var(--serif);font-size:38px;color:var(--pine);opacity:.35;line-height:1;position:absolute;right:22px;top:18px}
+  .step h3{font-family:var(--sans);font-size:17px;font-weight:700;padding-right:60px}
+  .step p{margin:10px 0 0;font-size:14px;color:var(--ink-2)}
+  .first-note{margin-top:28px;display:flex;gap:16px;align-items:flex-start;background:var(--paper);border-radius:var(--r);padding:20px 24px;border:1px dashed var(--line);font-size:14px;color:var(--ink-2)}
+  .first-note b{color:var(--pine-ink)}
+  .first-note svg{flex:none;width:22px;height:22px;color:var(--pine);margin-top:4px}
 
-  .testimonial-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-5); }
-  .testimonial-card { margin: 0; position: relative; font-style: normal; }
-  .testimonial-card::before { content: "“"; display: block; font-family: var(--font-heading); font-size: 34px; line-height: 1; color: var(--color-accent); margin-bottom: 6px; }
+  /* ---------- CTA ---------- */
+  .cta{background:var(--paper);padding:0 0 96px}
+  .cta-box{background:var(--pine);color:#fff;border-radius:22px;padding:56px 56px;display:grid;grid-template-columns:1.2fr 1fr;gap:32px;align-items:center;position:relative;overflow:hidden}
+  .cta-box::before{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border-radius:50%;background:rgba(255,255,255,.06)}
+  .cta-box h2{font-size:clamp(26px,2.8vw,34px);color:#fff}
+  .cta-box p{margin:12px 0 0;opacity:.85;font-size:15px}
+  .cta-actions{display:flex;flex-direction:column;gap:14px;align-items:flex-end}
+  .cta-actions .tel{color:#fff;font-size:30px}
+  .cta-actions .tel small{color:rgba(255,255,255,.7)}
+  .cta-actions .btn-line{border-color:rgba(255,255,255,.55);color:#fff}
+  .cta-actions .btn-line:hover{background:rgba(255,255,255,.1)}
 
-  .component-doctor-profile { display: grid; grid-template-columns: minmax(256px, 42%) 1fr; gap: 40px; align-items: start; }
-  .profile-media img { width: 100%; display: block; object-fit: cover; aspect-ratio: 3/4; }
-  .profile-items { padding-left: 20px; }
+  /* ---------- Footer ---------- */
+  footer{background:var(--pine-ink);color:rgba(255,255,255,.85);padding:56px 0 28px;font-size:14px}
+  .foot-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:40px}
+  footer .logo{color:#fff}
+  footer .logo small{color:rgba(255,255,255,.6)}
+  footer h4{font-family:var(--serif);font-size:15px;margin:0 0 12px;color:#fff;letter-spacing:.1em}
+  footer dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px}
+  footer dt{opacity:.65;white-space:nowrap}
+  footer dd{margin:0}
+  .hours{width:100%;border-collapse:collapse;font-size:13px}
+  .hours th,.hours td{padding:6px 4px;text-align:center;border-bottom:1px solid rgba(255,255,255,.12)}
+  .hours th{opacity:.7;font-weight:500}
+  .copy{margin-top:40px;padding-top:18px;border-top:1px solid rgba(255,255,255,.12);display:flex;justify-content:space-between;font-size:12px;opacity:.65;flex-wrap:wrap;gap:8px}
 
-  .treatment-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-5); }
-  /* cardStyle: outlined の場合、v0のような罫線グリッド（隣接カードで境界線を共有）にする */
-  .treatment-cards.grid-outlined { gap: 1px; background: var(--color-border); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
-  .treatment-cards.grid-outlined .hp-card { border: none; border-radius: 0; background: var(--color-bg); }
-
-  .gallery-strip img { width: 100%; display: block; object-fit: cover; aspect-ratio: 21/9; }
-
-  .component-story-block.story-with-media { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; }
-  .story-media img { width: 100%; display: block; object-fit: cover; aspect-ratio: 4/3; }
-  .story-items { padding-left: 20px; }
-
-  /* ---- フルブリード写真帯 ---- */
-  .hp-section-fullbleed { padding: 0; }
-  .fullbleed-band { position: relative; min-height: 45vh; height: 45vh; max-height: 640px; overflow: hidden; }
-  .fullbleed-band img { width: 100%; height: 100%; display: block; object-fit: cover; border-radius: 0; }
-  .fullbleed-band-caption { position: absolute; left: 0; right: 0; bottom: 0; padding: var(--space-7) 6vw; color: #fff; background: linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.68) 100%); }
-  .fullbleed-band-eyebrow { font-size: var(--text-xs); letter-spacing: 0.18em; text-transform: uppercase; color: #fff; opacity: .85; margin: 0 0 8px; display: flex; align-items: center; gap: 10px; }
-  .fullbleed-band-eyebrow::before { content: ""; display: inline-block; width: 24px; height: 1px; background: currentColor; }
-  .fullbleed-band-heading { font-family: var(--font-heading); font-size: 24px; margin: 0; }
-
-  /* ---- CTA 3型 ---- */
-  .cta-primary { display: inline-block; margin: 8px; padding: 14px 36px; background: var(--color-accent); color: #fff; border-radius: var(--radius); text-decoration: none; font-weight: 700; }
-  .cta-secondary { display: inline-block; margin: 8px; padding: 14px 36px; border: 1px solid currentColor; border-radius: var(--radius); text-decoration: none; }
-  .cta-style-band { padding: calc(var(--section-spacing) * .7) 24px; background: #1e3a5f; color: #fff; text-align: center; }
-  .cta-style-inline { padding: calc(var(--section-spacing) * .5) 24px; text-align: center; }
-  .cta-style-floating { position: fixed; right: 20px; bottom: 20px; z-index: 40; }
-  .cta-style-floating .cta-primary { border-radius: 999px; box-shadow: var(--shadow-lg); margin: 0; }
-
-  .hp-footer { padding: calc(var(--section-spacing) * .5) 24px; background: var(--color-subtle-bg); border-top: 1px solid var(--color-border); font-size: var(--text-xs); }
-  .hp-footer .hp-footer-inner { max-width: var(--content-width); margin: 0 auto; }
-  .hp-footer a { text-decoration: none; color: inherit; }
-
-  .reveal { opacity: 1; transform: none; }
-  .js-anim .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
-  .js-anim .reveal.is-visible { opacity: 1; transform: none; }
-
-  @media (max-width: 640px) {
-    .hp-hero h1 { font-size: 30px; }
-    .hero-editorial-headline { font-size: 36px; }
-    .hero-split-inner { grid-template-columns: 1fr; padding: calc(var(--section-spacing) * .5) 16px; }
-    .hero-full-bleed { min-height: 60vh; }
-    .hero-full-bleed .hero-overlay-content { padding: 40px 20px; }
-    .hero-editorial-figure { margin-left: 0; }
-    .hp-section { padding: calc(var(--section-spacing) * .6) 16px; }
-    .component-doctor-profile { grid-template-columns: 1fr; }
-    .component-story-block.story-with-media { grid-template-columns: 1fr; }
-    .hp-nav:not(.hp-nav-hamburger) ul { justify-content: flex-start; }
-    .nav-toggle-label { display: flex; flex-direction: column; justify-content: center; gap: 4px; width: 28px; height: 22px; cursor: pointer; }
-    .nav-toggle-label span { display: block; height: 2px; background: var(--color-text); border-radius: 2px; }
-    .hp-nav-hamburger { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--color-bg); border-bottom: 1px solid var(--color-border); padding: 8px 24px 16px; z-index: 30; }
-    .hp-nav-hamburger ul { flex-direction: column; gap: 12px; }
-    .nav-toggle:checked ~ .hp-nav-hamburger { display: block; }
-    .hp-header-cta { display: none; }
+  /* ---------- Mobile ---------- */
+  .m-only{display:none}
+  @media (max-width:960px){
+    .menu{display:none}
+    .hero-grid{grid-template-columns:1fr}
+    .hero-copy{flex-direction:column;padding:44px 0 32px;gap:22px}
+    .tate{writing-mode:horizontal-tb;height:auto;font-size:clamp(30px,8vw,40px);line-height:1.45;letter-spacing:.06em}
+    .hero-photo{min-height:340px;margin:0 -24px;border-radius:0}
+    .doc-grid,.treat-grid,.steps,.foot-grid{grid-template-columns:1fr}
+    .doc{grid-template-columns:1fr}
+    .doc .ph{min-height:220px}
+    .equip-grid{grid-template-columns:repeat(2,1fr)}
+    .sec-head{grid-template-columns:1fr}
+    .cta-box{grid-template-columns:1fr;padding:36px 28px}
+    .cta-actions{align-items:flex-start}
+    section{padding:64px 0}
+    .nav .btn span{display:none}
+    .nav .tel small{display:none}
+    .nav .tel{font-size:16px}
+    .m-only{display:flex}
+  }
+  @media (max-width:560px){
+    .equip-grid{grid-template-columns:1fr 1fr}
+    .nav{gap:14px}
+    .nav .tel{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+    html{scroll-behavior:auto}
   }
 </style>
 </head>
-<body data-hero-layout="fullBleed" data-font-pairing="mincho-elegant" data-photo-treatment="natural" data-card-style="elevated">
-<header class="hp-header">
-  <div class="hp-logo">まごめの歯科・矯正歯科 馬込 歯医者/インビザライン/セラミック治療</div>
-  <input type="checkbox" id="nav-toggle" class="nav-toggle">
-<label for="nav-toggle" class="nav-toggle-label" aria-label="メニューを開く">
-  <span></span><span></span><span></span>
-</label>
-<nav class="hp-nav hp-nav-hamburger" data-navigation-style="デスクトップはヘッダー内に横並びのテキストナビ（診療内容／院長紹介／衛生への取り組み／アクセス／予約）を配置し、トップでは透明背景、スクロール後は白背景＋薄いシャドウに切り替える。モバイルはmobile-hamburger方式で全項目をハンバーガーメニューに格納し、開いた際は全画面のリスト表示（1項目1行、余白を広く確保）とする。ハンバーガーメニューとは独立して、画面下部に「電話」「予約」の2ボタンを常時固定表示し、片手操作でもすぐ連絡できる導線を確保する。">
-  <ul><li>診療内容</li><li>院長紹介</li><li>衛生への取り組み</li><li>アクセス</li><li>予約</li></ul>
-</nav>
-  <div class="hp-header-actions"><a class="hp-header-phone" href="tel:+81364518242">03-6451-8242</a><a class="hp-header-cta" href="/reservation">まずは相談してみる</a></div>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <a href="#" class="logo">まごめの歯科・矯正歯科</a>
+    <nav class="menu" aria-label="主要ナビ">
+      <a href="#doctors">院長・副院長</a>
+      <a href="#equip">衛生・設備</a>
+      <a href="#treat">診療案内</a>
+      <a href="#first">はじめての方へ</a>
+      <a href="#access">アクセス</a>
+    </nav>
+    <a class="tel" href="tel:0364518242">03-6451-8242<small>お電話でのご予約</small></a>
+    <a class="btn btn-sun" href="#reserve">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span>WEB予約</span>
+    </a>
+  </div>
 </header>
-<section class="hp-hero hero-full-bleed" data-hero-layout="fullBleed">
-  <div class="hero-media-cover"><img class="hp-photo " src="https://magomenoshika-clinic.jp/wp/wp-content/themes/dental-web_2021/assets/images/page/greeting/img-staff-main_v2@2x.jpg" alt="まごめの歯科・矯正歯科の受付から診療室にかけての明るく清潔な院内風景" loading="eager"></div>
-  <div class="hero-overlay-content">
-    <h1>清潔さは、見えないところにこそ表れる。</h1>
-    <p>馬込生まれの院長と、日本矯正歯科学会認定医による、衛生第一の歯科医療。</p>
-    <a class="hp-hero-cta" href="/reservation">まずは相談してみる</a>
-  </div>
-</section>
-<section class="hp-section reveal" id="concept-introduction">
-  <div class="hp-section-inner" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-8); align-items:stretch;">
-    <div style="border-radius: var(--radius-lg); overflow:hidden; box-shadow: var(--shadow-md);">
-      <img class="hp-photo" src="https://magomenoshika-clinic.jp/wp/wp-content/themes/dental-web_2021/assets/images/page/about/img-view04@2x.jpg" alt="落ち着いた色合いでまとめられた院内の待合スペース" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block; margin:0;">
-    </div>
-    <div style="background: var(--color-subtle-bg); border-left: 4px solid var(--color-accent); border-radius: var(--radius-md); padding: var(--space-6); display:flex; flex-direction:column; justify-content:center; gap: var(--space-4);">
-      <h2 class="section-heading" style="margin:0;">地元・馬込で育った歯科医院が大切にしていること</h2>
-      <p class="section-body" style="margin:0;">地元出身の先生による治療と衛生面にこだわった歯医者さん。日本矯正歯科学会の認定医も在籍。この方針は情緒的なスローガンではなく、院長・副院長の出身と資格、そして院内の設備投資という具体的な事実に基づいています。「みなさんがこの先ずっと安心して通える医院を目指します。」という院長の言葉のとおり、一度の治療で終わらず、この先何年も通い続けられる関係を前提に診療体制を整えています。</p>
-    </div>
-  </div>
-</section>
-<section class="hp-section hp-section-fullbleed reveal" id="hygiene-commitment">
-  <div class="fullbleed-band" style="position:relative;">
-    <img class="hp-photo fullbleed-band-photo" src="https://magomenoshika-clinic.jp/wp/wp-content/themes/dental-web_2021/assets/images/front/top-about@2x.webp" alt="滅菌・衛生管理に使用する医療機器が並ぶ診療室の一角" loading="lazy" style="width:100%; display:block; margin:0;">
-    <div class="fullbleed-band-caption" style="position:absolute; left:0; right:0; bottom:0; background: var(--color-primary); padding: var(--space-5) var(--space-6);">
-      <p class="fullbleed-band-heading" style="margin:0; color: var(--color-bg); text-align:center;">「10年20年経っても時代に合った医院を」</p>
-    </div>
-  </div>
-</section>
-<section class="hp-section reveal" id="equipment-showcase">
-  <div class="hp-section-inner" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-8); align-items:center;">
-    <div style="display:flex; flex-direction:column; gap: var(--space-4);">
-      <h2 class="section-heading" style="margin:0;">衛生管理に用いている設備</h2>
-      <p class="section-body" style="margin:0;">器具の滅菌から口腔内の診断まで、以下の機器を用いて衛生管理と診断精度の両立に取り組んでいます。いずれも院内で実際に使用している機器です。</p>
-    </div>
-    <div style="border: 1px solid var(--color-border); background: var(--color-subtle-bg); border-radius: var(--radius-lg); padding: var(--space-4);">
-      <img class="hp-photo gallery-photo" src="https://magomenoshika-clinic.jp/wp/wp-content/themes/dental-web_2021/assets/images/page/about/img-view07@2x.jpg" alt="位相差顕微鏡やミーレジェットウォッシャーなど衛生管理に用いる医療機器" loading="lazy" style="width:100%; display:block; border-radius: var(--radius-md); margin:0;">
-    </div>
-  </div>
-</section>
-<section class="hp-section reveal" id="doctor-profile">
-  <div class="hp-section-inner" style="display:flex; flex-direction:column; align-items:center; gap: var(--space-6); text-align:center;">
-    <img class="hp-photo profile-photo" src="https://magomenoshika-clinic.jp/wp/wp-content/themes/dental-web_2021/assets/images/page/greeting/img-president@2x.jpg" alt="院長 高山健嗣と副院長 高山可奈子（日本矯正歯科学会認定医）" loading="lazy" style="max-width:420px; width:100%; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); margin:0;">
-    <div style="max-width:720px; display:flex; flex-direction:column; gap: var(--space-3);">
-      <h2 class="section-heading" style="margin:0;">院長・副院長</h2>
-      <p class="section-body" style="margin:0;">一般歯科と矯正歯科、それぞれの専門性を持つ二人が同一医院内で診療にあたっています。矯正治療中に虫歯が見つかった場合も、院内でその場で一般歯科医による判断が可能です。</p>
-    </div>
-    <ul style="list-style:none; margin:0; padding:0; width:100%; display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-5); text-align:left;">
-      <li class="hp-card" style="padding: var(--space-5); border-top: 3px solid var(--color-accent);">高山健嗣（院長）：馬込小学校卒業、日本大学歯学部卒業。</li>
-      <li class="hp-card" style="padding: var(--space-5); border-top: 3px solid var(--color-accent);">高山可奈子（副院長）：日本大学松戸歯学部卒業。日本矯正歯科学会 認定医（2017年）、東京矯正歯科学会所属。</li>
-    </ul>
-  </div>
-</section>
-<section class="hp-section reveal" id="one-stop-collaboration">
-  <div class="hp-section-inner" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-8); align-items:center;">
-    <div style="background: var(--color-subtle-bg); border-radius: var(--radius-lg); padding: var(--space-6); box-shadow: var(--shadow-sm); display:flex; flex-direction:column; gap: var(--space-4);">
-      <h2 class="section-heading" style="margin:0;">一般歯科治療と矯正歯科治療。専門性の高い分野を当院だけで連携できる</h2>
-      <p class="section-body" style="margin:0;">矯正専門のクリニックでは虫歯の治療はできず、別の歯医者さんで治してもらうように言われてしまうことがほとんどです。矯正治療中に虫歯ができてしまったとしても当院ではその場ですぐ一般歯科医による判断が可能なのでそのために他の歯医者さんへ行く必要がありません。当院だけでワンストップで治療を終えることができます。</p>
-    </div>
-    <div style="border-radius: var(--radius-lg); overflow:hidden;">
-      <img class="hp-photo" src="https://magomenoshika-clinic.jp/wp/wp-content/themes/dental-web_2021/assets/images/page/about/img-view09@2x.jpg" alt="一般歯科の診療風景、治療台と診療器具" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block; margin:0;">
-    </div>
-  </div>
-</section>
-<section class="hp-section reveal" id="family-friendly-space">
-  <div class="hp-section-inner" style="display:flex; flex-direction:column; gap: var(--space-6);">
-    <div style="border-radius: var(--radius-lg); overflow:hidden; box-shadow: var(--shadow-md);">
-      <img class="hp-photo" src="https://magomenoshika-clinic.jp/wp/wp-content/themes/dental-web_2021/assets/images/page/about/img-view10@2x.jpg" alt="ベビーカーでも入れる広さを確保した診療室内" loading="lazy" style="width:100%; max-height:480px; object-fit:cover; display:block; margin:0;">
-    </div>
-    <div style="max-width:720px; margin:0 auto; text-align:center; display:flex; flex-direction:column; gap: var(--space-3);">
-      <h2 class="section-heading" style="margin:0;">小さなお子さんが一緒でも、安心して治療を受けられる空間を目指して</h2>
-      <p class="section-body" style="margin:0;">当院では診療室も広めなのでベビーカーを横付けして診療を受けることもでき、パパ・ママが治療中の際にはお子さんはキッズルームでアニメを見て待ってもらうなども可能です。そのため院内は待合室や通路も広めに設計しておりますので安心してご来院ください。</p>
-    </div>
-  </div>
-</section>
-<section class="hp-section reveal" id="treatment-menu">
-  <div class="hp-section-inner">
-    <div style="display:flex; flex-wrap:wrap; gap: var(--space-6); align-items:flex-end; margin-bottom: var(--space-7);">
-      <h2 class="section-heading" style="margin:0; flex:1 1 240px;">診療内容</h2>
-      <p class="section-body" style="margin:0; flex:2 1 320px;">一般歯科から矯正歯科まで、以下の診療をすべて院内で受けていただけます。虫歯治療や予防などの基本的な診療をまず整え、矯正治療や小児の診療、入れ歯・補綴といった専門性の高い治療まで、通院先を分ける必要がない体制です。</p>
-    </div>
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-4);">
-      <div class="treatment-card hp-card"><span class="hp-card-icon"><svg class="hp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c-2.2 0-3.8 1.1-4.6 1.1-.9 0-1.9-.6-2.9-.2-1.4.6-1.5 2.6-1 4.8.5 2.3 1.3 4.9 2 7 .4 1.2 1.1 2.3 2.1 2.3.9 0 1-1.1 1.3-2.5.3-1.3.6-2.5 1.1-2.5s.8 1.2 1.1 2.5c.3 1.4.4 2.5 1.3 2.5 1 0 1.7-1.1 2.1-2.3.7-2.1 1.5-4.7 2-7 .5-2.2.4-4.2-1-4.8-1-.4-2 .2-2.9.2-.8 0-2.4-1.1-4.6-1.1Z"/></svg></span><span class="hp-card-text">一般歯科</span></div>
-      <div class="treatment-card hp-card"><span class="hp-card-icon"><svg class="hp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c-2.2 0-3.8 1.1-4.6 1.1-.9 0-1.9-.6-2.9-.2-1.4.6-1.5 2.6-1 4.8.5 2.3 1.3 4.9 2 7 .4 1.2 1.1 2.3 2.1 2.3.9 0 1-1.1 1.3-2.5.3-1.3.6-2.5 1.1-2.5s.8 1.2 1.1 2.5c.3 1.4.4 2.5 1.3 2.5 1 0 1.7-1.1 2.1-2.3.7-2.1 1.5-4.7 2-7 .5-2.2.4-4.2-1-4.8-1-.4-2 .2-2.9.2-.8 0-2.4-1.1-4.6-1.1Z"/></svg></span><span class="hp-card-text">歯周病</span></div>
-      <div class="treatment-card hp-card"><span class="hp-card-text">予防・定期健診</span></div>
-      <div class="treatment-card hp-card"><span class="hp-card-text">PMTC</span></div>
-      <div class="treatment-card hp-card"><span class="hp-card-icon"><svg class="hp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c-2.2 0-3.8 1.1-4.6 1.1-.9 0-1.9-.6-2.9-.2-1.4.6-1.5 2.6-1 4.8.5 2.3 1.3 4.9 2 7 .4 1.2 1.1 2.3 2.1 2.3.9 0 1-1.1 1.3-2.5.3-1.3.6-2.5 1.1-2.5s.8 1.2 1.1 2.5c.3 1.4.4 2.5 1.3 2.5 1 0 1.7-1.1 2.1-2.3.7-2.1 1.5-4.7 2-7 .5-2.2.4-4.2-1-4.8-1-.4-2 .2-2.9.2-.8 0-2.4-1.1-4.6-1.1Z"/></svg></span><span class="hp-card-text">矯正歯科</span></div>
-      <div class="treatment-card hp-card"><span class="hp-card-icon"><svg class="hp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c-2.2 0-3.8 1.1-4.6 1.1-.9 0-1.9-.6-2.9-.2-1.4.6-1.5 2.6-1 4.8.5 2.3 1.3 4.9 2 7 .4 1.2 1.1 2.3 2.1 2.3.9 0 1-1.1 1.3-2.5.3-1.3.6-2.5 1.1-2.5s.8 1.2 1.1 2.5c.3 1.4.4 2.5 1.3 2.5 1 0 1.7-1.1 2.1-2.3.7-2.1 1.5-4.7 2-7 .5-2.2.4-4.2-1-4.8-1-.4-2 .2-2.9.2-.8 0-2.4-1.1-4.6-1.1Z"/></svg></span><span class="hp-card-text">小児歯科</span></div>
-      <div class="treatment-card hp-card"><span class="hp-card-text">親知らず</span></div>
-      <div class="treatment-card hp-card"><span class="hp-card-icon"><svg class="hp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c-2.2 0-3.8 1.1-4.6 1.1-.9 0-1.9-.6-2.9-.2-1.4.6-1.5 2.6-1 4.8.5 2.3 1.3 4.9 2 7 .4 1.2 1.1 2.3 2.1 2.3.9 0 1-1.1 1.3-2.5.3-1.3.6-2.5 1.1-2.5s.8 1.2 1.1 2.5c.3 1.4.4 2.5 1.3 2.5 1 0 1.7-1.1 2.1-2.3.7-2.1 1.5-4.7 2-7 .5-2.2.4-4.2-1-4.8-1-.4-2 .2-2.9.2-.8 0-2.4-1.1-4.6-1.1Z"/></svg></span><span class="hp-card-text">入れ歯治療</span></div>
-      <div class="treatment-card hp-card"><span class="hp-card-text">補綴治療</span></div>
-      <div class="treatment-card hp-card"><span class="hp-card-text">メタルフリー治療</span></div>
-      <div class="treatment-card hp-card"><span class="hp-card-text">ホワイトニング</span></div>
-      <div class="treatment-card hp-card"><span class="hp-card-text">保険外治療</span></div>
-    </div>
-  </div>
-</section>
-<section class="hp-section reveal" id="hours-access">
-  <div class="hp-section-inner" style="display:flex; flex-direction:column; gap: var(--space-6);">
-    <div style="max-width:760px;">
-      <h2 class="section-heading" style="margin:0 0 var(--space-3) 0;">診療時間・アクセス</h2>
-      <p class="section-body" style="margin:0;">診療時間は9:30〜12:30、14:30〜18:30（月・火・水・金・土）で、土曜午後のみ13:30〜16:30となります。木曜日・日曜日・祝祭日は休診です。最寄りは馬込銀座バス停より徒歩0分、馬込駅からは徒歩10分、大森駅からは徒歩11分です。所在地は東京都品川区西大井4-25-6 PRELUDE-M3階です。</p>
-    </div>
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-6); align-items:start;">
-      <div style="border-radius: var(--radius-lg); overflow:hidden;">
-        <img class="hp-photo" src="https://magomenoshika-clinic.jp/wp/wp-content/themes/dental-web_2021/assets/images/page/about/img-view03@2x.jpg" alt="医院入口付近の内観、案内表示のある通路" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block; margin:0;">
+
+<main>
+  <!-- ヒーロー：地元性＋衛生を一枚で -->
+  <div class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy" style="flex-direction:column;gap:22px">
+        <h1 class="tate" style="writing-mode:horizontal-tb;height:auto;line-height:1.45;letter-spacing:.06em">西大井の歯科医院<span class="thin">院長は高山健嗣です</span></h1>
+        <div class="hero-side">
+          <p class="eyebrow">まごめの歯科・矯正歯科</p>
+          <p>地元出身の先生による治療と衛生面にこだわった歯医者さん日本矯正歯科学会の認定医も在籍。</p>
+          <div class="btns">
+            <a class="btn btn-sun" href="#reserve">WEB予約へ</a>
+            <a class="btn btn-line" href="#first">はじめての方へ</a>
+          </div>
+          <div class="hero-facts">
+            <ul>
+              <li><span class="dot"></span><span>院長：馬込小学校・日本大学歯学部</span></li><li><span class="dot"></span><span>副院長：日本矯正歯科学会　認定医（2017年年）・東京矯正歯科学会</span></li><li><span class="dot"></span><span>設備：EMSエアフロー・メディカルライトエアー・位相差顕微鏡</span></li>
+            </ul>
+          </div>
+        </div>
       </div>
-      <ul style="list-style:none; margin:0; padding:0; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-3);">
-        <li class="hp-card" style="padding: var(--space-4);">診療時間：9:30〜12:30／14:30〜18:30（月・火・水・金・土）</li>
-        <li class="hp-card" style="padding: var(--space-4);">土曜午後：13:30〜16:30</li>
-        <li class="hp-card" style="padding: var(--space-4);">休診日：木曜日・日曜日・祝祭日</li>
-        <li class="hp-card" style="padding: var(--space-4);">所在地：東京都品川区西大井4-25-6 PRELUDE-M3階</li>
-        <li class="hp-card" style="padding: var(--space-4);">電話：03-6451-8242</li>
-        <li class="hp-card" style="padding: var(--space-4);">アクセス：馬込銀座バス停より徒歩0分／馬込駅から徒歩10分／大森駅から徒歩11分</li>
+      <div class="hero-photo ph" style="">
+        
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- 衛生・設備バンド：実名を実名のまま -->
+  <div class="band" aria-label="院内の衛生・設備">
+    <div class="wrap">
+      <span class="label">衛生と設備</span>
+      <ul>
+        <li>EMSエアフロー</li><li>メディカルライトエアー</li><li>位相差顕微鏡</li><li>itero(アイテロ)</li><li>ミーレジェットウォッシャー</li><li>クラスB滅菌機</li><li>口腔外バキューム</li><li>口腔内小型カメラ</li>
       </ul>
     </div>
   </div>
-</section>
-<section class="hp-section reveal" id="reservation-cta">
-  <div class="hp-section-inner" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-8); align-items:center;">
-    <div style="border-radius: var(--radius-lg); overflow:hidden;">
-      <img class="hp-photo" src="https://magomenoshika-clinic.jp/wp/wp-content/themes/dental-web_2021/assets/images/page/about/img-view08@2x.jpg" alt="まごめの歯科・矯正歯科 馬込 歯医者/インビザライン/セラミック治療の院内の写真" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block; margin:0;">
+  
+
+  
+  <!-- 院長・副院長 -->
+  <section class="doctors" id="doctors">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="eyebrow">DOCTORS</p>
+          <h2>院長・副院長</h2>
+        </div>
+      </div>
+      <div class="doc-grid" style="">
+        
+        <article class="doc">
+          <div class="ph" style=""></div>
+          <div class="doc-body">
+            <p class="role">院長</p>
+            <h3>高山健嗣</h3>
+            <dl>
+              <dt>出身</dt><dd>馬込小学校</dd><dt>学歴</dt><dd>日本大学歯学部</dd>
+            </dl>
+            <p class="quote">「みなさまが安心して通える医院を目指します。」<span>院長の言葉</span></p>
+          </div>
+        </article>
+        
+        <article class="doc">
+          <div class="ph" style=""></div>
+          <div class="doc-body">
+            <p class="role">副院長</p>
+            <h3>高山可奈子</h3>
+            <dl>
+              <dt>学歴</dt><dd>日本大学松戸歯学部</dd><dt>資格</dt><dd>日本矯正歯科学会　認定医（2017年年）</dd><dt>資格</dt><dd>東京矯正歯科学会</dd>
+            </dl>
+            
+          </div>
+        </article>
+        
+      </div>
     </div>
-    <div style="display:flex; flex-direction:column; gap: var(--space-4);">
-      <h2 class="section-heading" style="margin:0;">まずは相談してみる</h2>
-      <p class="section-body" style="margin:0;">虫歯の治療から矯正のご相談まで、電話またはWeb予約からお申し込みいただけます。矯正治療をご検討の方は、iteroを用いた検査を含む矯正相談から始めていただくことも可能です。院内で一般歯科と矯正歯科の両方に対応できるため、通院先を分ける必要はありません。</p>
-      <ul style="list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap: var(--space-3);">
-        <li style="background: var(--color-primary); color: var(--color-bg); padding: var(--space-3) var(--space-5); border-radius: var(--radius-lg);">電話予約：03-6451-8242</li>
-        <li style="background: var(--color-primary); color: var(--color-bg); padding: var(--space-3) var(--space-5); border-radius: var(--radius-lg);">Web予約はこちら</li>
-        <li style="background: var(--color-accent); color: var(--color-bg); padding: var(--space-3) var(--space-5); border-radius: var(--radius-lg);">矯正相談はこちら</li>
-      </ul>
+  </section>
+  
+
+  
+  <!-- 衛生・設備 詳細 -->
+  <section id="equip">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="eyebrow">HYGIENE &amp; EQUIPMENT</p>
+          <h2>院内の衛生と設備</h2>
+        </div>
+        <p>当院が実際に使っている設備を、そのままの名前でご紹介します。</p>
+      </div>
+      <div class="equip-grid" style="">
+        
+        <div class="equip">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <h3>EMSエアフロー</h3><p>微細なパウダーで歯の表面の汚れを落とすクリーニング機器です。</p>
+        </div>
+        
+        <div class="equip">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <h3>メディカルライトエアー</h3>
+        </div>
+        
+        <div class="equip">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <h3>位相差顕微鏡</h3><p>お口の中の細菌の状態を拡大して確認する顕微鏡です。</p>
+        </div>
+        
+        <div class="equip">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <h3>itero(アイテロ)</h3><p>お口の中をスキャンして立体的なデータにする機器です。</p>
+        </div>
+        
+        <div class="equip">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <h3>ミーレジェットウォッシャー</h3><p>治療器具を洗浄・消毒する機器です。</p>
+        </div>
+        
+        <div class="equip">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <h3>クラスB滅菌機</h3><p>治療器具を高圧蒸気で滅菌する機器です。</p>
+        </div>
+        
+        <div class="equip">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <h3>口腔外バキューム</h3><p>治療中に出る飛沫や粉じんをお口の外側で吸引します。</p>
+        </div>
+        
+        <div class="equip">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <h3>口腔内小型カメラ</h3><p>お口の中を撮影して画面でお見せするカメラです。</p>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+  
+
+  
+  <!-- 診療案内：チップではなく写真＋説明 -->
+  <section class="treat" id="treat">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="eyebrow">TREATMENTS</p>
+          <h2>診療案内</h2>
+        </div>
+        <p>詳しくは各診療ページをご覧ください。</p>
+      </div>
+      <div class="treat-grid">
+        
+        <article class="card"><div class="ph" style=""></div>
+          <div class="card-body"><h3>一般歯科</h3><p>一般歯科とは、小児歯科や矯正歯科、口腔外科など特殊な歯の治療以外の通常の患者さんが通院した際に受ける歯科治療（虫歯や歯周病の治療など）のことです。</p><a href="https://magomenoshika-clinic.jp/information/general/">詳しく見る <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg></a></div></article>
+        
+        <article class="card"><div class="ph" style=""></div>
+          <div class="card-body"><h3>歯周病</h3><a href="https://magomenoshika-clinic.jp/information/periodontal/">詳しく見る <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg></a></div></article>
+        
+        <article class="card"><div class="ph" style=""></div>
+          <div class="card-body"><h3>ホワイトニング</h3><p>ホワイトニングとは、ホワイトニング剤を歯の表面に塗って色素を落としたり、歯の中にある色素を分解して歯を明るくし、歯を白くすることです。</p><p>自由診療です。内容・費用・期間・リスクのご案内へ。</p><a href="https://magomenoshika-clinic.jp/information/whitening/">詳しく見る <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg></a></div></article>
+        
+        <article class="card"><div class="ph" style=""></div>
+          <div class="card-body"><h3>予防・定期健診</h3><p>予防・定期健診は虫歯や歯周病など、歯のトラブルが起きるのを未然に防ぎ、歯の健康を保つためのものです。</p><a href="https://magomenoshika-clinic.jp/information/prevention/">詳しく見る <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg></a></div></article>
+        
+        <article class="card"><div class="ph" style=""></div>
+          <div class="card-body"><h3>矯正歯科</h3><p>歯列矯正は、一般的に歯並びのゆがみを矯正する治療のことです。</p><p>自由診療です。内容・費用・期間・リスクのご案内へ。</p><a href="https://magomenoshika-clinic.jp/information/correction/">詳しく見る <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg></a></div></article>
+        
+        <article class="card"><div class="ph" style=""></div>
+          <div class="card-body"><h3>PMTC</h3><a href="https://magomenoshika-clinic.jp/information/pmtc/">詳しく見る <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg></a></div></article>
+        
+      </div>
+      <div class="treat-more"><a class="btn btn-line" href="https://magomenoshika-clinic.jp/">診療案内をすべて見る（12科目）</a></div>
+    </div>
+  </section>
+  
+
+  <!-- はじめての方へ：説明の「体験差」に構造で答える -->
+  <section class="first" id="first">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="eyebrow">FOR FIRST VISIT</p>
+          <h2>はじめての方へ、当院の進め方。</h2>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step"><h3>問診とご相談</h3></div>
+        <div class="step"><h3>検査と説明</h3></div>
+        <div class="step"><h3>治療計画と費用の見通し</h3></div>
+      </div>
+      
+      <div class="first-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+        <div><b>ご予約時間について。</b>ご質問が多くなりそうな場合は、ご予約の際にその旨をお伝えください。ご相談のお時間を調整します。</div>
+      </div>
+      
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta" id="reserve">
+    <div class="wrap">
+      <div class="cta-box">
+        <div>
+          <h2>ご予約・ご相談はこちらから。</h2>
+        </div>
+        <div class="cta-actions">
+          <a class="tel" href="tel:0364518242">03-6451-8242<small>受付時間は診療時間内</small></a>
+          <a class="btn btn-sun" href="#">WEB予約へ進む</a>
+          <a class="btn btn-line" href="#access">アクセスを見る</a>
+        </div>
+      </div>
     </div>
   </div>
-</section>
-<div class="hp-cta cta-style-band"><a class="cta-primary" href="/reservation">まずは相談してみる</a><a class="cta-secondary" href="/orthodontics#consultation">矯正相談はこちら</a></div>
-<footer class="hp-footer">
-  <div class="hp-footer-inner">
-    <p>まごめの歯科・矯正歯科 馬込 歯医者/インビザライン/セラミック治療 ｜ 〒140-0015 東京都品川区西大井４丁目２５−６ 3階 馬込駅 大森駅【歯医者/インビザライン/セラミック治療】 ｜ <a href="tel:+81364518242">+81 3-6451-8242</a></p>
+</main>
+
+<footer id="access">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <p class="logo">まごめの歯科・矯正歯科</p>
+        <dl style="margin-top:18px">
+          <dt>所在地</dt><dd>〒140-0015東京都品川区西大井4-25-6PRELUDE-M3階</dd>
+          <dt>電話</dt><dd><a href="tel:0364518242">03-6451-8242</a></dd>
+          <dt>アクセス</dt><dd>最寄りバス停：馬込銀座バス停より徒歩0分（バスでお越しの方）馬込駅から徒歩10分、大森駅から徒歩11分（JRでお越しの方）</dd>
+        </dl>
+      </div>
+      <div>
+        <h4>診療時間</h4>
+        
+        <table class="hours">
+          <thead><tr><th></th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th><th>日</th></tr></thead>
+          <tbody>
+            <tr><td>午前</td><td>●</td><td>●</td><td>●</td><td>—</td><td>●</td><td>●</td><td>—</td></tr><tr><td>午後</td><td>●</td><td>●</td><td>●</td><td>—</td><td>●</td><td>●</td><td>—</td></tr>
+          </tbody>
+        </table>
+        
+        
+        <p style="font-size:12px;opacity:.65;margin:8px 0 0">休診日：木曜日・日曜日・祝祭日</p>
+      </div>
+      <div>
+        <h4>ページ</h4>
+        <dl>
+          <dt>院長・副院長</dt><dd><a href="#doctors">ご挨拶・経歴</a></dd>
+          <dt>衛生・設備</dt><dd><a href="#equip">院内の取り組み</a></dd>
+          <dt>診療案内</dt><dd><a href="#treat">12科目</a></dd>
+          <dt>はじめての方</dt><dd><a href="#first">初診の流れ</a></dd>
+        </dl>
+      </div>
+    </div>
+    <div class="copy">
+      <span>© まごめの歯科・矯正歯科</span>
+      <span>改善イメージ（A案）／このページは提案用のモックです</span>
+    </div>
   </div>
 </footer>
-<script>
-document.documentElement.classList.add("js-anim");
-var io = new IntersectionObserver(function (entries) {
-  entries.forEach(function (e) { if (e.isIntersecting) e.target.classList.add("is-visible"); });
-}, { threshold: 0.1, rootMargin: "0px 0px -10% 0px" });
-document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
-setTimeout(function () {
-  document.querySelectorAll(".reveal:not(.is-visible)").forEach(function (el) { el.classList.add("is-visible"); });
-}, 800);
-</script>
+
 </body>
 </html>
