@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Appointment } from "@/lib/types";
 
+const TREATMENT_CATEGORY_LABEL: Record<string, string> = { private: "自由診療", insurance: "保険診療" };
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("ja-JP", {
     year: "numeric", month: "long", day: "numeric",
@@ -18,6 +20,7 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
   const [consented, setConsented] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [policyOpen, setPolicyOpen] = useState(false);
+  const [cancelPolicyConsented, setCancelPolicyConsented] = useState(false);
 
   useEffect(() => {
     params.then(({ token: t }) => setToken(t));
@@ -43,8 +46,11 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
       .catch(() => setError("読み込みに失敗しました"));
   }, [token, router]);
 
+  const cancelPolicyApplied = appt?.cancelPolicyApplied ?? false;
+  const canConfirm = consented && (!cancelPolicyApplied || cancelPolicyConsented);
+
   const handleConfirm = async () => {
-    if (!token || !consented) return;
+    if (!token || !canConfirm) return;
     setSubmitting(true);
     const res = await fetch(`/api/appointments/${token}/confirm`, { method: "POST" });
     if (res.ok) {
@@ -102,6 +108,32 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
           </div>
         </div>
 
+        {/* キャンセルについて（適用ありの場合のみ描画。無い場合は「対象外」表示すら出さない） */}
+        {cancelPolicyApplied && (
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">キャンセルについて</p>
+            <p className="text-sm text-gray-700 leading-relaxed">
+              このご予約は〔{TREATMENT_CATEGORY_LABEL[appt.treatmentCategory] ?? appt.treatmentCategory}〕のため、
+              {appt.clinicName}のキャンセルポリシーが適用されます
+            </p>
+            <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-xl px-4 py-3">
+              {appt.cancelPolicySnapshot}
+            </p>
+            {appt.cancelPolicyShowBasisToPatient && appt.cancelPolicyBasisNote && (
+              <p className="text-xs text-gray-500 leading-relaxed">{appt.cancelPolicyBasisNote}</p>
+            )}
+            <label className="flex items-start gap-3 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                checked={cancelPolicyConsented}
+                onChange={(e) => setCancelPolicyConsented(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded accent-teal-600 shrink-0"
+              />
+              <span className="text-sm text-gray-700 leading-relaxed">上記を確認し、同意します</span>
+            </label>
+          </div>
+        )}
+
         {/* 同意 */}
         <label className="flex items-start gap-3 cursor-pointer">
           <input
@@ -132,7 +164,7 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
         {/* CTA */}
         <button
           onClick={handleConfirm}
-          disabled={!consented || submitting}
+          disabled={!canConfirm || submitting}
           className="w-full py-4 rounded-2xl bg-teal-600 text-white font-bold text-base hover:bg-teal-700 transition disabled:opacity-30 disabled:cursor-not-allowed"
         >
           {submitting ? "確認中..." : "予約内容を確認して確定"}

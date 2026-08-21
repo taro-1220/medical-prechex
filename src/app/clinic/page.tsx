@@ -230,6 +230,18 @@ export default function ClinicPage() {
                         </span>
                       );
                     })()}
+                    {a.cancelPolicyApplied ? (
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${a.cancelPolicyAgreedAt ? "bg-teal-100 text-teal-700" : "bg-yellow-100 text-yellow-700"}`}>
+                        {a.cancelPolicyAgreedAt ? `ポリシー同意済 ✓（${formatDate(a.cancelPolicyAgreedAt)}）` : "ポリシー未同意"}
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-400">ポリシー対象外</span>
+                    )}
+                    {a.cancelRequestedAt && (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                        ⚠ キャンセル申出あり（{formatDate(a.cancelRequestedAt)}）
+                      </span>
+                    )}
                     <span className="text-gray-400 text-xs">{formatDate(a.appointmentAt)}</span>
                     <span className="text-gray-300 text-xs font-mono">#{a.id.slice(0, 8)}</span>
                   </div>

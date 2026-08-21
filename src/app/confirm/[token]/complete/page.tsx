@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { Appointment } from "@/lib/types";
+import { maskPatientName, buildIcsContent } from "@/lib/ticket";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("ja-JP", {
@@ -15,6 +16,9 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
   const [token, setToken] = useState<string | null>(null);
   const [appt, setAppt] = useState<Appointment | null>(null);
   const [errorType, setErrorType] = useState<ErrorType | null>(null);
+  const [policyModalOpen, setPolicyModalOpen] = useState(false);
+  const [cancelRequesting, setCancelRequesting] = useState(false);
+  const [cancelRequested, setCancelRequested] = useState(false);
 
   useEffect(() => {
     params.then(({ token: t }) => setToken(t));
@@ -103,6 +107,39 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
 
   const qrData = encodeURIComponent(`${window.location.origin}/confirm/${appt.token}/complete`);
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=236x236&data=${qrData}&bgcolor=ffffff&color=0f766e&margin=16`;
+  const ticketUrl = `${window.location.origin}/confirm/${appt.token}/complete`;
+  const alreadyRequestedCancel = cancelRequested || !!appt.cancelRequestedAt;
+
+  const handleDownloadIcs = () => {
+    const ics = buildIcsContent({
+      uid: appt.id,
+      clinicName: appt.clinicName,
+      description: appt.description,
+      appointmentAt: appt.appointmentAt,
+      ticketUrl,
+      now: new Date().toISOString(),
+    });
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `medipre-${appt.id.slice(0, 8)}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCancelRequest = async () => {
+    if (!token || cancelRequesting || alreadyRequestedCancel) return;
+    setCancelRequesting(true);
+    try {
+      const res = await fetch(`/api/appointments/${token}/cancel-request`, { method: "POST" });
+      if (res.ok) setCancelRequested(true);
+    } finally {
+      setCancelRequesting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -151,7 +188,7 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
           {[
             { label: "予約番号", value: appt.id.slice(0, 8).toUpperCase() },
             { label: "クリニック", value: appt.clinicName },
-            { label: "患者名", value: appt.patientName },
+            { label: "患者名", value: maskPatientName(appt.patientName) },
             { label: "予約日時", value: formatDate(appt.appointmentAt) },
             { label: "内容", value: appt.description },
           ].map((row) => (
@@ -162,10 +199,66 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
           ))}
         </div>
 
+        {/* アクション */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-2 divide-y divide-gray-100">
+          <button onClick={handleDownloadIcs} className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition rounded-xl">
+            <span className="text-lg">📅</span>
+            <span className="text-sm font-bold text-gray-800">カレンダーに追加</span>
+          </button>
+          {appt.cancelPolicyApplied && (
+            <button onClick={() => setPolicyModalOpen(true)} className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition rounded-xl">
+              <span className="text-lg">📄</span>
+              <span className="text-sm font-bold text-gray-800">キャンセルポリシー</span>
+            </button>
+          )}
+          {appt.clinicPhone && (
+            <a href={`tel:${appt.clinicPhone}`} className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition rounded-xl">
+              <span className="text-lg">📞</span>
+              <span className="text-sm font-bold text-gray-800">医院に電話する</span>
+            </a>
+          )}
+          <button
+            onClick={handleCancelRequest}
+            disabled={cancelRequesting || alreadyRequestedCancel}
+            className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition rounded-xl disabled:cursor-default disabled:hover:bg-transparent"
+          >
+            <span className="text-lg">✕</span>
+            <span className={`text-sm font-bold ${alreadyRequestedCancel ? "text-gray-400" : "text-gray-800"}`}>
+              {alreadyRequestedCancel ? "医院へキャンセルのご連絡を受け付けました" : cancelRequesting ? "送信中..." : "キャンセルを申し出る"}
+            </span>
+          </button>
+        </div>
+
         <p className="text-center text-xs text-gray-400 pb-4">
           このQRは予約確認・同意取得が完了していることを示します。
         </p>
       </div>
+
+      {/* キャンセルポリシーモーダル */}
+      {policyModalOpen && appt.cancelPolicyApplied && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="キャンセルポリシー">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setPolicyModalOpen(false)} />
+          <div className="relative w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-h-[85vh] sm:mx-6">
+            <div className="px-6 pt-5 pb-3 border-b border-gray-100">
+              <p className="text-base font-bold text-gray-900">キャンセルポリシー</p>
+              {appt.cancelPolicyAgreedAt && (
+                <p className="text-xs text-gray-400 mt-1">同意日時: {formatDate(appt.cancelPolicyAgreedAt)}</p>
+              )}
+            </div>
+            <div className="px-6 py-4 overflow-y-auto space-y-3">
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{appt.cancelPolicySnapshot}</p>
+              {appt.cancelPolicyShowBasisToPatient && appt.cancelPolicyBasisNote && (
+                <p className="text-xs text-gray-500 leading-relaxed">{appt.cancelPolicyBasisNote}</p>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100">
+              <button type="button" onClick={() => setPolicyModalOpen(false)} className="w-full py-3 rounded-2xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 transition">
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

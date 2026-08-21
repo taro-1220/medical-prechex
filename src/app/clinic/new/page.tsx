@@ -1,9 +1,12 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import type { MessageChannel, Patient, TemplateWithMeta } from "@/lib/types";
+import type { MessageChannel, Patient, TemplateWithMeta, TreatmentCategory, ClinicCancelPolicySettings } from "@/lib/types";
 import { getAccessToken, getCurrentClinic } from "@/lib/clinic-auth";
 import { DEFAULT_TEMPLATES, renderTemplate, findUnresolvedPlaceholders } from "@/lib/message-templates";
+import { resolveCancelPolicyApplication } from "@/lib/cancel-policy";
+
+const TREATMENT_CATEGORY_LABEL: Record<TreatmentCategory, string> = { private: "自由診療", insurance: "保険診療", other: "その他" };
 
 const CHANNELS: MessageChannel[] = ["sms", "line", "email"];
 const TAB_LABELS: Record<MessageChannel, string> = { sms: "SMS", line: "LINE", email: "メール" };
@@ -63,6 +66,12 @@ export default function ClinicNewPage() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
+  // MVP+1: キャンセル料ポリシー
+  const [treatmentCategory, setTreatmentCategory] = useState<TreatmentCategory>("other");
+  const [cancelPolicySettings, setCancelPolicySettings] = useState<ClinicCancelPolicySettings | null>(null);
+  const [cancelPolicyManualOverride, setCancelPolicyManualOverride] = useState<boolean | null>(null);
+  const [cancelPolicyPreviewOpen, setCancelPolicyPreviewOpen] = useState(false);
+
   // ログイン中クリニックから取得
   useEffect(() => {
     getCurrentClinic()
@@ -91,6 +100,37 @@ export default function ClinicNewPage() {
       }
     })().catch(() => {});
   }, [clinicId]);
+
+  // キャンセル料ポリシー設定（未設定/無効な医院ではUIに一切表示しない）
+  useEffect(() => {
+    if (!clinicId) return;
+    (async () => {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/cancel-policy?clinic_id=${clinicId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) return;
+      setCancelPolicySettings(await res.json());
+    })().catch(() => {});
+  }, [clinicId]);
+
+  // 診療区分が変わったら手動上書きをリセット（既定ルールに戻す）
+  useEffect(() => {
+    setCancelPolicyManualOverride(null);
+    setCancelPolicyPreviewOpen(false);
+  }, [treatmentCategory]);
+
+  const cancelPolicyApplied = cancelPolicySettings
+    ? resolveCancelPolicyApplication(
+        { enabled: cancelPolicySettings.enabled, scope: cancelPolicySettings.scope },
+        treatmentCategory,
+        cancelPolicyManualOverride,
+      )
+    : false;
+  const activeCancelPolicy =
+    treatmentCategory === "private" || treatmentCategory === "insurance"
+      ? cancelPolicySettings?.policies[treatmentCategory] ?? null
+      : null;
 
   // 送信用テンプレート（SMS/LINE/メール）を医院設定から取得
   useEffect(() => {
@@ -187,6 +227,8 @@ export default function ClinicNewPage() {
         ...(clinicId ? { clinicId } : {}),
         communicationChannel: "manual",
         ...(selectedPatient ? { patientId: selectedPatient.id } : {}),
+        treatmentCategory,
+        cancelPolicyManualOverride,
       }),
     });
     const appt = await res.json();
@@ -555,6 +597,55 @@ export default function ClinicNewPage() {
               onChange={set("description")}
               className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-teal-500 transition text-sm"
             />
+          </div>
+
+          {/* MVP+1: 診療区分（キャンセル料ポリシー適用判定に使う） */}
+          <div>
+            <label className="block text-sm font-bold mb-1.5 text-gray-700">診療区分</label>
+            <div className="flex gap-2">
+              {(["private", "insurance", "other"] as const).map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setTreatmentCategory(c)}
+                  className={`px-3 py-1.5 rounded-lg border text-sm transition ${treatmentCategory === c ? "bg-teal-600 border-teal-600 text-white font-bold" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
+                >
+                  {TREATMENT_CATEGORY_LABEL[c]}
+                </button>
+              ))}
+            </div>
+
+            {cancelPolicySettings?.enabled && (
+              <div className="mt-2 text-sm">
+                {cancelPolicyApplied ? (
+                  <p className="text-teal-700">
+                    キャンセルポリシーが適用されます
+                    {activeCancelPolicy && (
+                      <button type="button" onClick={() => setCancelPolicyPreviewOpen(o => !o)} className="ml-2 underline underline-offset-2 hover:text-teal-800">
+                        {cancelPolicyPreviewOpen ? "本文を閉じる" : "本文を確認"}
+                      </button>
+                    )}
+                    <button type="button" onClick={() => setCancelPolicyManualOverride(false)} className="ml-2 text-gray-400 underline underline-offset-2 hover:text-gray-600">
+                      この予約では適用しない
+                    </button>
+                  </p>
+                ) : (
+                  <p className="text-gray-400">
+                    キャンセルポリシーは適用されません
+                    {activeCancelPolicy && (
+                      <button type="button" onClick={() => setCancelPolicyManualOverride(true)} className="ml-2 text-teal-600 underline underline-offset-2 hover:text-teal-700">
+                        この予約では適用する
+                      </button>
+                    )}
+                  </p>
+                )}
+                {cancelPolicyPreviewOpen && activeCancelPolicy && (
+                  <p className="mt-1.5 text-xs text-gray-600 whitespace-pre-wrap bg-gray-50 rounded-lg px-3 py-2 leading-relaxed">
+                    {activeCancelPolicy.policyText}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 初回のみクリニック名入力 */}
