@@ -55,6 +55,9 @@ export async function GET(req: NextRequest) {
     websiteUrl: prof.website_url as string,
     cancellationPolicy: prof.cancellation_policy as string,
     defaultMessage: prof.default_message as string,
+    cancelPolicyEnabled: (prof.cancel_policy_enabled as boolean | null | undefined) ?? false,
+    cancelPolicyScope: (prof.cancel_policy_scope as ClinicProfile["cancelPolicyScope"]) ?? null,
+    cancelPolicyInsuranceAcknowledged: (prof.cancel_policy_insurance_acknowledged as boolean | null | undefined) ?? false,
     createdAt: prof.created_at as string,
     updatedAt: prof.updated_at as string,
   } : null;

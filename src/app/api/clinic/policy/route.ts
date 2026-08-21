@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
+import { isGeneralPolicyStepComplete } from "@/lib/cancel-policy";
 
 export async function PUT(req: NextRequest) {
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -19,14 +20,26 @@ export async function PUT(req: NextRequest) {
     .maybeSingle();
   if (!cu) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const policyText = cancellationPolicy ?? "";
+
   const { error: profErr } = await getSupabase()
     .from("clinic_profile")
-    .upsert({ clinic_id: clinicId, cancellation_policy: cancellationPolicy ?? "" }, { onConflict: "clinic_id" });
+    .upsert({ clinic_id: clinicId, cancellation_policy: policyText }, { onConflict: "clinic_id" });
   if (profErr) return NextResponse.json({ error: profErr.message }, { status: 500 });
+
+  // 完了条件: 本文が空でないこと。ただしキャンセル料ポリシー機能(cancel_policy_enabled)を
+  // 使わない医院には本文記入を強制しない（無効時は空でも完了扱い）
+  const { data: prof } = await getSupabase()
+    .from("clinic_profile")
+    .select("cancel_policy_enabled")
+    .eq("clinic_id", clinicId)
+    .maybeSingle();
+  const cancelPolicyEnabled = (prof?.cancel_policy_enabled as boolean | undefined) ?? false;
+  const policyCompleted = isGeneralPolicyStepComplete(policyText, cancelPolicyEnabled);
 
   const { error: progErr } = await getSupabase()
     .from("onboarding_progress")
-    .upsert({ clinic_id: clinicId, policy_completed: true }, { onConflict: "clinic_id" });
+    .upsert({ clinic_id: clinicId, policy_completed: policyCompleted }, { onConflict: "clinic_id" });
   if (progErr) return NextResponse.json({ error: progErr.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });

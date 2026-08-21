@@ -6,7 +6,12 @@ import type {
   PatientListItem,
   PatientConsentLog,
   PatientDetail,
+  TreatmentCategory,
+  CancelPolicyScope,
+  ClinicCancelPolicySettings,
+  CancelPolicy,
 } from "./types";
+import { resolveCancelPolicyApplication } from "./cancel-policy";
 
 function toAppt(row: Record<string, unknown>): Appointment {
   return {
@@ -29,6 +34,11 @@ function toAppt(row: Record<string, unknown>): Appointment {
     clinicId:             row.clinic_id as string | undefined,
     patientId:            row.patient_id as string | undefined,
     createdAt:            row.created_at as string,
+    treatmentCategory:      row.treatment_category as TreatmentCategory,
+    cancelPolicyApplied:    row.cancel_policy_applied as boolean,
+    cancelPolicySnapshot:   row.cancel_policy_snapshot as string | undefined,
+    cancelPolicyAgreedAt:   row.cancel_policy_agreed_at as string | undefined,
+    cancelRequestedAt:      row.cancel_requested_at as string | undefined,
   };
 }
 
@@ -186,6 +196,45 @@ export async function getAppointment(token: string): Promise<Appointment | undef
   return data ? toAppt(data) : undefined;
 }
 
+/**
+ * confirm/チケット画面向け。getAppointment に加え、DBカラムを持たない表示専用フィールド
+ * （basis_note・医院電話番号）を都度joinして返す。basis_note は show_basis_to_patient=true の
+ * 場合のみ載せる（内部の金額根拠メモを無条件に患者へ見せないため）
+ */
+export async function getAppointmentForDisplay(token: string): Promise<Appointment | undefined> {
+  const appt = await getAppointment(token);
+  if (!appt || !appt.clinicId) return appt;
+
+  const sb = getSupabase();
+  const { data: profile } = await sb
+    .from("clinic_profile")
+    .select("phone")
+    .eq("clinic_id", appt.clinicId)
+    .maybeSingle();
+  let clinicPhone = (profile?.phone as string | undefined) || undefined;
+  if (!clinicPhone) {
+    const { data: clinic } = await sb.from("clinics").select("phone").eq("id", appt.clinicId).maybeSingle();
+    clinicPhone = (clinic?.phone as string | undefined) || undefined;
+  }
+
+  if (appt.cancelPolicyApplied && (appt.treatmentCategory === "private" || appt.treatmentCategory === "insurance")) {
+    const { data: policy } = await sb
+      .from("clinic_cancel_policies")
+      .select("basis_note, show_basis_to_patient")
+      .eq("clinic_id", appt.clinicId)
+      .eq("treatment_category", appt.treatmentCategory)
+      .maybeSingle();
+    return {
+      ...appt,
+      clinicPhone,
+      cancelPolicyShowBasisToPatient: (policy?.show_basis_to_patient as boolean | undefined) ?? false,
+      cancelPolicyBasisNote: policy?.show_basis_to_patient ? (policy?.basis_note as string | undefined) : undefined,
+    };
+  }
+
+  return { ...appt, clinicPhone };
+}
+
 async function findOrCreatePatient(
   patientName: string,
   phone: string,
@@ -214,7 +263,7 @@ async function findOrCreatePatient(
 }
 
 export async function createAppointment(
-  input: Omit<Appointment, "id" | "token" | "status" | "createdAt">,
+  input: Omit<Appointment, "id" | "token" | "status" | "createdAt"> & { cancelPolicyManualOverride?: boolean | null },
   clinicId: string,
 ): Promise<Appointment> {
   const sb = getSupabase();
@@ -224,6 +273,23 @@ export async function createAppointment(
 
   // patientId は API 層で clinicId 所属を検証済みのものだけが渡る想定。未指定なら医院単位で照合/作成
   const patientId = input.patientId ?? await findOrCreatePatient(input.patientName, input.phone ?? "", input.email ?? "", clinicId);
+
+  const treatmentCategory: TreatmentCategory = input.treatmentCategory ?? "other";
+
+  // Step MVP+1: 予約作成時点のキャンセル料ポリシー設定を snapshot する
+  // （cancellation_policy と同じ「作成時点で凍結する」設計に揃える。同意時に医院側の設定が
+  //   変わっていても、患者が確認画面で見た内容と同じものだけを同意ログへ残せるようにするため）
+  const settings = await getClinicCancelPolicySettings(clinicId);
+  const manualOverride = input.cancelPolicyManualOverride ?? null;
+  const applied = resolveCancelPolicyApplication(
+    { enabled: settings.enabled, scope: settings.scope },
+    treatmentCategory,
+    manualOverride,
+  );
+  const policyForCategory = treatmentCategory === "private" || treatmentCategory === "insurance"
+    ? settings.policies[treatmentCategory]
+    : null;
+  const cancelPolicySnapshot = applied ? (policyForCategory?.policyText ?? "") : null;
 
   const { data, error } = await sb
     .from("appointments")
@@ -240,6 +306,9 @@ export async function createAppointment(
       status:                "confirmation_pending",
       clinic_id:             clinicId,
       patient_id:            patientId,
+      treatment_category:    treatmentCategory,
+      cancel_policy_applied: applied,
+      cancel_policy_snapshot: cancelPolicySnapshot,
     })
     .select()
     .single();
@@ -254,22 +323,41 @@ export async function confirmWithConsent(token: string): Promise<boolean> {
 
   const consentAt = new Date().toISOString();
 
+  // MVP+1: 同意時点の適用条件（診療区分・医院設定scope）を consent_logs へ記録する。
+  // policy_text自体のスナップショットは既存どおり appt.cancellationPolicy のみ（構造は変更しない）
+  const settings = appt.clinicId ? await getClinicCancelPolicySettings(appt.clinicId) : null;
+
   // 2. consent_logs に先に insert（失敗時は appointments を更新しない）
   const { error: logError } = await getSupabase()
     .from("consent_logs")
     .insert({
-      appointment_id: appt.id,
-      token:          appt.token,
-      policy_text:    appt.cancellationPolicy,
-      consented_at:   consentAt,
-      patient_name:   appt.patientName,
-      appointment_at: appt.appointmentAt,
+      appointment_id:     appt.id,
+      token:              appt.token,
+      policy_text:        appt.cancellationPolicy,
+      consented_at:       consentAt,
+      patient_name:       appt.patientName,
+      appointment_at:     appt.appointmentAt,
+      treatment_category: appt.treatmentCategory,
+      policy_scope:       settings?.scope ?? null,
     });
   if (logError) throw new Error(`consent_log insert failed: ${logError.message}`);
 
-  // 3. consent_logs 保存成功後のみ appointments を confirmed に更新
-  const ok = await updateStatus(token, "confirmed", { consentAt });
+  // 3. consent_logs 保存成功後のみ appointments を confirmed に更新。
+  //    キャンセル料ポリシー適用時は同意日時も記録する（本文は作成時点で既にsnapshot済み）
+  const extra = appt.cancelPolicyApplied ? { consentAt, cancelPolicyAgreedAt: consentAt } : { consentAt };
+  const ok = await updateStatus(token, "confirmed", extra);
   return ok;
+}
+
+/** ［キャンセルを申し出る］。金銭処理は行わず、医院側が予約一覧で気付けるよう記録するのみ */
+export async function requestCancellation(token: string): Promise<boolean> {
+  const { data, error } = await getSupabase()
+    .from("appointments")
+    .update({ cancel_requested_at: new Date().toISOString() })
+    .eq("token", token)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return (data?.length ?? 0) > 0;
 }
 
 export async function updateStatus(
@@ -278,9 +366,10 @@ export async function updateStatus(
   extra?: Partial<Appointment>
 ): Promise<boolean> {
   const patch: Record<string, unknown> = { status };
-  if (extra?.consentAt)   patch.consent_at   = extra.consentAt;
-  if (extra?.checkedInAt) patch.checked_in_at = extra.checkedInAt;
-  if (extra?.cancelledAt) patch.cancelled_at  = extra.cancelledAt;
+  if (extra?.consentAt)           patch.consent_at            = extra.consentAt;
+  if (extra?.checkedInAt)         patch.checked_in_at         = extra.checkedInAt;
+  if (extra?.cancelledAt)         patch.cancelled_at          = extra.cancelledAt;
+  if (extra?.cancelPolicyAgreedAt) patch.cancel_policy_agreed_at = extra.cancelPolicyAgreedAt;
 
   const { data, error } = await getSupabase()
     .from("appointments")
@@ -289,4 +378,86 @@ export async function updateStatus(
     .select("id");
   if (error) throw new Error(error.message);
   return (data?.length ?? 0) > 0;
+}
+
+// ---------------------------------------------------------------------------
+// MVP+1: キャンセル料ポリシー設定（clinic_profile拡張 + clinic_cancel_policies）
+// ---------------------------------------------------------------------------
+
+function toCancelPolicy(row: Record<string, unknown>): CancelPolicy {
+  return {
+    treatmentCategory:    row.treatment_category as "private" | "insurance",
+    policyText:           row.policy_text as string,
+    basisNote:            row.basis_note as string,
+    showBasisToPatient:   row.show_basis_to_patient as boolean,
+    graceHours:           row.grace_hours as number,
+  };
+}
+
+export async function getClinicCancelPolicySettings(clinicId: string): Promise<ClinicCancelPolicySettings> {
+  const sb = getSupabase();
+  const { data: profile, error: profErr } = await sb
+    .from("clinic_profile")
+    .select("cancel_policy_enabled, cancel_policy_scope, cancel_policy_insurance_acknowledged")
+    .eq("clinic_id", clinicId)
+    .maybeSingle();
+  if (profErr) throw new Error(profErr.message);
+
+  const { data: policies, error: polErr } = await sb
+    .from("clinic_cancel_policies")
+    .select("*")
+    .eq("clinic_id", clinicId);
+  if (polErr) throw new Error(polErr.message);
+
+  const byCategory = new Map((policies ?? []).map(p => [p.treatment_category as string, toCancelPolicy(p)]));
+
+  return {
+    enabled:               (profile?.cancel_policy_enabled as boolean | undefined) ?? false,
+    scope:                 (profile?.cancel_policy_scope as CancelPolicyScope | null | undefined) ?? null,
+    insuranceAcknowledged: (profile?.cancel_policy_insurance_acknowledged as boolean | undefined) ?? false,
+    policies: {
+      private:   byCategory.get("private") ?? null,
+      insurance: byCategory.get("insurance") ?? null,
+    },
+  };
+}
+
+export interface UpsertCancelPolicyInput {
+  enabled: boolean;
+  scope: CancelPolicyScope | null;
+  insuranceAcknowledged: boolean;
+  policies: {
+    private?: { policyText: string; basisNote: string; showBasisToPatient: boolean; graceHours: number };
+    insurance?: { policyText: string; basisNote: string; showBasisToPatient: boolean; graceHours: number };
+  };
+}
+
+export async function upsertClinicCancelPolicy(clinicId: string, input: UpsertCancelPolicyInput): Promise<void> {
+  const sb = getSupabase();
+
+  const { error: profErr } = await sb
+    .from("clinic_profile")
+    .upsert({
+      clinic_id: clinicId,
+      cancel_policy_enabled: input.enabled,
+      cancel_policy_scope: input.scope,
+      cancel_policy_insurance_acknowledged: input.insuranceAcknowledged,
+    }, { onConflict: "clinic_id" });
+  if (profErr) throw new Error(profErr.message);
+
+  for (const category of ["private", "insurance"] as const) {
+    const p = input.policies[category];
+    if (!p) continue;
+    const { error } = await sb
+      .from("clinic_cancel_policies")
+      .upsert({
+        clinic_id: clinicId,
+        treatment_category: category,
+        policy_text: p.policyText,
+        basis_note: p.basisNote,
+        show_basis_to_patient: p.showBasisToPatient,
+        grace_hours: p.graceHours,
+      }, { onConflict: "clinic_id,treatment_category" });
+    if (error) throw new Error(error.message);
+  }
 }

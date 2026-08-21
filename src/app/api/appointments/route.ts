@@ -54,6 +54,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 });
   }
 
+  const treatmentCategory = ["insurance", "private", "other"].includes(body?.treatmentCategory)
+    ? body.treatmentCategory
+    : "other";
+  const cancelPolicyManualOverride = typeof body?.cancelPolicyManualOverride === "boolean"
+    ? body.cancelPolicyManualOverride
+    : null;
+
   // clinic_id の確定: 指定があれば所属チェック、無ければ selected(なければ先頭)を採用
   const requestedClinicId = (body?.clinicId ?? body?.clinic_id) as string | undefined;
   let clinicId: string;
@@ -80,7 +87,10 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const appt = await createAppointment({ ...body, patientName, appointmentAt }, clinicId);
+    const appt = await createAppointment(
+      { ...body, patientName, appointmentAt, treatmentCategory, cancelPolicyManualOverride },
+      clinicId,
+    );
     return NextResponse.json(appt, { status: 201 });
   } catch (e) {
     return NextResponse.json({ error: "internal_error", ...safeError(e) }, { status: 500 });

@@ -32,6 +32,30 @@ export type AppointmentStatus =
 
 export type CommunicationChannel = "sms" | "email" | "line" | "manual";
 
+// MVP+1: キャンセルポリシー合意基盤
+export type TreatmentCategory = "insurance" | "private" | "other";
+export type CancelPolicyScope = "private" | "insurance" | "both";
+
+// clinic_cancel_policies の1行（自由診療／保険診療で独立して持つ）
+export interface CancelPolicy {
+  treatmentCategory: "private" | "insurance";
+  policyText: string;
+  basisNote: string;
+  showBasisToPatient: boolean;
+  graceHours: number;
+}
+
+// 医院単位のキャンセル料ポリシー設定（clinic_profile拡張分 + clinic_cancel_policies）
+export interface ClinicCancelPolicySettings {
+  enabled: boolean;
+  scope: CancelPolicyScope | null;
+  insuranceAcknowledged: boolean;
+  policies: {
+    private: CancelPolicy | null;
+    insurance: CancelPolicy | null;
+  };
+}
+
 export interface Patient {
   id: string;
   name: string;
@@ -80,6 +104,9 @@ export interface ClinicProfile {
   websiteUrl: string;
   cancellationPolicy: string;
   defaultMessage: string;
+  cancelPolicyEnabled: boolean;
+  cancelPolicyScope: CancelPolicyScope | null;
+  cancelPolicyInsuranceAcknowledged: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -116,6 +143,17 @@ export interface Appointment {
   clinicId?: string;
   patientId?: string;
   createdAt: string;
+  // MVP+1: キャンセルポリシー合意基盤
+  treatmentCategory: TreatmentCategory;
+  cancelPolicyApplied: boolean;
+  /** 適用時、予約作成時点の policy_text 全文（同意前もこの内容を患者に提示する） */
+  cancelPolicySnapshot?: string;
+  cancelPolicyAgreedAt?: string;
+  cancelRequestedAt?: string;
+  // 以下はDBカラムではなく、参照時に clinic_cancel_policies / clinic_profile から都度joinする表示専用フィールド
+  cancelPolicyBasisNote?: string;
+  cancelPolicyShowBasisToPatient?: boolean;
+  clinicPhone?: string;
 }
 
 export interface ConsentSummary {

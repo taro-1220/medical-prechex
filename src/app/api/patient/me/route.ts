@@ -30,6 +30,8 @@ export async function GET() {
       cancellationPolicy: "前日18時までのキャンセルは無料です。",
       status: "ticket_issued",
       createdAt: "2026-07-01T09:00:00+09:00",
+      treatmentCategory: "other",
+      cancelPolicyApplied: false,
     },
     appointmentHistory: [
       {
@@ -45,6 +47,8 @@ export async function GET() {
         cancellationPolicy: "前日18時までのキャンセルは無料です。",
         status: "completed",
         createdAt: "2026-05-01T09:00:00+09:00",
+        treatmentCategory: "other",
+        cancelPolicyApplied: false,
       },
     ],
     consentHistory: [
