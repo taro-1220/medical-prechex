@@ -2,6 +2,8 @@
 
 医療機関向けmedipre。予約確認・キャンセルポリシー同意・事前カード登録・オーソリ・キャンセル料回収・来院確認を扱う「同意・決済・状態遷移・紛争耐性OS」。
 
+Node 25系では全ページがSSRで500になる（localStorage.getItem is not a function）。開発は Node 22 LTS を使用すること。
+
 ---
 
 ## 応答ルール
