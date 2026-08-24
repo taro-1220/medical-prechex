@@ -36,6 +36,13 @@ export type CommunicationChannel = "sms" | "email" | "line" | "manual";
 export type TreatmentCategory = "insurance" | "private" | "other";
 export type CancelPolicyScope = "private" | "insurance" | "both";
 
+// MVP+2: 段階テーブル（days_before/no_show × percent）。数値の初期値はコード側に持たない
+export interface CancelTier {
+  daysBefore?: number;
+  noShow?: boolean;
+  percent: number;
+}
+
 // clinic_cancel_policies の1行（自由診療／保険診療で独立して持つ）
 export interface CancelPolicy {
   treatmentCategory: "private" | "insurance";
@@ -43,6 +50,7 @@ export interface CancelPolicy {
   basisNote: string;
   showBasisToPatient: boolean;
   graceHours: number;
+  tiers: CancelTier[] | null;
 }
 
 // 医院単位のキャンセル料ポリシー設定（clinic_profile拡張分 + clinic_cancel_policies）
@@ -54,6 +62,29 @@ export interface ClinicCancelPolicySettings {
     private: CancelPolicy | null;
     insurance: CancelPolicy | null;
   };
+}
+
+// MVP+2: Stripe Connect Express の状態
+export type StripeAccountStatus = "not_connected" | "pending" | "active";
+
+// MVP+2: 予約単位の課金状態
+export type ChargeStatus = "none" | "charged" | "failed" | "requires_action" | "written_off";
+
+// charge_events の1行（全操作の証跡）
+export type ChargeEventType = "charge" | "failure" | "retry" | "notice";
+export type ChargeEventActor = "system" | "staff";
+
+export interface ChargeEvent {
+  id: string;
+  appointmentId: string;
+  clinicId: string;
+  eventType: ChargeEventType;
+  amount: number | null;
+  stripeReferenceId: string | null;
+  actor: ChargeEventActor;
+  dryRun: boolean;
+  detail: string | null;
+  createdAt: string;
 }
 
 export interface Patient {
@@ -107,6 +138,9 @@ export interface ClinicProfile {
   cancelPolicyEnabled: boolean;
   cancelPolicyScope: CancelPolicyScope | null;
   cancelPolicyInsuranceAcknowledged: boolean;
+  // MVP+2
+  stripeAccountId: string | null;
+  stripeAccountStatus: StripeAccountStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -153,7 +187,17 @@ export interface Appointment {
   // 以下はDBカラムではなく、参照時に clinic_cancel_policies / clinic_profile から都度joinする表示専用フィールド
   cancelPolicyBasisNote?: string;
   cancelPolicyShowBasisToPatient?: boolean;
+  cancelPolicyTiers?: CancelTier[] | null;
   clinicPhone?: string;
+  // MVP+2: カード登録・課金状態
+  baseAmount: number | null;
+  cardRegistrationRequired: boolean;
+  stripeSetupIntentId?: string;
+  stripePaymentMethodId?: string;
+  stripePaymentIntentId?: string;
+  chargeStatus: ChargeStatus;
+  chargedAmount: number | null;
+  chargeExecutedAt?: string;
 }
 
 export interface ConsentSummary {
@@ -188,4 +232,18 @@ export interface TemplateWithMeta {
   body: string;
   source: TemplateSource;
   updatedAt: string | null;
+}
+
+// MVP+2 C-5: GET /api/clinic/dashboard のレスポンス
+export interface ChargeDashboardResponse {
+  month: string;
+  totalAppointments: number;
+  cancelledCount: number;
+  cancelRate: number;
+  noShowCount: number;
+  collectedAmount: number;
+  collectedCount: number;
+  failedChargeCount: number;
+  policyAppliedCancelRate: number;
+  policyNotAppliedCancelRate: number;
 }

@@ -10,10 +10,16 @@ import type {
   CancelPolicyScope,
   ClinicCancelPolicySettings,
   CancelPolicy,
+  CancelTier,
+  StripeAccountStatus,
+  ChargeStatus,
+  ChargeEvent,
+  ChargeEventType,
+  ChargeEventActor,
 } from "./types";
 import { resolveCancelPolicyApplication } from "./cancel-policy";
 
-function toAppt(row: Record<string, unknown>): Appointment {
+export function toAppt(row: Record<string, unknown>): Appointment {
   return {
     id:                   row.id as string,
     token:                row.token as string,
@@ -39,6 +45,14 @@ function toAppt(row: Record<string, unknown>): Appointment {
     cancelPolicySnapshot:   row.cancel_policy_snapshot as string | undefined,
     cancelPolicyAgreedAt:   row.cancel_policy_agreed_at as string | undefined,
     cancelRequestedAt:      row.cancel_requested_at as string | undefined,
+    baseAmount:             (row.base_amount as number | null) ?? null,
+    cardRegistrationRequired: row.card_registration_required as boolean,
+    stripeSetupIntentId:    row.stripe_setup_intent_id as string | undefined,
+    stripePaymentMethodId:  row.stripe_payment_method_id as string | undefined,
+    stripePaymentIntentId:  row.stripe_payment_intent_id as string | undefined,
+    chargeStatus:           row.charge_status as Appointment["chargeStatus"],
+    chargedAmount:          (row.charged_amount as number | null) ?? null,
+    chargeExecutedAt:       row.charge_executed_at as string | undefined,
   };
 }
 
@@ -196,6 +210,17 @@ export async function getAppointment(token: string): Promise<Appointment | undef
   return data ? toAppt(data) : undefined;
 }
 
+/** 医院スタッフ向け。clinicIds所属チェックは呼び出し側で行う */
+export async function getAppointmentById(id: string): Promise<Appointment | undefined> {
+  const { data, error } = await getSupabase()
+    .from("appointments")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? toAppt(data) : undefined;
+}
+
 /**
  * confirm/チケット画面向け。getAppointment に加え、DBカラムを持たない表示専用フィールド
  * （basis_note・医院電話番号）を都度joinして返す。basis_note は show_basis_to_patient=true の
@@ -220,7 +245,7 @@ export async function getAppointmentForDisplay(token: string): Promise<Appointme
   if (appt.cancelPolicyApplied && (appt.treatmentCategory === "private" || appt.treatmentCategory === "insurance")) {
     const { data: policy } = await sb
       .from("clinic_cancel_policies")
-      .select("basis_note, show_basis_to_patient")
+      .select("basis_note, show_basis_to_patient, tiers")
       .eq("clinic_id", appt.clinicId)
       .eq("treatment_category", appt.treatmentCategory)
       .maybeSingle();
@@ -229,6 +254,7 @@ export async function getAppointmentForDisplay(token: string): Promise<Appointme
       clinicPhone,
       cancelPolicyShowBasisToPatient: (policy?.show_basis_to_patient as boolean | undefined) ?? false,
       cancelPolicyBasisNote: policy?.show_basis_to_patient ? (policy?.basis_note as string | undefined) : undefined,
+      cancelPolicyTiers: (policy?.tiers as CancelTier[] | null | undefined) ?? null,
     };
   }
 
@@ -309,6 +335,8 @@ export async function createAppointment(
       treatment_category:    treatmentCategory,
       cancel_policy_applied: applied,
       cancel_policy_snapshot: cancelPolicySnapshot,
+      base_amount:           input.baseAmount ?? null,
+      card_registration_required: input.cardRegistrationRequired ?? false,
     })
     .select()
     .single();
@@ -391,6 +419,7 @@ function toCancelPolicy(row: Record<string, unknown>): CancelPolicy {
     basisNote:            row.basis_note as string,
     showBasisToPatient:   row.show_basis_to_patient as boolean,
     graceHours:           row.grace_hours as number,
+    tiers:                (row.tiers as CancelTier[] | null) ?? null,
   };
 }
 
@@ -427,8 +456,8 @@ export interface UpsertCancelPolicyInput {
   scope: CancelPolicyScope | null;
   insuranceAcknowledged: boolean;
   policies: {
-    private?: { policyText: string; basisNote: string; showBasisToPatient: boolean; graceHours: number };
-    insurance?: { policyText: string; basisNote: string; showBasisToPatient: boolean; graceHours: number };
+    private?: { policyText: string; basisNote: string; showBasisToPatient: boolean; graceHours: number; tiers: CancelTier[] | null };
+    insurance?: { policyText: string; basisNote: string; showBasisToPatient: boolean; graceHours: number; tiers: CancelTier[] | null };
   };
 }
 
@@ -457,6 +486,7 @@ export async function upsertClinicCancelPolicy(clinicId: string, input: UpsertCa
         basis_note: p.basisNote,
         show_basis_to_patient: p.showBasisToPatient,
         grace_hours: p.graceHours,
+        tiers: p.tiers,
       }, { onConflict: "clinic_id,treatment_category" });
     if (error) throw new Error(error.message);
   }

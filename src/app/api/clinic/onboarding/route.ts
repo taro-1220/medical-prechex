@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
-import type { ClinicProfile, OnboardingProgress } from "@/lib/types";
+import type { ClinicProfile, OnboardingProgress, StripeAccountStatus } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -58,6 +58,8 @@ export async function GET(req: NextRequest) {
     cancelPolicyEnabled: (prof.cancel_policy_enabled as boolean | null | undefined) ?? false,
     cancelPolicyScope: (prof.cancel_policy_scope as ClinicProfile["cancelPolicyScope"]) ?? null,
     cancelPolicyInsuranceAcknowledged: (prof.cancel_policy_insurance_acknowledged as boolean | null | undefined) ?? false,
+    stripeAccountId: (prof.stripe_account_id as string | null | undefined) ?? null,
+    stripeAccountStatus: (prof.stripe_account_status as StripeAccountStatus | null | undefined) ?? "not_connected",
     createdAt: prof.created_at as string,
     updatedAt: prof.updated_at as string,
   } : null;

@@ -60,6 +60,13 @@ export async function POST(req: NextRequest) {
   const cancelPolicyManualOverride = typeof body?.cancelPolicyManualOverride === "boolean"
     ? body.cancelPolicyManualOverride
     : null;
+  const cardRegistrationRequired = Boolean(body?.cardRegistrationRequired);
+  const baseAmount = cardRegistrationRequired && typeof body?.baseAmount === "number" && body.baseAmount >= 0
+    ? Math.floor(body.baseAmount)
+    : null;
+  if (cardRegistrationRequired && baseAmount === null) {
+    return NextResponse.json({ error: "base_amount required when card_registration_required" }, { status: 400 });
+  }
 
   // clinic_id の確定: 指定があれば所属チェック、無ければ selected(なければ先頭)を採用
   const requestedClinicId = (body?.clinicId ?? body?.clinic_id) as string | undefined;
@@ -88,7 +95,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const appt = await createAppointment(
-      { ...body, patientName, appointmentAt, treatmentCategory, cancelPolicyManualOverride },
+      { ...body, patientName, appointmentAt, treatmentCategory, cancelPolicyManualOverride, cardRegistrationRequired, baseAmount },
       clinicId,
     );
     return NextResponse.json(appt, { status: 201 });

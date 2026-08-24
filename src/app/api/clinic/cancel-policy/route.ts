@@ -7,7 +7,8 @@ import {
   findRiskyPolicyWording,
   scopeAppliesToCategory,
 } from "@/lib/cancel-policy";
-import type { CancelPolicyScope } from "@/lib/types";
+import { areTierPercentsValid } from "@/lib/charge-policy";
+import type { CancelPolicyScope, CancelTier } from "@/lib/types";
 
 async function requireClinicMember(req: NextRequest, clinicId: string) {
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -42,6 +43,7 @@ interface PolicyInput {
   basisNote?: string;
   showBasisToPatient?: boolean;
   graceHours?: number;
+  tiers?: CancelTier[] | null;
 }
 
 export async function PUT(req: NextRequest) {
@@ -74,6 +76,9 @@ export async function PUT(req: NextRequest) {
       if (!isBasisNoteValid(basisNote)) {
         return NextResponse.json({ error: `${category}: basis_note required` }, { status: 400 });
       }
+      if (p?.tiers && !areTierPercentsValid(p.tiers)) {
+        return NextResponse.json({ error: `${category}: tiers percent must be 0-100` }, { status: 400 });
+      }
     }
   }
 
@@ -88,12 +93,14 @@ export async function PUT(req: NextRequest) {
           basisNote: policies.private.basisNote ?? "",
           showBasisToPatient: Boolean(policies.private.showBasisToPatient),
           graceHours: policies.private.graceHours ?? 24,
+          tiers: policies.private.tiers ?? null,
         } : undefined,
         insurance: policies.insurance ? {
           policyText: policies.insurance.policyText ?? "",
           basisNote: policies.insurance.basisNote ?? "",
           showBasisToPatient: Boolean(policies.insurance.showBasisToPatient),
           graceHours: policies.insurance.graceHours ?? 24,
+          tiers: policies.insurance.tiers ?? null,
         } : undefined,
       },
     });

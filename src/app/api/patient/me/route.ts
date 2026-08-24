@@ -32,6 +32,10 @@ export async function GET() {
       createdAt: "2026-07-01T09:00:00+09:00",
       treatmentCategory: "other",
       cancelPolicyApplied: false,
+      baseAmount: null,
+      cardRegistrationRequired: false,
+      chargeStatus: "none",
+      chargedAmount: null,
     },
     appointmentHistory: [
       {
@@ -49,6 +53,10 @@ export async function GET() {
         createdAt: "2026-05-01T09:00:00+09:00",
         treatmentCategory: "other",
         cancelPolicyApplied: false,
+        baseAmount: null,
+        cardRegistrationRequired: false,
+        chargeStatus: "none",
+        chargedAmount: null,
       },
     ],
     consentHistory: [
