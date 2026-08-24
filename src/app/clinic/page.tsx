@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Appointment, AppointmentStatus, Clinic } from "@/lib/types";
+import type { Appointment, AppointmentStatus, Clinic, ChargeDashboardResponse } from "@/lib/types";
 import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken } from "@/lib/clinic-auth";
 import OnboardingGuide, { GUIDE_KEY } from "./OnboardingGuide";
 
@@ -44,6 +44,7 @@ export default function ClinicPage() {
   const [clinic, setClinic]   = useState<Clinic | null>(null);
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [activatedAt, setActivatedAt] = useState<string | null | undefined>(undefined);
+  const [dashboard, setDashboard] = useState<ChargeDashboardResponse | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem(GUIDE_KEY)) {
@@ -91,6 +92,17 @@ export default function ClinicPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    if (!clinic) return;
+    (async () => {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/dashboard?clinic_id=${clinic.id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (res.ok) setDashboard(await res.json());
+    })();
+  }, [clinic]);
 
   const sorted = [...appointments].sort((a, b) => {
     const diff = new Date(a.appointmentAt).getTime() - new Date(b.appointmentAt).getTime();
@@ -200,6 +212,45 @@ export default function ClinicPage() {
           ))}
         </div>
 
+        {/* MVP+2 C-5: キャンセル料回収ダッシュボード */}
+        {dashboard && (
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 mb-10">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-gray-700">キャンセル料回収（{dashboard.month}）</h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-xs text-gray-400">キャンセル率</p>
+                <p className="text-2xl font-black text-gray-900">{(dashboard.cancelRate * 100).toFixed(1)}%</p>
+                <p className="text-[11px] text-gray-400">{dashboard.cancelledCount}/{dashboard.totalAppointments}件</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">無断件数</p>
+                <p className="text-2xl font-black text-gray-900">{dashboard.noShowCount}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">回収額・件数</p>
+                <p className="text-2xl font-black text-teal-600">{dashboard.collectedAmount.toLocaleString()}円</p>
+                <p className="text-[11px] text-gray-400">{dashboard.collectedCount}件</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">課金失敗</p>
+                <p className={`text-2xl font-black ${dashboard.failedChargeCount > 0 ? "text-red-600" : "text-gray-900"}`}>{dashboard.failedChargeCount}</p>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-100 flex gap-8 text-sm">
+              <div>
+                <span className="text-gray-400">同意済み予約のキャンセル率: </span>
+                <span className="font-bold text-gray-900">{(dashboard.policyAppliedCancelRate * 100).toFixed(1)}%</span>
+              </div>
+              <div>
+                <span className="text-gray-400">対象外予約のキャンセル率: </span>
+                <span className="font-bold text-gray-900">{(dashboard.policyNotAppliedCancelRate * 100).toFixed(1)}%</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* List */}
         <h2 className="text-base font-bold mb-4 text-gray-700">予約一覧</h2>
         {loading ? (
@@ -242,6 +293,22 @@ export default function ClinicPage() {
                         ⚠ キャンセル申出あり（{formatDate(a.cancelRequestedAt)}）
                       </span>
                     )}
+                    {a.cardRegistrationRequired && (
+                      a.stripePaymentMethodId ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-700">カード登録済✓</span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">⚠ カード未登録・要確認連絡</span>
+                      )
+                    )}
+                    {a.chargeStatus === "charged" && (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-700">請求済 {a.chargedAmount ?? 0}円</span>
+                    )}
+                    {a.chargeStatus === "failed" && (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">⚠ 請求失敗</span>
+                    )}
+                    {a.chargeStatus === "requires_action" && (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">要再認証</span>
+                    )}
                     <span className="text-gray-400 text-xs">{formatDate(a.appointmentAt)}</span>
                     <span className="text-gray-300 text-xs font-mono">#{a.id.slice(0, 8)}</span>
                   </div>
@@ -266,6 +333,14 @@ export default function ClinicPage() {
                   >
                     URL コピー
                   </button>
+                  {a.cancelPolicyApplied && (
+                    <Link
+                      href={`/clinic/appointments/${a.id}`}
+                      className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs hover:bg-gray-50 transition"
+                    >
+                      キャンセル判定
+                    </Link>
+                  )}
                   {a.status === "confirmed" && (
                     <Link
                       href={`/clinic/checkin/${a.token}`}

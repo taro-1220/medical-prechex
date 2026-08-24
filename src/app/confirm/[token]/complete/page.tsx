@@ -19,6 +19,10 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
   const [policyModalOpen, setPolicyModalOpen] = useState(false);
   const [cancelRequesting, setCancelRequesting] = useState(false);
   const [cancelRequested, setCancelRequested] = useState(false);
+  const [cancelPreview, setCancelPreview] = useState<{ applicable: boolean; percent?: number; amount?: number | null } | null>(null);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [reauthenticating, setReauthenticating] = useState(false);
+  const [reauthError, setReauthError] = useState<string | null>(null);
 
   useEffect(() => {
     params.then(({ token: t }) => setToken(t));
@@ -67,13 +71,78 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
     );
   }
 
+  // MVP+2 D-2/D-3: 請求状態（キャンセル済みで初めて意味を持つため、cancelled分岐でも使う）
+  const handleReauth = async () => {
+    if (!token || reauthenticating) return;
+    setReauthenticating(true);
+    setReauthError(null);
+    try {
+      const res = await fetch(`/api/appointments/${token}/reauth`);
+      if (!res.ok) throw new Error("再認証の準備に失敗しました");
+      const { clientSecret, connectedAccountId } = await res.json();
+      const pk = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+      if (!pk) throw new Error("設定エラー");
+      const { loadStripe } = await import("@stripe/stripe-js");
+      const stripe = await loadStripe(pk, { stripeAccount: connectedAccountId });
+      if (!stripe) throw new Error("読み込みに失敗しました");
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret);
+      if (error) throw new Error(error.message ?? "認証に失敗しました");
+      if (paymentIntent?.status === "succeeded") {
+        await fetch(`/api/appointments/${token}/reauth/confirm`, { method: "POST" });
+        const refetch = await fetch(`/api/appointments/${token}`);
+        if (refetch.ok) setAppt(await refetch.json());
+      } else {
+        setReauthError("認証が完了しませんでした");
+      }
+    } catch (e) {
+      setReauthError(e instanceof Error ? e.message : "再認証に失敗しました");
+    } finally {
+      setReauthenticating(false);
+    }
+  };
+
+  const chargeStatusBlock = appt.cardRegistrationRequired && (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5">
+      {appt.chargeStatus === "charged" ? (
+        <p className="text-sm text-gray-700">
+          請求済み: <span className="font-bold">{appt.chargedAmount ?? 0}円</span>
+          {appt.chargeExecutedAt && `（${formatDate(appt.chargeExecutedAt)}`}
+          {appt.baseAmount && appt.chargedAmount != null && `、同意条件: ${Math.round((appt.chargedAmount / appt.baseAmount) * 100)}%）`}
+        </p>
+      ) : appt.chargeStatus === "failed" ? (
+        <div className="space-y-1">
+          <p className="text-sm text-red-600 font-bold">お支払いに失敗しました</p>
+          <p className="text-xs text-gray-500">窓口でのご精算となる場合があります。医院までご連絡ください。</p>
+        </div>
+      ) : appt.chargeStatus === "requires_action" ? (
+        <div className="space-y-2">
+          <p className="text-sm text-amber-700 font-bold">お支払い方法の確認が必要です</p>
+          <button onClick={handleReauth} disabled={reauthenticating} className="w-full py-3 rounded-xl bg-amber-500 text-white font-bold text-sm hover:bg-amber-600 transition disabled:opacity-50">
+            {reauthenticating ? "確認中..." : "お支払い方法を確認する"}
+          </button>
+          {reauthError && <p className="text-xs text-red-600">{reauthError}</p>}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-500">ご来院いただければ請求は発生しません。</p>
+      )}
+    </div>
+  );
+
   if (appt.status === "cancelled") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
-        <div className="text-center max-w-sm">
-          <p className="text-4xl mb-4">✕</p>
-          <p className="font-bold text-gray-900 mb-2">この予約はキャンセルされています</p>
-          <p className="text-sm text-gray-500">ご不明な点はクリニックへお問い合わせください。</p>
+      <div className="min-h-screen bg-gray-50 text-gray-900">
+        <header className="border-b border-gray-200 bg-white px-6 py-3 text-center">
+          <span className="text-lg font-black text-teal-700">medipre</span>
+        </header>
+        <div className="max-w-sm mx-auto px-6 py-8 space-y-4">
+          <div className="text-center">
+            <p className="text-4xl mb-4">✕</p>
+            <p className="font-bold text-gray-900 mb-2">この予約はキャンセルされています</p>
+            {!appt.cardRegistrationRequired && (
+              <p className="text-sm text-gray-500">ご不明な点はクリニックへお問い合わせください。</p>
+            )}
+          </div>
+          {chargeStatusBlock}
         </div>
       </div>
     );
@@ -130,12 +199,19 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
     URL.revokeObjectURL(url);
   };
 
+  const openCancelConfirm = async () => {
+    if (!token || alreadyRequestedCancel) return;
+    const res = await fetch(`/api/appointments/${token}/cancel-preview`);
+    if (res.ok) setCancelPreview(await res.json());
+    setCancelConfirmOpen(true);
+  };
+
   const handleCancelRequest = async () => {
     if (!token || cancelRequesting || alreadyRequestedCancel) return;
     setCancelRequesting(true);
     try {
       const res = await fetch(`/api/appointments/${token}/cancel-request`, { method: "POST" });
-      if (res.ok) setCancelRequested(true);
+      if (res.ok) { setCancelRequested(true); setCancelConfirmOpen(false); }
     } finally {
       setCancelRequesting(false);
     }
@@ -218,21 +294,54 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
             </a>
           )}
           <button
-            onClick={handleCancelRequest}
+            onClick={openCancelConfirm}
             disabled={cancelRequesting || alreadyRequestedCancel}
             className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50 transition rounded-xl disabled:cursor-default disabled:hover:bg-transparent"
           >
             <span className="text-lg">✕</span>
             <span className={`text-sm font-bold ${alreadyRequestedCancel ? "text-gray-400" : "text-gray-800"}`}>
-              {alreadyRequestedCancel ? "医院へキャンセルのご連絡を受け付けました" : cancelRequesting ? "送信中..." : "キャンセルを申し出る"}
+              {alreadyRequestedCancel ? "医院へキャンセルのご連絡を受け付けました" : "キャンセルを申し出る"}
             </span>
           </button>
         </div>
+
+        {/* MVP+2 D-2: 請求状態 */}
+        {chargeStatusBlock}
 
         <p className="text-center text-xs text-gray-400 pb-4">
           このQRは予約確認・同意取得が完了していることを示します。
         </p>
       </div>
+
+      {/* キャンセル確認モーダル（D-2: 現時点で適用される段階を表示してから確認を挟む） */}
+      {cancelConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="キャンセルの確認">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setCancelConfirmOpen(false)} />
+          <div className="relative w-full sm:max-w-sm bg-white rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-h-[85vh] sm:mx-6">
+            <div className="px-6 pt-5 pb-3 border-b border-gray-100">
+              <p className="text-base font-bold text-gray-900">キャンセルの確認</p>
+            </div>
+            <div className="px-6 py-4 space-y-3">
+              {cancelPreview?.applicable && (cancelPreview.amount ?? 0) > 0 ? (
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  現時点でのキャンセルには、条件に基づき<span className="font-bold">{cancelPreview.percent}%（{cancelPreview.amount}円）</span>のお支払いが発生します。
+                </p>
+              ) : (
+                <p className="text-sm text-gray-700 leading-relaxed">現時点でのキャンセルは無料です。</p>
+              )}
+              <p className="text-xs text-gray-400">よろしければ「キャンセルする」を押してください。</p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-2">
+              <button type="button" onClick={() => setCancelConfirmOpen(false)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 transition">
+                戻る
+              </button>
+              <button type="button" onClick={handleCancelRequest} disabled={cancelRequesting} className="flex-1 py-3 rounded-2xl bg-red-600 text-white font-bold text-sm hover:bg-red-700 transition disabled:opacity-50">
+                {cancelRequesting ? "処理中..." : "キャンセルする"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* キャンセルポリシーモーダル */}
       {policyModalOpen && appt.cancelPolicyApplied && (

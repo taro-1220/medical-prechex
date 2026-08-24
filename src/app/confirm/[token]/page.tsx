@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Appointment } from "@/lib/types";
+import CardRegistration from "./CardRegistration";
 
 const TREATMENT_CATEGORY_LABEL: Record<string, string> = { private: "自由診療", insurance: "保険診療" };
 
@@ -47,7 +48,15 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
   }, [token, router]);
 
   const cancelPolicyApplied = appt?.cancelPolicyApplied ?? false;
-  const canConfirm = consented && (!cancelPolicyApplied || cancelPolicyConsented);
+  const needsCardRegistration = !!appt?.cardRegistrationRequired && !appt?.stripePaymentMethodId;
+  const canConfirm = consented && (!cancelPolicyApplied || cancelPolicyConsented) && !needsCardRegistration;
+
+  const refetchAppointment = () => {
+    if (!token) return;
+    fetch(`/api/appointments/${token}`).then(async (res) => {
+      if (res.ok) setAppt(await res.json());
+    });
+  };
 
   const handleConfirm = async () => {
     if (!token || !canConfirm) return;
@@ -132,6 +141,17 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
               <span className="text-sm text-gray-700 leading-relaxed">上記を確認し、同意します</span>
             </label>
           </div>
+        )}
+
+        {/* MVP+2 D-1: カード登録（適用時かつ登録必須の予約のみ、同意ステップの後） */}
+        {needsCardRegistration && (
+          <CardRegistration
+            token={token!}
+            clinicName={appt.clinicName}
+            category={TREATMENT_CATEGORY_LABEL[appt.treatmentCategory] ?? appt.treatmentCategory}
+            tiers={appt.cancelPolicyTiers ?? null}
+            onRegistered={refetchAppointment}
+          />
         )}
 
         {/* 同意 */}

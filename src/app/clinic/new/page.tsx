@@ -72,6 +72,10 @@ export default function ClinicNewPage() {
   const [cancelPolicyManualOverride, setCancelPolicyManualOverride] = useState<boolean | null>(null);
   const [cancelPolicyPreviewOpen, setCancelPolicyPreviewOpen] = useState(false);
 
+  // MVP+2: カード登録・課金
+  const [cardRegistrationRequired, setCardRegistrationRequired] = useState(false);
+  const [baseAmount, setBaseAmount] = useState("");
+
   // ログイン中クリニックから取得
   useEffect(() => {
     getCurrentClinic()
@@ -229,6 +233,8 @@ export default function ClinicNewPage() {
         ...(selectedPatient ? { patientId: selectedPatient.id } : {}),
         treatmentCategory,
         cancelPolicyManualOverride,
+        cardRegistrationRequired,
+        ...(cardRegistrationRequired ? { baseAmount: Number(baseAmount) || 0 } : {}),
       }),
     });
     const appt = await res.json();
@@ -644,6 +650,36 @@ export default function ClinicNewPage() {
                     {activeCancelPolicy.policyText}
                   </p>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* MVP+2: カード登録 */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-bold text-gray-700">
+              <input
+                type="checkbox"
+                checked={cardRegistrationRequired}
+                onChange={e => setCardRegistrationRequired(e.target.checked)}
+                className="h-4 w-4 accent-teal-600"
+              />
+              カード登録を求める
+            </label>
+            {cardRegistrationRequired && (
+              <div className="mt-2">
+                <label className="block text-sm font-bold mb-1.5 text-gray-700">
+                  基準額（円）<span className="text-red-500 ml-1">*</span>
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  required={cardRegistrationRequired}
+                  placeholder="例：10000"
+                  value={baseAmount}
+                  onChange={e => setBaseAmount(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-teal-500 transition text-sm"
+                />
+                <p className="text-xs text-gray-400 mt-1">キャンセル発生時、段階テーブルの%をこの額に掛けて請求します</p>
               </div>
             )}
           </div>

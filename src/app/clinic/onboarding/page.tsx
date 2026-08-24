@@ -2,14 +2,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAccessToken, getCurrentClinic } from "@/lib/clinic-auth";
-import type { ClinicProfile, OnboardingProgress, CancelPolicyScope, ClinicCancelPolicySettings } from "@/lib/types";
+import type { ClinicProfile, OnboardingProgress, CancelPolicyScope, ClinicCancelPolicySettings, CancelTier, StripeAccountStatus } from "@/lib/types";
 import { findRiskyPolicyWording, scopeAppliesToCategory, isInsuranceAcknowledgmentSatisfied, isBasisNoteValid } from "@/lib/cancel-policy";
+import { areTierPercentsValid } from "@/lib/charge-policy";
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500";
 const labelCls = "block text-xs text-gray-500 mb-1";
 
-type CategoryForm = { policyText: string; basisNote: string; showBasisToPatient: boolean; graceHours: number };
-const EMPTY_CATEGORY_FORM: CategoryForm = { policyText: "", basisNote: "", showBasisToPatient: false, graceHours: 24 };
+type CategoryForm = { policyText: string; basisNote: string; showBasisToPatient: boolean; graceHours: number; tiers: CancelTier[] | null };
+const EMPTY_CATEGORY_FORM: CategoryForm = { policyText: "", basisNote: "", showBasisToPatient: false, graceHours: 24, tiers: null };
+
+const STRIPE_STATUS_LABEL: Record<StripeAccountStatus, string> = { not_connected: "未接続", pending: "審査中", active: "有効" };
 
 const CATEGORY_LABEL: Record<"private" | "insurance", string> = { private: "自由診療", insurance: "保険診療" };
 
@@ -39,6 +42,10 @@ export default function OnboardingPage() {
   const [cpInsurance, setCpInsurance] = useState<CategoryForm>(EMPTY_CATEGORY_FORM);
   const [cpWarnings, setCpWarnings] = useState<Record<string, string[]>>({});
   const [cpError, setCpError] = useState<string | null>(null);
+
+  // MVP+2: Stripe Connect
+  const [connectingStripe, setConnectingStripe] = useState(false);
+  const [stripeError, setStripeError] = useState<string | null>(null);
 
   async function loadOnboarding(cid: string) {
     const token = await getAccessToken();
@@ -76,8 +83,36 @@ export default function OnboardingPage() {
       setClinicId(clinic.id);
       await loadOnboarding(clinic.id);
       setLoading(false);
+
+      // Stripe Connect オンボーディングから戻ってきた直後は、最新状態をポーリングして反映する
+      if (new URLSearchParams(window.location.search).get("stripe")) {
+        const token = await getAccessToken();
+        await fetch(`/api/clinic/stripe/status?clinic_id=${clinic.id}`, { headers: { Authorization: `Bearer ${token}` } });
+        await loadOnboarding(clinic.id);
+        router.replace("/clinic/onboarding");
+      }
     })();
   }, [router]);
+
+  async function connectStripe() {
+    if (!clinicId) return;
+    setStripeError(null);
+    setConnectingStripe(true);
+    const token = await getAccessToken();
+    const res = await fetch("/api/clinic/stripe/connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ clinicId }),
+    });
+    if (res.ok) {
+      const { url } = await res.json();
+      window.location.href = url;
+    } else {
+      const { error } = await res.json().catch(() => ({ error: "接続に失敗しました" }));
+      setStripeError(String(error));
+      setConnectingStripe(false);
+    }
+  }
 
   async function saveCancelPolicy() {
     if (!clinicId) return;
@@ -107,12 +142,13 @@ export default function OnboardingPage() {
   }
 
   const cpAppliesTo = (category: "private" | "insurance") => cpScope != null && scopeAppliesToCategory(cpScope, category);
+  const cpTiersOk = (t: CategoryForm) => !t.tiers || areTierPercentsValid(t.tiers);
   const cpCanSave =
     !cpEnabled ||
     (cpScope != null &&
       isInsuranceAcknowledgmentSatisfied(cpScope, cpInsuranceAck) &&
-      (!cpAppliesTo("private") || (cpPrivate.policyText.trim().length > 0 && isBasisNoteValid(cpPrivate.basisNote))) &&
-      (!cpAppliesTo("insurance") || (cpInsurance.policyText.trim().length > 0 && isBasisNoteValid(cpInsurance.basisNote))));
+      (!cpAppliesTo("private") || (cpPrivate.policyText.trim().length > 0 && isBasisNoteValid(cpPrivate.basisNote) && cpTiersOk(cpPrivate))) &&
+      (!cpAppliesTo("insurance") || (cpInsurance.policyText.trim().length > 0 && isBasisNoteValid(cpInsurance.basisNote) && cpTiersOk(cpInsurance))));
 
   async function saveProfile() {
     if (!clinicId) return;
@@ -268,6 +304,26 @@ export default function OnboardingPage() {
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <div className="flex items-center justify-between">
             <div>
+              <p className="font-bold text-gray-900">お支払い連携（Stripe）</p>
+              <p className="text-xs text-gray-400 mt-0.5">キャンセル料の回収先口座。カード登録・請求を行う場合のみ必要です</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {profile?.stripeAccountStatus === "active"
+                ? <span className="text-teal-600 font-bold text-sm">✓ 有効</span>
+                : profile?.stripeAccountStatus === "pending"
+                  ? <span className="text-amber-600 font-bold text-sm">審査中</span>
+                  : <span className="text-xs text-gray-400">未接続</span>}
+              <button onClick={connectStripe} disabled={connectingStripe} className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+                {connectingStripe ? "接続中..." : profile?.stripeAccountStatus === "active" ? "管理画面を開く" : profile?.stripeAccountStatus === "pending" ? "続きを設定する" : "Stripeに接続する"}
+              </button>
+            </div>
+          </div>
+          {stripeError && <p className="text-xs text-red-600 mt-2">{stripeError}</p>}
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="font-bold text-gray-900">キャンセル料ポリシー</p>
               <p className="text-xs text-gray-400 mt-0.5">任意設定。予約時に患者さまへ提示し、同意をいただく文章です</p>
             </div>
@@ -362,6 +418,59 @@ export default function OnboardingPage() {
                           />
                         </div>
 
+                        <div>
+                          <label className={labelCls}>段階テーブル（キャンセル発生時の請求率。金額の初期値はありません）</label>
+                          <div className="space-y-2">
+                            {(form.tiers ?? []).map((tier, i) => (
+                              <div key={i} className="flex items-center gap-2">
+                                {tier.noShow ? (
+                                  <span className="text-xs w-28 shrink-0 text-gray-600">無断不来院</span>
+                                ) : (
+                                  <span className="text-xs w-28 shrink-0 text-gray-600 flex items-center gap-1">
+                                    <input
+                                      type="number" min={0} className={`${inputCls} w-14 px-2 py-1`}
+                                      value={tier.daysBefore ?? 0}
+                                      onChange={e => {
+                                        const tiers = [...(form.tiers ?? [])];
+                                        tiers[i] = { ...tier, daysBefore: Number(e.target.value) || 0 };
+                                        setForm({ ...form, tiers });
+                                      }}
+                                    />
+                                    日前
+                                  </span>
+                                )}
+                                <input
+                                  type="number" min={0} max={100} className={`${inputCls} w-20 px-2 py-1`}
+                                  value={tier.percent}
+                                  onChange={e => {
+                                    const tiers = [...(form.tiers ?? [])];
+                                    tiers[i] = { ...tier, percent: Number(e.target.value) || 0 };
+                                    setForm({ ...form, tiers });
+                                  }}
+                                />
+                                <span className="text-xs text-gray-500">%</span>
+                                <button type="button" onClick={() => {
+                                  const tiers = (form.tiers ?? []).filter((_, j) => j !== i);
+                                  setForm({ ...form, tiers });
+                                }} className="text-xs text-gray-400 hover:text-red-600 ml-2">削除</button>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="flex gap-2 mt-2">
+                            <button type="button" onClick={() => setForm({ ...form, tiers: [...(form.tiers ?? []), { daysBefore: 0, percent: 0 }] })} className="text-xs text-teal-600 hover:underline">
+                              ＋ 日数指定の段階を追加
+                            </button>
+                            {!(form.tiers ?? []).some(t => t.noShow) && (
+                              <button type="button" onClick={() => setForm({ ...form, tiers: [...(form.tiers ?? []), { noShow: true, percent: 0 }] })} className="text-xs text-teal-600 hover:underline">
+                                ＋ 無断不来院の段階を追加
+                              </button>
+                            )}
+                          </div>
+                          {form.tiers && !areTierPercentsValid(form.tiers) && (
+                            <p className="text-xs text-red-600 mt-1">% は0〜100の範囲で入力してください</p>
+                          )}
+                        </div>
+
                         {form.policyText && (
                           <div className="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
                             <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mb-1.5">患者さまにはこう表示されます</p>
@@ -371,6 +480,18 @@ export default function OnboardingPage() {
                             <p className="text-xs text-gray-800 whitespace-pre-wrap mt-1.5 leading-relaxed">{form.policyText}</p>
                             {form.showBasisToPatient && form.basisNote && (
                               <p className="text-xs text-gray-500 mt-1.5">{form.basisNote}</p>
+                            )}
+                            {form.tiers && form.tiers.length > 0 && (
+                              <table className="mt-2 text-xs text-gray-700 w-full">
+                                <tbody>
+                                  {form.tiers.map((t, i) => (
+                                    <tr key={i} className="border-t border-gray-200">
+                                      <td className="py-1 pr-2">{t.noShow ? "ご連絡のないキャンセル" : t.daysBefore === 0 ? "当日" : `${t.daysBefore}日前まで`}</td>
+                                      <td className="py-1 text-right font-bold">{t.percent === 0 ? "無料" : `${t.percent}%`}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
                             )}
                           </div>
                         )}
