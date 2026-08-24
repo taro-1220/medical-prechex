@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import type { Appointment } from "@/lib/types";
 import { maskPatientName, buildIcsContent } from "@/lib/ticket";
+import { computeFreeCancellationDeadline, formatYen } from "@/lib/charge-policy";
+import { formatDeadline } from "../CardRegistration";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("ja-JP", {
@@ -101,11 +103,15 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
     }
   };
 
+  const freeCancellationDeadline = appt.cancelPolicyApplied
+    ? computeFreeCancellationDeadline(appt.appointmentAt, appt.cancelPolicyTiers ?? null)
+    : null;
+
   const chargeStatusBlock = appt.cardRegistrationRequired && (
     <div className="rounded-2xl border border-gray-200 bg-white p-5">
       {appt.chargeStatus === "charged" ? (
         <p className="text-sm text-gray-700">
-          請求済み: <span className="font-bold">{appt.chargedAmount ?? 0}円</span>
+          請求済み: <span className="font-bold">{formatYen(appt.chargedAmount ?? 0)}</span>
           {appt.chargeExecutedAt && `（${formatDate(appt.chargeExecutedAt)}`}
           {appt.baseAmount && appt.chargedAmount != null && `、同意条件: ${Math.round((appt.chargedAmount / appt.baseAmount) * 100)}%）`}
         </p>
@@ -123,7 +129,14 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
           {reauthError && <p className="text-xs text-red-600">{reauthError}</p>}
         </div>
       ) : (
-        <p className="text-sm text-gray-500">ご来院いただければ請求は発生しません。</p>
+        <div className="space-y-2">
+          <p className="text-sm text-gray-500">ご来院いただければ請求は発生しません。</p>
+          {freeCancellationDeadline && (
+            <p className="text-sm font-bold text-teal-700 bg-teal-50 rounded-xl px-4 py-2.5">
+              {formatDeadline(freeCancellationDeadline)} まで キャンセル無料
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
@@ -324,7 +337,7 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
             <div className="px-6 py-4 space-y-3">
               {cancelPreview?.applicable && (cancelPreview.amount ?? 0) > 0 ? (
                 <p className="text-sm text-gray-700 leading-relaxed">
-                  現時点でのキャンセルには、条件に基づき<span className="font-bold">{cancelPreview.percent}%（{cancelPreview.amount}円）</span>のお支払いが発生します。
+                  現時点でのキャンセルには、条件に基づき<span className="font-bold">{formatYen(cancelPreview.amount ?? 0)}（{cancelPreview.percent}%）</span>を登録のカードから自動的にお引き落としいたします。
                 </p>
               ) : (
                 <p className="text-sm text-gray-700 leading-relaxed">現時点でのキャンセルは無料です。</p>

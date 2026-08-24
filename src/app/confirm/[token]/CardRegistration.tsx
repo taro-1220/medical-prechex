@@ -3,6 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import type { CancelTier } from "@/lib/types";
+import { formatTierAmount } from "@/lib/charge-policy";
+
+export function formatDeadline(iso: string): string {
+  return new Date(iso).toLocaleString("ja-JP", {
+    month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
+  });
+}
 
 const TIER_ROW_LABEL = (t: CancelTier): string => {
   if (t.noShow) return "ご連絡のないキャンセル";
@@ -10,14 +17,14 @@ const TIER_ROW_LABEL = (t: CancelTier): string => {
   return `${t.daysBefore}日前まで`;
 };
 
-function TierTable({ tiers }: { tiers: CancelTier[] }) {
+function TierTable({ tiers, baseAmount }: { tiers: CancelTier[]; baseAmount: number | null }) {
   return (
     <table className="w-full text-sm">
       <tbody>
         {tiers.map((t, i) => (
           <tr key={i} className="border-t border-gray-100 first:border-t-0">
             <td className="py-2 text-gray-600">{TIER_ROW_LABEL(t)}</td>
-            <td className="py-2 text-right font-bold text-gray-900">{t.percent === 0 ? "無料" : `${t.percent}%`}</td>
+            <td className="py-2 text-right font-bold text-gray-900">{formatTierAmount(t.percent, baseAmount)}</td>
           </tr>
         ))}
       </tbody>
@@ -82,12 +89,14 @@ export default function CardRegistration({
   clinicName,
   category,
   tiers,
+  baseAmount,
   onRegistered,
 }: {
   token: string;
   clinicName: string;
   category: string;
   tiers: CancelTier[] | null;
+  baseAmount: number | null;
   onRegistered: () => void;
 }) {
   const [connectedAccountId, setConnectedAccountId] = useState<string | null>(null);
@@ -119,11 +128,11 @@ export default function CardRegistration({
       <p className="text-xs font-bold uppercase tracking-widest text-gray-400">お支払いカードのご登録</p>
       <p className="text-sm text-gray-700 leading-relaxed">
         カードのご登録のみで、この時点でお支払いは発生しません。ご来院いただければ一切の請求はありません。
-        ご都合によるキャンセルの場合のみ、下記の条件に基づきご登録のカードへお支払いをお願いいたします。
+        ご都合によるキャンセルの場合のみ、下記の条件に基づきご登録のカードから自動的にお引き落としいたします。
       </p>
       {tiers && tiers.length > 0 && (
         <div className="bg-gray-50 rounded-xl px-4 py-2">
-          <TierTable tiers={tiers} />
+          <TierTable tiers={tiers} baseAmount={baseAmount} />
         </div>
       )}
       <p className="text-xs text-gray-400">{clinicName}（{category}）</p>

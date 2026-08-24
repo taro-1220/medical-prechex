@@ -5,6 +5,11 @@ import {
   computeChargeAmount,
   evaluateChargeEligibility,
   areTierPercentsValid,
+  computeFreeCancellationDeadline,
+  extractStatedDeadlineDaysBefore,
+  checkPolicyTierConsistency,
+  formatYen,
+  formatTierAmount,
   type CancelTier,
 } from "./charge-policy";
 
@@ -185,5 +190,97 @@ describe("areTierPercentsValid", () => {
   });
   it("負値は無効", () => {
     expect(areTierPercentsValid([{ percent: -1 }])).toBe(false);
+  });
+});
+
+describe("computeFreeCancellationDeadline", () => {
+  const APPT = "2026-09-10T09:00:00.000Z";
+
+  it("percent=0の段階（最小daysBefore）から絶対日時を算出する", () => {
+    expect(computeFreeCancellationDeadline(APPT, [
+      { daysBefore: 3, percent: 0 }, { daysBefore: 1, percent: 30 }, { daysBefore: 0, percent: 50 },
+    ])).toBe("2026-09-07T09:00:00.000Z");
+  });
+
+  it("percent=0の段階が複数あっても最小daysBefore側が境界になる", () => {
+    expect(computeFreeCancellationDeadline(APPT, [
+      { daysBefore: 5, percent: 0 }, { daysBefore: 3, percent: 0 }, { daysBefore: 1, percent: 30 },
+    ])).toBe("2026-09-07T09:00:00.000Z");
+  });
+
+  it("percent=0の段階が無ければnull", () => {
+    expect(computeFreeCancellationDeadline(APPT, [{ daysBefore: 1, percent: 30 }])).toBeNull();
+  });
+
+  it("tiersがnull/未設定ならnull", () => {
+    expect(computeFreeCancellationDeadline(APPT, null)).toBeNull();
+    expect(computeFreeCancellationDeadline(APPT, undefined)).toBeNull();
+  });
+});
+
+describe("extractStatedDeadlineDaysBefore", () => {
+  it("「n日前」を抽出する", () => {
+    expect(extractStatedDeadlineDaysBefore("予約日3日前までのキャンセルは無料です。")).toBe(3);
+  });
+  it("「前日」は1として抽出する", () => {
+    expect(extractStatedDeadlineDaysBefore("前日までにご連絡ください。")).toBe(1);
+  });
+  it("「当日」は0として抽出する", () => {
+    expect(extractStatedDeadlineDaysBefore("当日のキャンセルは治療費の50%を頂戴します。")).toBe(0);
+  });
+  it("該当する表現が無ければnull", () => {
+    expect(extractStatedDeadlineDaysBefore("お早めにご連絡ください。")).toBeNull();
+  });
+});
+
+describe("checkPolicyTierConsistency", () => {
+  const APPT = "2026-09-10T09:00:00.000Z";
+  const TIERS_3DAY_FREE: CancelTier[] = [{ daysBefore: 3, percent: 0 }, { daysBefore: 1, percent: 50 }];
+
+  it("本文とtiersの日数が一致すれば矛盾なし", () => {
+    const r = checkPolicyTierConsistency("予約日3日前までのキャンセルは無料です。", APPT, TIERS_3DAY_FREE);
+    expect(r.mismatched).toBe(false);
+    expect(r.statedDaysBefore).toBe(3);
+    expect(r.tierDaysBefore).toBe(3);
+  });
+
+  it("本文とtiersの日数が異なれば矛盾あり", () => {
+    const r = checkPolicyTierConsistency("前日までのキャンセルは無料です。", APPT, TIERS_3DAY_FREE);
+    expect(r.mismatched).toBe(true);
+    expect(r.statedDaysBefore).toBe(1);
+    expect(r.tierDaysBefore).toBe(3);
+  });
+
+  it("本文から抽出できなければ矛盾ありとしない（誤検出回避）", () => {
+    const r = checkPolicyTierConsistency("お早めにご連絡ください。", APPT, TIERS_3DAY_FREE);
+    expect(r.mismatched).toBe(false);
+    expect(r.statedDaysBefore).toBeNull();
+  });
+
+  it("tiersに0%段階が無ければ矛盾ありとしない", () => {
+    const r = checkPolicyTierConsistency("3日前までのキャンセルは無料です。", APPT, [{ daysBefore: 1, percent: 50 }]);
+    expect(r.mismatched).toBe(false);
+    expect(r.tierDaysBefore).toBeNull();
+  });
+});
+
+describe("formatYen", () => {
+  it("3桁区切りで円表示する", () => {
+    expect(formatYen(5000)).toBe("5,000円");
+    expect(formatYen(1234567)).toBe("1,234,567円");
+    expect(formatYen(0)).toBe("0円");
+  });
+});
+
+describe("formatTierAmount", () => {
+  it("基準額があれば円建て＋%表示にする", () => {
+    expect(formatTierAmount(50, 10000)).toBe("5,000円（治療費の50%）");
+  });
+  it("基準額があってもpercent=0は「無料」にする", () => {
+    expect(formatTierAmount(0, 10000)).toBe("無料");
+  });
+  it("基準額が無ければ%単独表示にフォールバックする", () => {
+    expect(formatTierAmount(50, null)).toBe("50%");
+    expect(formatTierAmount(50, undefined)).toBe("50%");
   });
 });

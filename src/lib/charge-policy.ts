@@ -114,3 +114,72 @@ export function evaluateChargeEligibility(input: ChargeEligibilityInput): Charge
 export function areTierPercentsValid(tiers: CancelTier[]): boolean {
   return tiers.every((t) => typeof t.percent === "number" && t.percent >= 0 && t.percent <= 100);
 }
+
+// ---------------------------------------------------------------------------
+// Phase G P0: 締切の絶対日時化・本文とtiersの整合チェック（追加のみ。上記の既存関数は変更しない）
+// ---------------------------------------------------------------------------
+
+/**
+ * tiersが定める「無料キャンセル期限」の絶対日時。
+ * percent=0の段階のうちdaysBeforeが最小のものを採用する
+ * （ラダー判定の性質上、実際の無料/有料の境界はそこで決まるため。0%段階が複数あっても同じ結果になる）。
+ * percent=0の段階が無ければ null（tiersだけでは無料期間が無い）。
+ */
+export function computeFreeCancellationDeadline(appointmentAt: string, tiers: CancelTier[] | null | undefined): string | null {
+  const freeDaysBefore = (tiers ?? [])
+    .filter((t): t is CancelTier & { daysBefore: number } => typeof t.daysBefore === "number" && t.percent === 0)
+    .map((t) => t.daysBefore);
+  if (freeDaysBefore.length === 0) return null;
+  const minDaysBefore = Math.min(...freeDaysBefore);
+  return new Date(new Date(appointmentAt).getTime() - minDaysBefore * 24 * 60 * 60 * 1000).toISOString();
+}
+
+/**
+ * 予約確認ポリシー本文（自由記述）から「n日前」「前日」「当日」の締切表現を抽出する。
+ * 見つからなければ null（本文に具体的な日数表現が無いだけであり、矛盾とは判定しない）。
+ * 複数該当する場合は本文中で最初に出現したものを採用する。
+ */
+export function extractStatedDeadlineDaysBefore(policyText: string): number | null {
+  const match = policyText.match(/(\d+)\s*日前|前日|当日/);
+  if (!match) return null;
+  if (match[0] === "当日") return 0;
+  if (match[0] === "前日") return 1;
+  return Number(match[1]);
+}
+
+export interface PolicyTierConsistencyResult {
+  /** 本文・tiersの双方から締切日数を抽出できて、かつ値が異なる場合のみtrue */
+  mismatched: boolean;
+  statedDaysBefore: number | null;
+  tierDaysBefore: number | null;
+}
+
+/**
+ * 予約確認ポリシー本文とtiersの無料境界が矛盾していないかを検証する。
+ * 抽出できない側があれば mismatched=false（誤検出よりも「警告しない」を優先する。Gate 0で承認済みの方針）。
+ */
+export function checkPolicyTierConsistency(
+  policyText: string,
+  appointmentAt: string,
+  tiers: CancelTier[] | null | undefined,
+): PolicyTierConsistencyResult {
+  const statedDaysBefore = extractStatedDeadlineDaysBefore(policyText);
+  const deadline = computeFreeCancellationDeadline(appointmentAt, tiers);
+  const tierDaysBefore = deadline != null ? Math.round(daysBeforeAppointment(appointmentAt, deadline)) : null;
+  const mismatched = statedDaysBefore != null && tierDaysBefore != null && statedDaysBefore !== tierDaysBefore;
+  return { mismatched, statedDaysBefore, tierDaysBefore };
+}
+
+/** 金額を3桁区切りの円表示にする（例: 5000 → "5,000円"） */
+export function formatYen(amount: number): string {
+  return `${amount.toLocaleString("ja-JP")}円`;
+}
+
+/**
+ * 段階の表示文言。基準額があれば「5,000円（治療費の50%）」、無ければ「50%」にフォールバックする。
+ */
+export function formatTierAmount(percent: number, baseAmount: number | null | undefined): string {
+  if (baseAmount == null) return `${percent}%`;
+  if (percent === 0) return "無料";
+  return `${formatYen(computeChargeAmount(baseAmount, percent))}（治療費の${percent}%）`;
+}

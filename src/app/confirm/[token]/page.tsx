@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Appointment } from "@/lib/types";
-import CardRegistration from "./CardRegistration";
+import CardRegistration, { formatDeadline } from "./CardRegistration";
+import { computeFreeCancellationDeadline } from "@/lib/charge-policy";
 
 const TREATMENT_CATEGORY_LABEL: Record<string, string> = { private: "自由診療", insurance: "保険診療" };
 
@@ -90,6 +91,9 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
   }
 
   const hasPolicy = appt.cancellationPolicy.trim().length > 0;
+  const freeCancellationDeadline = cancelPolicyApplied
+    ? computeFreeCancellationDeadline(appt.appointmentAt, appt.cancelPolicyTiers ?? null)
+    : null;
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -128,6 +132,11 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
             <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-xl px-4 py-3">
               {appt.cancelPolicySnapshot}
             </p>
+            {freeCancellationDeadline && (
+              <p className="text-sm font-bold text-teal-700 bg-teal-50 rounded-xl px-4 py-2.5">
+                {formatDeadline(freeCancellationDeadline)} まで キャンセル無料
+              </p>
+            )}
             {appt.cancelPolicyShowBasisToPatient && appt.cancelPolicyBasisNote && (
               <p className="text-xs text-gray-500 leading-relaxed">{appt.cancelPolicyBasisNote}</p>
             )}
@@ -150,6 +159,7 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
             clinicName={appt.clinicName}
             category={TREATMENT_CATEGORY_LABEL[appt.treatmentCategory] ?? appt.treatmentCategory}
             tiers={appt.cancelPolicyTiers ?? null}
+            baseAmount={appt.baseAmount ?? null}
             onRegistered={refetchAppointment}
           />
         )}
