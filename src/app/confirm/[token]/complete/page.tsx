@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import type { Appointment } from "@/lib/types";
 import { maskPatientName, buildIcsContent } from "@/lib/ticket";
 import { computeFreeCancellationDeadline, formatYen } from "@/lib/charge-policy";
-import { formatDeadline } from "../CardRegistration";
+import CardRegistration, { formatDeadline } from "../CardRegistration";
+
+const TREATMENT_CATEGORY_LABEL: Record<string, string> = { private: "自由診療", insurance: "保険診療" };
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("ja-JP", {
@@ -25,6 +27,7 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [reauthenticating, setReauthenticating] = useState(false);
   const [reauthError, setReauthError] = useState<string | null>(null);
+  const [retryingCard, setRetryingCard] = useState(false);
 
   useEffect(() => {
     params.then(({ token: t }) => setToken(t));
@@ -74,6 +77,13 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
   }
 
   // MVP+2 D-2/D-3: 請求状態（キャンセル済みで初めて意味を持つため、cancelled分岐でも使う）
+  const refetchAppointment = () => {
+    if (!token) return;
+    fetch(`/api/appointments/${token}`).then(async (res) => {
+      if (res.ok) setAppt(await res.json());
+    });
+  };
+
   const handleReauth = async () => {
     if (!token || reauthenticating) return;
     setReauthenticating(true);
@@ -106,19 +116,59 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
   const freeCancellationDeadline = appt.cancelPolicyApplied
     ? computeFreeCancellationDeadline(appt.appointmentAt, appt.cancelPolicyTiers ?? null)
     : null;
+  const needsCardRegistration = appt.cardRegistrationRequired && !appt.stripePaymentMethodId;
 
   const chargeStatusBlock = appt.cardRegistrationRequired && (
     <div className="rounded-2xl border border-gray-200 bg-white p-5">
-      {appt.chargeStatus === "charged" ? (
+      {needsCardRegistration ? (
+        <div className="space-y-3">
+          <p className="text-sm text-amber-700 font-bold">お支払いカードのご登録がお済みではありません</p>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            ご来院いただければ請求は発生しません。ご都合によるキャンセルの場合のみ、条件に基づき登録のカードから自動的にお引き落としいたします。
+          </p>
+          <CardRegistration
+            token={token!}
+            clinicName={appt.clinicName}
+            category={TREATMENT_CATEGORY_LABEL[appt.treatmentCategory] ?? appt.treatmentCategory}
+            tiers={appt.cancelPolicyTiers ?? null}
+            baseAmount={appt.baseAmount ?? null}
+            onRegistered={refetchAppointment}
+          />
+        </div>
+      ) : appt.chargeStatus === "charged" ? (
         <p className="text-sm text-gray-700">
           請求済み: <span className="font-bold">{formatYen(appt.chargedAmount ?? 0)}</span>
           {appt.chargeExecutedAt && `（${formatDate(appt.chargeExecutedAt)}`}
           {appt.baseAmount && appt.chargedAmount != null && `、同意条件: ${Math.round((appt.chargedAmount / appt.baseAmount) * 100)}%）`}
         </p>
       ) : appt.chargeStatus === "failed" ? (
-        <div className="space-y-1">
-          <p className="text-sm text-red-600 font-bold">お支払いに失敗しました</p>
-          <p className="text-xs text-gray-500">窓口でのご精算となる場合があります。医院までご連絡ください。</p>
+        <div className="space-y-3">
+          <p className="text-sm text-red-600 font-bold">カードのお手続きが完了できませんでした</p>
+          <p className="text-xs text-gray-500">
+            請求額 <span className="font-bold text-gray-700">{formatYen(appt.chargedAmount ?? 0)}</span> のお引き落としができませんでした。
+          </p>
+          {retryingCard ? (
+            <CardRegistration
+              token={token!}
+              clinicName={appt.clinicName}
+              category={TREATMENT_CATEGORY_LABEL[appt.treatmentCategory] ?? appt.treatmentCategory}
+              tiers={appt.cancelPolicyTiers ?? null}
+              baseAmount={appt.baseAmount ?? null}
+              onRegistered={() => { setRetryingCard(false); refetchAppointment(); }}
+            />
+          ) : (
+            <button
+              onClick={() => setRetryingCard(true)}
+              className="w-full py-3 rounded-xl bg-gray-900 text-white font-bold text-sm hover:bg-gray-800 transition"
+            >
+              別のカードでお手続きする
+            </button>
+          )}
+          {appt.clinicPhone && (
+            <a href={`tel:${appt.clinicPhone}`} className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition">
+              📞 医院に電話する
+            </a>
+          )}
         </div>
       ) : appt.chargeStatus === "requires_action" ? (
         <div className="space-y-2">
