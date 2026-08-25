@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   resolveCancelTier,
   daysBeforeAppointment,
+  toJstDateKey,
+  calendarDaysBefore,
   computeChargeAmount,
   evaluateChargeEligibility,
   areTierPercentsValid,
@@ -29,6 +31,45 @@ describe("daysBeforeAppointment", () => {
   });
   it("予約日時より後（無断判定時）なら負の日数", () => {
     expect(daysBeforeAppointment(APPT_AT, "2026-09-11T09:00:00.000Z")).toBeCloseTo(-1, 5);
+  });
+});
+
+describe("toJstDateKey / calendarDaysBefore: Phase I 共通暦日ヘルパー", () => {
+  it("toJstDateKeyはAsia/Tokyo暦日をYYYY-MM-DDで返す", () => {
+    expect(toJstDateKey("2026-09-10T09:00:00.000Z")).toBe("2026-09-10"); // 18:00 JST
+    expect(toJstDateKey("2026-09-09T23:00:00.000Z")).toBe("2026-09-10"); // 08:00 JST（UTC暦日は前日）
+  });
+
+  it("JST/UTC日跨ぎ: 予約がJST 08:00（=UTC前日23:00）でも正しくJST暦日で差分を出す", () => {
+    // 予約: 2026-09-10 08:00 JST = 2026-09-09T23:00:00Z
+    const appt = "2026-09-09T23:00:00.000Z";
+    // キャンセル: 2026-09-07 08:00 JST = 2026-09-06T23:00:00Z（3日前）
+    const event = "2026-09-06T23:00:00.000Z";
+    expect(calendarDaysBefore(appt, event)).toBe(3);
+  });
+
+  it("UTC暦日は同じでもJST暦日をまたぐ場合は1日分カウントする", () => {
+    // 予約: 2026-09-10 08:00 JST（UTC 2026-09-09T23:00Z）
+    const appt = "2026-09-09T23:00:00.000Z";
+    // イベント: 2026-09-09 23:00 JST（UTC 2026-09-09T14:00Z）。UTC暦日は同じ9/9だがJST暦日は9/9で1日差
+    const event = "2026-09-09T14:00:00.000Z";
+    expect(calendarDaysBefore(appt, event)).toBe(1);
+  });
+
+  it("月またぎでも正しい暦日差になる", () => {
+    const appt = "2026-09-02T01:00:00.000Z"; // 2026-09-02 10:00 JST
+    const event = "2026-08-30T01:00:00.000Z"; // 2026-08-30 10:00 JST（3日前）
+    expect(calendarDaysBefore(appt, event)).toBe(3);
+  });
+
+  it("年またぎでも正しい暦日差になる", () => {
+    const appt = "2027-01-02T01:00:00.000Z"; // 2027-01-02 10:00 JST
+    const event = "2026-12-30T01:00:00.000Z"; // 2026-12-30 10:00 JST（3日前）
+    expect(calendarDaysBefore(appt, event)).toBe(3);
+  });
+
+  it("eventAtがappointmentAtより後なら負の値を返す（0へのクランプはresolveCancelTier側の責務）", () => {
+    expect(calendarDaysBefore("2026-09-10T09:00:00.000Z", "2026-09-12T09:00:00.000Z")).toBe(-2);
   });
 });
 
@@ -126,6 +167,90 @@ describe("resolveCancelTier: 無断不来院（境界値）", () => {
       eventAt: "2026-09-10T09:30:00.000Z", graceHours: 24, isNoShow: true,
     });
     expect(r.reason).toBe("grace_hours");
+  });
+});
+
+describe("resolveCancelTier: Phase I 表示(computeFreeCancellationDeadline)との一致検証", () => {
+  const TIERS_3_1: CancelTier[] = [{ daysBefore: 3, percent: 0 }, { daysBefore: 1, percent: 50 }];
+  const CREATED_LONG_AGO = "2026-01-01T00:00:00.000Z"; // grace_hoursに掛からないよう十分前
+
+  const APPT_TIMES_JST: Array<{ label: string; appt: string }> = [
+    { label: "00:15 JST", appt: "2026-09-09T15:15:00.000Z" },
+    { label: "07:57 JST", appt: "2026-09-09T22:57:00.000Z" },
+    { label: "12:00 JST", appt: "2026-09-10T03:00:00.000Z" },
+    { label: "23:45 JST", appt: "2026-09-10T14:45:00.000Z" },
+  ];
+
+  it.each(APPT_TIMES_JST)("予約時刻 $label: 表示締切の直前1秒は無料、直後1秒は有料になる", ({ appt }) => {
+    const deadline = computeFreeCancellationDeadline(appt, TIERS_3_1)!;
+    const justBefore = new Date(new Date(deadline).getTime() - 1000).toISOString();
+    const justAfter = new Date(new Date(deadline).getTime() + 1000).toISOString();
+
+    const beforeResult = resolveCancelTier({
+      tiers: TIERS_3_1, appointmentAt: appt, createdAt: CREATED_LONG_AGO,
+      eventAt: justBefore, graceHours: 1, isNoShow: false,
+    });
+    const afterResult = resolveCancelTier({
+      tiers: TIERS_3_1, appointmentAt: appt, createdAt: CREATED_LONG_AGO,
+      eventAt: justAfter, graceHours: 1, isNoShow: false,
+    });
+
+    expect(beforeResult.percent).toBe(0);
+    expect(afterResult.percent).toBeGreaterThan(0);
+  });
+});
+
+describe("resolveCancelTier: Phase I 事後キャンセル（暦日差が負）", () => {
+  const CREATED_LONG_AGO = "2026-01-01T00:00:00.000Z";
+
+  it("予約時刻を過ぎてからのキャンセルは0日前tierとして扱う", () => {
+    const tiers: CancelTier[] = [{ daysBefore: 3, percent: 0 }, { daysBefore: 1, percent: 50 }, { daysBefore: 0, percent: 100 }];
+    const r = resolveCancelTier({
+      tiers, appointmentAt: "2026-09-10T09:00:00.000Z", createdAt: CREATED_LONG_AGO,
+      eventAt: "2026-09-12T09:00:00.000Z", // 予約の2日後
+      graceHours: 1, isNoShow: false,
+    });
+    expect(r.reason).toBe("tier");
+    expect(r.percent).toBe(100);
+    expect(r.matchedTier).toEqual({ daysBefore: 0, percent: 100 });
+  });
+
+  it("0日前tierが無い場合は事後キャンセルでもno_matching_tierのまま（0%を勝手に補わない）", () => {
+    const tiers: CancelTier[] = [{ daysBefore: 3, percent: 0 }, { daysBefore: 1, percent: 50 }];
+    const r = resolveCancelTier({
+      tiers, appointmentAt: "2026-09-10T09:00:00.000Z", createdAt: CREATED_LONG_AGO,
+      eventAt: "2026-09-12T09:00:00.000Z",
+      graceHours: 1, isNoShow: false,
+    });
+    expect(r.reason).toBe("no_matching_tier");
+    expect(r.percent).toBe(0);
+  });
+});
+
+describe("resolveCancelTier: Phase I grace_hours / 無断不来院の独立性確認", () => {
+  it("事後（appointmentAtより後）でもgrace_hours以内なら無料が優先される", () => {
+    const r = resolveCancelTier({
+      tiers: [{ daysBefore: 3, percent: 0 }, { daysBefore: 0, percent: 100 }],
+      appointmentAt: "2026-09-10T09:00:00.000Z",
+      createdAt: "2026-09-10T10:00:00.000Z", // 予約時刻より後に作成された想定
+      eventAt: "2026-09-10T11:00:00.000Z", // 作成から1時間後
+      graceHours: 24,
+      isNoShow: false,
+    });
+    expect(r.reason).toBe("grace_hours");
+    expect(r.percent).toBe(0);
+  });
+
+  it("暦日差が負になるeventAtでも無断不来院tierはcalendarDaysBefore非経由でそのまま適用される", () => {
+    const tiers: CancelTier[] = [{ daysBefore: 3, percent: 0 }, { noShow: true, percent: 100 }];
+    const r = resolveCancelTier({
+      tiers, appointmentAt: "2026-09-10T09:00:00.000Z", createdAt: "2026-01-01T00:00:00.000Z",
+      eventAt: "2026-09-15T09:00:00.000Z", // 予約の5日後
+      graceHours: 1, isNoShow: true,
+    });
+    expect(r.reason).toBe("tier");
+    expect(r.percent).toBe(100);
+    expect(r.matchedTier).toEqual({ noShow: true, percent: 100 });
   });
 });
 

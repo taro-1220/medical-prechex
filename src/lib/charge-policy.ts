@@ -4,6 +4,39 @@
 
 import { isWithinGraceHours } from "./cancel-policy";
 
+// ---------------------------------------------------------------------------
+// Phase I: JST暦日ヘルパー（表示のcomputeFreeCancellationDeadlineと判定のresolveCancelTierが
+// 同じ日数概念を参照するための共通実装。DST非対応地域のため固定+9hシフトで安全に算出できる）
+// ---------------------------------------------------------------------------
+
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** isoのAsia/Tokyo暦日を "YYYY-MM-DD" で返す */
+export function toJstDateKey(iso: string): string {
+  const d = new Date(new Date(iso).getTime() + JST_OFFSET_MS);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** "YYYY-MM-DD" を、日単位の演算専用の疑似UTC ms（暦日の差分計算にのみ使う。実時刻ではない）に変換する */
+function dateKeyToDayMs(dateKey: string): number {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
+/**
+ * 予約日とeventAtのAsia/Tokyo暦日差（時刻は無視）。
+ * 正: eventAtが予約日より前の暦日。0: 同じ暦日。負: eventAtが予約日より後の暦日
+ * （負の扱い＝0日前tierとして扱うかどうかは呼び出し側の責務。ここでは実際の差分をそのまま返す）
+ */
+export function calendarDaysBefore(appointmentAt: string, eventAt: string): number {
+  const apptDayMs = dateKeyToDayMs(toJstDateKey(appointmentAt));
+  const eventDayMs = dateKeyToDayMs(toJstDateKey(eventAt));
+  return Math.round((apptDayMs - eventDayMs) / (1000 * 60 * 60 * 24));
+}
+
 export interface CancelTier {
   /** 「n日前まで」。no_showとは排他 */
   daysBefore?: number;
@@ -71,7 +104,9 @@ export function resolveCancelTier(params: {
     return { reason: "tier", matchedTier: tier, percent: tier.percent };
   }
 
-  const actualDaysBefore = daysBeforeAppointment(appointmentAt, eventAt);
+  // 暦日差が負（＝予約時刻より後のキャンセル/事後判定）は0日前として扱う
+  // （無断不来院はfindNoShowTier経由で独立しているため、ここには競合しない）
+  const actualDaysBefore = Math.max(0, calendarDaysBefore(appointmentAt, eventAt));
   const ladder = sortedDaysBeforeTiers(list);
   for (const tier of ladder) {
     if (actualDaysBefore >= tier.daysBefore!) {
@@ -119,14 +154,28 @@ export function areTierPercentsValid(tiers: CancelTier[]): boolean {
 // Phase G P0: 締切の絶対日時化・本文とtiersの整合チェック（追加のみ。上記の既存関数は変更しない）
 // ---------------------------------------------------------------------------
 
-const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
-
 /** percent=0の段階のうち最小のdaysBeforeを返す（無ければnull） */
 function minFreeDaysBefore(tiers: CancelTier[] | null | undefined): number | null {
   const freeDaysBefore = (tiers ?? [])
     .filter((t): t is CancelTier & { daysBefore: number } => typeof t.daysBefore === "number" && t.percent === 0)
     .map((t) => t.daysBefore);
   return freeDaysBefore.length === 0 ? null : Math.min(...freeDaysBefore);
+}
+
+/** "YYYY-MM-DD" にdeltaDays日を加減した日付キーを返す（月またぎ・年またぎはDateの正規化に委ねる） */
+function shiftDateKey(dateKey: string, deltaDays: number): string {
+  const shifted = new Date(dateKeyToDayMs(dateKey) + deltaDays * 24 * 60 * 60 * 1000);
+  const y = shifted.getUTCFullYear();
+  const m = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(shifted.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** "YYYY-MM-DD"のAsia/Tokyo暦日における hh:mm:ss の実時刻を、ISO(UTC)文字列で返す */
+function jstDateKeyTimeToUtcIso(dateKey: string, hh: number, mm: number, ss: number): string {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const jstWallClockAsUtcMs = Date.UTC(y, m - 1, d, hh, mm, ss, 0);
+  return new Date(jstWallClockAsUtcMs - JST_OFFSET_MS).toISOString();
 }
 
 /**
@@ -136,24 +185,18 @@ function minFreeDaysBefore(tiers: CancelTier[] | null | undefined): number | nul
  * （ラダー判定の性質上、実際の無料/有料の境界はそこで決まるため。0%段階が複数あっても同じ結果になる）。
  * percent=0の段階が無ければ null（tiersだけでは無料期間が無い）。
  *
- * 日境界はAsia/Tokyo固定（+9時間、DST無し）で算出する: 予約日（JST）からminDaysBefore日引いた日の
- * 23:59:59 JSTを締切とする。ただしminDaysBefore=0（当日が0%）の場合は日境界にせず、
- * appointmentAtそのものを締切として返す（「当日23:59まで無料」という誤った意味にしないため）。
+ * 日境界はtoJstDateKey（resolveCancelTierのcalendarDaysBeforeと共通）で算出する:
+ * 予約日（JST暦日）からminDaysBefore日引いた日の23:59:59 JSTを締切とする。
+ * ただしminDaysBefore=0（当日が0%）の場合は日境界にせず、appointmentAtそのものを締切として
+ * 返す（「当日23:59まで無料」という誤った意味にしないため）。
  */
 export function computeFreeCancellationDeadline(appointmentAt: string, tiers: CancelTier[] | null | undefined): string | null {
   const minDaysBefore = minFreeDaysBefore(tiers);
   if (minDaysBefore === null) return null;
   if (minDaysBefore === 0) return new Date(appointmentAt).toISOString();
 
-  // JST壁時計の年月日を得る（固定+9hシフトしてUTCゲッターで読む、という標準的な手法。DST非対応地域なので安全）
-  const apptJstWallClock = new Date(new Date(appointmentAt).getTime() + JST_OFFSET_MS);
-  const deadlineJstMidnightUtcMs = Date.UTC(
-    apptJstWallClock.getUTCFullYear(),
-    apptJstWallClock.getUTCMonth(),
-    apptJstWallClock.getUTCDate() - minDaysBefore,
-    23, 59, 59, 0,
-  );
-  return new Date(deadlineJstMidnightUtcMs - JST_OFFSET_MS).toISOString();
+  const deadlineDateKey = shiftDateKey(toJstDateKey(appointmentAt), -minDaysBefore);
+  return jstDateKeyTimeToUtcIso(deadlineDateKey, 23, 59, 59);
 }
 
 /**
