@@ -5,6 +5,7 @@ import type { MessageChannel, Patient, TemplateWithMeta, TreatmentCategory, Clin
 import { getAccessToken, getCurrentClinic } from "@/lib/clinic-auth";
 import { DEFAULT_TEMPLATES, renderTemplate, findUnresolvedPlaceholders } from "@/lib/message-templates";
 import { resolveCancelPolicyApplication } from "@/lib/cancel-policy";
+import { checkPolicyTierConsistency } from "@/lib/charge-policy";
 
 const TREATMENT_CATEGORY_LABEL: Record<TreatmentCategory, string> = { private: "自由診療", insurance: "保険診療", other: "その他" };
 
@@ -50,7 +51,7 @@ export default function ClinicNewPage() {
   const [sentAt, setSentAt] = useState<Record<MessageChannel, string | null>>({ sms: null, line: null, email: null });
   const [confirmChannel, setConfirmChannel] = useState<MessageChannel | null>(null);
   const [marking, setMarking] = useState(false);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [toast, setToast] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
 
   // 医院のテンプレート（保存済み or フォールバック）。今回限りの編集は bodies に閉じ、
   // templateMetas（医院共通テンプレート）自体は書き換えない。
@@ -220,6 +221,19 @@ export default function ClinicNewPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Phase J セクションB: 「予約確認ポリシー」本文とtiersの無料境界の矛盾を保存時に警告する
+    // （ブロックはしない。誤検知は許容し、検出できないケースはそのまま素通りさせる）
+    if (cancelPolicyApplied && activeCancelPolicy?.tiers) {
+      const consistency = checkPolicyTierConsistency(form.cancellationPolicy, activeCancelPolicy.tiers);
+      if (consistency.mismatched) {
+        showToast(
+          "warning",
+          `⚠ 本文は「${consistency.statedDaysBefore}日前」までの記載ですが、段階テーブルの無料境界は「${consistency.tierDaysBefore}日前」です。内容をご確認ください`,
+        );
+      }
+    }
+
     setLoading(true);
     const token = await getAccessToken();
     const res = await fetch("/api/appointments", {
@@ -262,7 +276,7 @@ export default function ClinicNewPage() {
     setTimeout(() => setCopiedTpl(false), 2000);
   };
 
-  const showToast = (type: "success" | "error", message: string) => {
+  const showToast = (type: "success" | "error" | "warning", message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000);
   };
@@ -311,7 +325,7 @@ export default function ClinicNewPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6 py-10">
         {toast && (
-          <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-bold ${toast.type === "success" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>
+          <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-bold ${toast.type === "success" ? "bg-emerald-600 text-white" : toast.type === "warning" ? "bg-amber-500 text-white" : "bg-red-600 text-white"}`}>
             {toast.message}
           </div>
         )}
