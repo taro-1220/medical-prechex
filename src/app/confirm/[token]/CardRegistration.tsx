@@ -17,7 +17,7 @@ const TIER_ROW_LABEL = (t: CancelTier): string => {
   return `${t.daysBefore}日前まで`;
 };
 
-function TierTable({ tiers, baseAmount }: { tiers: CancelTier[]; baseAmount: number | null }) {
+export function TierTable({ tiers, baseAmount }: { tiers: CancelTier[]; baseAmount: number | null }) {
   return (
     <table className="w-full text-sm">
       <tbody>
@@ -72,11 +72,12 @@ function CardForm({ token, onRegistered }: { token: string; onRegistered: () => 
         <CardElement options={{ style: { base: { fontSize: "15px", color: "#111827" } } }} />
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
+      {/* Phase J セクションD: 主アクション（予約内容を確認して確定）に対する副次アクションの見た目にする */}
       <button
         type="button"
         onClick={handleRegister}
         disabled={!stripe || registering}
-        className="w-full py-3.5 rounded-2xl bg-gray-900 text-white font-bold text-sm hover:bg-gray-800 transition disabled:opacity-40"
+        className="w-full py-3 rounded-2xl bg-white border border-gray-300 text-gray-700 font-bold text-sm hover:bg-gray-50 transition disabled:opacity-40"
       >
         {registering ? "登録中..." : "カードを登録"}
       </button>

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Appointment } from "@/lib/types";
-import CardRegistration, { formatDeadline } from "./CardRegistration";
+import CardRegistration, { formatDeadline, TierTable } from "./CardRegistration";
 import { computeFreeCancellationDeadline } from "@/lib/charge-policy";
 
 const TREATMENT_CATEGORY_LABEL: Record<string, string> = { private: "自由診療", insurance: "保険診療" };
@@ -21,7 +21,6 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
   const [error, setError] = useState<string | null>(null);
   const [consented, setConsented] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [policyOpen, setPolicyOpen] = useState(false);
   const [cancelPolicyConsented, setCancelPolicyConsented] = useState(false);
 
   useEffect(() => {
@@ -90,10 +89,17 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
     );
   }
 
-  const hasPolicy = appt.cancellationPolicy.trim().length > 0;
   const freeCancellationDeadline = cancelPolicyApplied
     ? computeFreeCancellationDeadline(appt.appointmentAt, appt.cancelPolicyTiers ?? null)
     : null;
+  // Phase J セクションD: 確定ボタンがdisabledの間、押下条件を明示する
+  const disabledReason = !consented
+    ? "同意にチェックすると確定できます"
+    : cancelPolicyApplied && !cancelPolicyConsented
+      ? "キャンセルについての同意にチェックすると確定できます"
+      : needsCardRegistration
+        ? "カードを登録すると確定できます"
+        : null;
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -126,12 +132,13 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 space-y-3">
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400">キャンセルについて</p>
             <p className="text-sm text-gray-700 leading-relaxed">
-              このご予約は〔{TREATMENT_CATEGORY_LABEL[appt.treatmentCategory] ?? appt.treatmentCategory}〕のため、
-              {appt.clinicName}のキャンセルポリシーが適用されます
+              このご予約にはキャンセルポリシーが適用されます
             </p>
-            <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-xl px-4 py-3">
-              {appt.cancelPolicySnapshot}
-            </p>
+            {appt.cancelPolicyTiers && appt.cancelPolicyTiers.length > 0 && (
+              <div className="bg-gray-50 rounded-xl px-4 py-2">
+                <TierTable tiers={appt.cancelPolicyTiers} baseAmount={appt.baseAmount ?? null} />
+              </div>
+            )}
             {freeCancellationDeadline && (
               <p className="text-sm font-bold text-teal-700 bg-teal-50 rounded-xl px-4 py-2.5">
                 {formatDeadline(freeCancellationDeadline)} まで キャンセル無料
@@ -172,71 +179,26 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
             onChange={(e) => setConsented(e.target.checked)}
             className="mt-0.5 h-4 w-4 rounded accent-teal-600 shrink-0"
           />
-          <span className="text-sm text-gray-700 leading-relaxed">
-            {hasPolicy ? (
-              <>
-                予約内容および
-                <button
-                  type="button"
-                  onClick={(e) => { e.preventDefault(); setPolicyOpen(true); }}
-                  className="text-teal-600 font-bold underline underline-offset-2 hover:text-teal-700"
-                >
-                  「予約時の確認事項」
-                </button>
-                を確認しました
-              </>
-            ) : (
-              "予約内容を確認しました"
-            )}
-          </span>
+          <span className="text-sm text-gray-700 leading-relaxed">予約内容を確認しました</span>
         </label>
 
-        {/* CTA */}
+        {/* CTA（Phase J セクションD: 最も強い見た目にする） */}
         <button
           onClick={handleConfirm}
           disabled={!canConfirm || submitting}
-          className="w-full py-4 rounded-2xl bg-teal-600 text-white font-bold text-base hover:bg-teal-700 transition disabled:opacity-30 disabled:cursor-not-allowed"
+          className="w-full py-4 rounded-2xl bg-teal-600 text-white font-black text-base shadow-md hover:bg-teal-700 transition disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
         >
           {submitting ? "確認中..." : "予約内容を確認して確定"}
         </button>
+        {!canConfirm && !submitting && disabledReason && (
+          <p className="text-center text-xs text-amber-600">{disabledReason}</p>
+        )}
 
         <p className="text-center text-xs text-gray-400 leading-relaxed">
           確定後にQR来院チケットが発行されます。<br />
           来院時に受付でご提示ください。
         </p>
       </div>
-
-      {/* 予約時の確認事項モーダル */}
-      {policyOpen && hasPolicy && (
-        <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
-          role="dialog"
-          aria-modal="true"
-          aria-label="予約時の確認事項"
-        >
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setPolicyOpen(false)}
-          />
-          <div className="relative w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-xl flex flex-col max-h-[85vh] sm:mx-6">
-            <div className="px-6 pt-5 pb-3 border-b border-gray-100">
-              <p className="text-base font-bold text-gray-900">予約時の確認事項</p>
-            </div>
-            <div className="px-6 py-4 overflow-y-auto">
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{appt.cancellationPolicy}</p>
-            </div>
-            <div className="px-6 py-4 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setPolicyOpen(false)}
-                className="w-full py-3 rounded-2xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 transition"
-              >
-                閉じる
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
