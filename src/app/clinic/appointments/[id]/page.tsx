@@ -10,6 +10,11 @@ interface TierMatch {
   percent: number;
 }
 
+interface ExistingCharge {
+  amount: number;
+  chargedAt: string;
+}
+
 interface Judgment {
   applicable: boolean;
   consented: boolean;
@@ -25,12 +30,17 @@ interface Judgment {
   chargeExecutionEnabled?: boolean;
   currentChargeStatus?: string;
   note?: string;
+  existingCharge?: ExistingCharge | null;
+  patientName?: string;
+  appointmentAt?: string;
+  description?: string;
 }
 
 const BLOCKED_LABEL: Record<string, string> = {
   not_consented: "同意なし",
   within_grace_hours: "予約直後の無条件無料時間内",
   no_payment_method: "カード未登録",
+  already_charged: "既に請求済みです",
   flag_disabled: "課金実行フラグが無効（ドライラン運用中）",
 };
 
@@ -89,6 +99,30 @@ export default function AppointmentJudgmentPage({ params }: { params: Promise<{ 
         <h1 className="text-xl font-black mt-1">キャンセル判定</h1>
       </header>
 
+      {/* Phase J セクションA: 誤操作防止のため、対象予約サマリを画面最上部に固定表示する */}
+      {judgment && (
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-gray-200 shadow-sm px-6 py-3">
+          <div className="max-w-2xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <p className="text-[11px] text-gray-400">患者名</p>
+              <p className="text-sm font-bold text-gray-900 truncate">{judgment.patientName ?? "-"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-gray-400">予約日時</p>
+              <p className="text-sm font-bold text-gray-900">{judgment.appointmentAt ? formatDate(judgment.appointmentAt) : "-"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-gray-400">予約内容</p>
+              <p className="text-sm font-bold text-gray-900 truncate">{judgment.description ?? "-"}</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-gray-400">請求予定額</p>
+              <p className="text-sm font-bold text-gray-900">{judgment.amount != null ? `${judgment.amount.toLocaleString()}円` : "-"}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-2xl mx-auto px-6 py-8">
         {loading ? (
           <p className="text-gray-400 text-sm">読み込み中...</p>
@@ -144,12 +178,18 @@ export default function AppointmentJudgmentPage({ params }: { params: Promise<{ 
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 space-y-3">
               <p className="text-xs font-bold uppercase tracking-widest text-gray-400">課金の成立条件</p>
               {judgment.eligibility?.eligible ? (
-                <p className="text-sm font-bold text-teal-700">成立（同意済み・無料時間外・カード登録済み・課金フラグ有効）</p>
+                <p className="text-sm font-bold text-teal-700">成立（同意済み・無料時間外・カード登録済み・未課金・課金フラグ有効）</p>
               ) : (
                 <div className="text-sm text-amber-700">
                   <p className="font-bold">未成立</p>
                   <ul className="list-disc list-inside mt-1 space-y-0.5">
-                    {(judgment.eligibility?.blockedBy ?? []).map((b) => <li key={b}>{BLOCKED_LABEL[b] ?? b}</li>)}
+                    {(judgment.eligibility?.blockedBy ?? []).map((b) => (
+                      <li key={b}>
+                        {b === "already_charged" && judgment.existingCharge
+                          ? `この予約は既に請求済みです（${formatDate(judgment.existingCharge.chargedAt)}、${judgment.existingCharge.amount.toLocaleString()}円）`
+                          : BLOCKED_LABEL[b] ?? b}
+                      </li>
+                    ))}
                   </ul>
                 </div>
               )}
@@ -160,13 +200,41 @@ export default function AppointmentJudgmentPage({ params }: { params: Promise<{ 
 
             {result && <p className="text-sm text-teal-700 bg-teal-50 rounded-xl px-4 py-3">{result}</p>}
 
-            <button
-              onClick={recordCancellation}
-              disabled={recording}
-              className="w-full py-4 rounded-2xl bg-red-600 text-white font-bold text-base hover:bg-red-700 transition disabled:opacity-40"
-            >
-              {recording ? "記録中..." : "この予約のキャンセルを記録する"}
-            </button>
+            {/* Phase J セクションA: ボタンを3分岐にする（already_charged / フラグOFF / フラグON） */}
+            {(() => {
+              const alreadyCharged = judgment.eligibility?.blockedBy?.includes("already_charged") ?? false;
+              if (alreadyCharged) {
+                return (
+                  <button
+                    disabled
+                    className="w-full py-4 rounded-2xl bg-gray-100 text-gray-400 font-bold text-base cursor-not-allowed"
+                  >
+                    請求済みです
+                    {judgment.existingCharge && `（${formatDate(judgment.existingCharge.chargedAt)}、${judgment.existingCharge.amount.toLocaleString()}円）`}
+                  </button>
+                );
+              }
+              if (!judgment.chargeExecutionEnabled) {
+                return (
+                  <button
+                    onClick={recordCancellation}
+                    disabled={recording}
+                    className="w-full py-4 rounded-2xl bg-gray-400 text-white font-bold text-base hover:bg-gray-500 transition disabled:opacity-40"
+                  >
+                    {recording ? "記録中..." : "キャンセルを記録する（テスト運用中・請求は行われません）"}
+                  </button>
+                );
+              }
+              return (
+                <button
+                  onClick={recordCancellation}
+                  disabled={recording}
+                  className="w-full py-4 rounded-2xl bg-red-600 text-white font-bold text-base hover:bg-red-700 transition disabled:opacity-40"
+                >
+                  {recording ? "記録中..." : "この予約のキャンセル料を請求する"}
+                </button>
+              );
+            })()}
           </div>
         )}
       </div>
