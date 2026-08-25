@@ -27,7 +27,8 @@ describe("computeChargeDashboard", () => {
     expect(d).toEqual({
       totalAppointments: 0, cancelledCount: 0, cancelRate: 0, noShowCount: 0,
       collectedAmount: 0, collectedCount: 0, failedChargeCount: 0,
-      policyAppliedCancelRate: 0, policyNotAppliedCancelRate: 0,
+      policyAppliedCancelRate: 0, policyAppliedTotal: 0, policyAppliedCancelledCount: 0,
+      policyNotAppliedCancelRate: 0, policyNotAppliedTotal: 0, policyNotAppliedCancelledCount: 0,
     });
   });
 
@@ -48,7 +49,11 @@ describe("computeChargeDashboard", () => {
     ];
     const d = computeChargeDashboard(appts, []);
     expect(d.policyAppliedCancelRate).toBe(0.5);
+    expect(d.policyAppliedTotal).toBe(2);
+    expect(d.policyAppliedCancelledCount).toBe(1);
     expect(d.policyNotAppliedCancelRate).toBe(1);
+    expect(d.policyNotAppliedTotal).toBe(2);
+    expect(d.policyNotAppliedCancelledCount).toBe(2);
   });
 
   it("no_show:接頭辞のcharge_eventsを予約単位で数える（同一予約の重複は1件）", () => {

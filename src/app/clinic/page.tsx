@@ -36,6 +36,23 @@ const isConfirmed = (s: AppointmentStatus) => s === "confirmed" || s === "ticket
 const isVisited = (s: AppointmentStatus) => s === "checked_in";
 const isCancelled = (s: AppointmentStatus) => s === "cancelled" || s === "expired";
 
+/** 母数が小さい率は誤解を招きやすいため件数を併記する（Phase J セクションC） */
+function formatRate(rate: number, numerator: number, denominator: number): string {
+  const pct = `${(rate * 100).toFixed(1)}%`;
+  return denominator < 10 ? `${pct}（${numerator}/${denominator}件）` : pct;
+}
+
+/** Phase J セクションC: 一覧の「要対応」判定。時系列より上に固定表示する対象を決める */
+function attentionReasons(a: Appointment): string[] {
+  const reasons: string[] = [];
+  if (a.cardRegistrationRequired && !a.stripePaymentMethodId && !isCancelled(a.status) && a.status !== "completed") {
+    reasons.push("カード未登録");
+  }
+  if (a.chargeStatus === "failed") reasons.push("請求失敗");
+  if (a.chargeStatus === "requires_action") reasons.push("要再認証");
+  return reasons;
+}
+
 export default function ClinicPage() {
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -109,6 +126,9 @@ export default function ClinicPage() {
     if (diff !== 0) return diff;
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
+
+  // Phase J セクションC: 要対応の予約を時系列より上に固定表示する
+  const needsAttention = sorted.filter((a) => attentionReasons(a).length > 0);
 
   const markCompleted = async (token: string) => {
     await fetch(`/api/appointments/${token}`, {
@@ -212,41 +232,69 @@ export default function ClinicPage() {
           ))}
         </div>
 
-        {/* MVP+2 C-5: キャンセル料回収ダッシュボード */}
+        {/* MVP+2 C-5 / Phase J セクションC: キャンセル料回収ダッシュボード（回収額を主指標にする） */}
         {dashboard && (
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 mb-10">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-gray-700">キャンセル料回収（{dashboard.month}）</h2>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+            {/* 主指標: 回収額 */}
+            <div className="mb-5">
+              <p className="text-xs text-gray-400">回収額</p>
+              <p className="text-4xl font-black text-teal-600">{dashboard.collectedAmount.toLocaleString()}円</p>
+              <p className="text-xs text-gray-400 mt-0.5">{dashboard.collectedCount}件</p>
+            </div>
+
+            {/* 従属指標 */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
               <div>
                 <p className="text-xs text-gray-400">キャンセル率</p>
-                <p className="text-2xl font-black text-gray-900">{(dashboard.cancelRate * 100).toFixed(1)}%</p>
-                <p className="text-[11px] text-gray-400">{dashboard.cancelledCount}/{dashboard.totalAppointments}件</p>
+                <p className="text-lg font-bold text-gray-900">{formatRate(dashboard.cancelRate, dashboard.cancelledCount, dashboard.totalAppointments)}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400">無断件数</p>
-                <p className="text-2xl font-black text-gray-900">{dashboard.noShowCount}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400">回収額・件数</p>
-                <p className="text-2xl font-black text-teal-600">{dashboard.collectedAmount.toLocaleString()}円</p>
-                <p className="text-[11px] text-gray-400">{dashboard.collectedCount}件</p>
+                <p className="text-lg font-bold text-gray-900">{dashboard.noShowCount}件</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400">課金失敗</p>
-                <p className={`text-2xl font-black ${dashboard.failedChargeCount > 0 ? "text-red-600" : "text-gray-900"}`}>{dashboard.failedChargeCount}</p>
+                <p className={`text-lg font-bold ${dashboard.failedChargeCount > 0 ? "text-red-600" : "text-gray-900"}`}>{dashboard.failedChargeCount}件</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">同意済み予約のキャンセル率</p>
+                <p className="text-lg font-bold text-gray-900">{formatRate(dashboard.policyAppliedCancelRate, dashboard.policyAppliedCancelledCount, dashboard.policyAppliedTotal)}</p>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-100 flex gap-8 text-sm">
-              <div>
-                <span className="text-gray-400">同意済み予約のキャンセル率: </span>
-                <span className="font-bold text-gray-900">{(dashboard.policyAppliedCancelRate * 100).toFixed(1)}%</span>
-              </div>
-              <div>
-                <span className="text-gray-400">対象外予約のキャンセル率: </span>
-                <span className="font-bold text-gray-900">{(dashboard.policyNotAppliedCancelRate * 100).toFixed(1)}%</span>
-              </div>
+            <p className="mt-3 text-xs text-gray-400">
+              対象外予約のキャンセル率: {formatRate(dashboard.policyNotAppliedCancelRate, dashboard.policyNotAppliedCancelledCount, dashboard.policyNotAppliedTotal)}
+            </p>
+          </div>
+        )}
+
+        {/* Phase J セクションC: 要対応（カード未登録／請求失敗／要再認証）を時系列より上に固定表示 */}
+        {needsAttention.length > 0 && (
+          <div className="mb-10">
+            <h2 className="text-base font-bold mb-4 text-red-700">⚠ 要対応（{needsAttention.length}件）</h2>
+            <div className="space-y-2">
+              {needsAttention.map((a) => (
+                <div key={a.id} className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                        {attentionReasons(a).join("・")}
+                      </span>
+                      <span className="text-xs text-gray-500">{formatDate(a.appointmentAt)}</span>
+                    </div>
+                    <p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{a.patientName}</p>
+                  </div>
+                  <Link
+                    href={`/clinic/appointments/${a.id}`}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-red-200 text-red-700 text-xs font-bold hover:bg-red-100 transition"
+                  >
+                    確認する
+                  </Link>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -268,46 +316,15 @@ export default function ClinicPage() {
             {sorted.map((a) => (
               <div key={a.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
+                  {/* Phase J セクションC: バッジは「状態」「要対応」の2軸のみ。他の内部状態はテキストで示す */}
                   <div className="flex items-center gap-3 mb-2">
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${STATUS_COLOR[a.status]}`}>
                       {STATUS_LABEL[a.status]}
                     </span>
-                    {(() => {
-                      // 送信申告済み媒体（自動検知ではなくスタッフ申告の記録）
-                      const sentChannels = [a.lineSentAt && "LINE", a.smsSentAt && "SMS", a.emailSentAt && "メール"].filter(Boolean);
-                      return (
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${sentChannels.length ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-400"}`}>
-                          {sentChannels.length ? `🟢 送信済み（${sentChannels.join("・")}）` : "○ 未送信"}
-                        </span>
-                      );
-                    })()}
-                    {a.cancelPolicyApplied ? (
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${a.cancelPolicyAgreedAt ? "bg-teal-100 text-teal-700" : "bg-yellow-100 text-yellow-700"}`}>
-                        {a.cancelPolicyAgreedAt ? `ポリシー同意済 ✓（${formatDate(a.cancelPolicyAgreedAt)}）` : "ポリシー未同意"}
-                      </span>
-                    ) : (
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-400">ポリシー対象外</span>
-                    )}
-                    {a.cancelRequestedAt && (
+                    {attentionReasons(a).length > 0 && (
                       <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
-                        ⚠ キャンセル申出あり（{formatDate(a.cancelRequestedAt)}）
+                        ⚠ 要対応（{attentionReasons(a).join("・")}）
                       </span>
-                    )}
-                    {a.cardRegistrationRequired && (
-                      a.stripePaymentMethodId ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-700">カード登録済✓</span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">⚠ カード未登録・要確認連絡</span>
-                      )
-                    )}
-                    {a.chargeStatus === "charged" && (
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-700">請求済 {a.chargedAmount ?? 0}円</span>
-                    )}
-                    {a.chargeStatus === "failed" && (
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">⚠ 請求失敗</span>
-                    )}
-                    {a.chargeStatus === "requires_action" && (
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">要再認証</span>
                     )}
                     <span className="text-gray-400 text-xs">{formatDate(a.appointmentAt)}</span>
                     <span className="text-gray-300 text-xs font-mono">#{a.id.slice(0, 8)}</span>
@@ -316,6 +333,29 @@ export default function ClinicPage() {
                   <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
                     {a.phone && <span className="text-xs text-gray-500">{a.phone}</span>}
                     {a.email && <span className="text-xs text-gray-500">{a.email}</span>}
+                  </div>
+                  <div className="mt-1 space-y-0.5">
+                    <p className="text-xs text-gray-400">
+                      {(() => {
+                        // 送信申告済み媒体（自動検知ではなくスタッフ申告の記録）
+                        const sentChannels = [a.lineSentAt && "LINE", a.smsSentAt && "SMS", a.emailSentAt && "メール"].filter(Boolean);
+                        return sentChannels.length ? `確認URL: 送信済み（${sentChannels.join("・")}）` : "確認URL未送信";
+                      })()}
+                    </p>
+                    {a.cancelPolicyApplied && (
+                      <p className="text-xs text-gray-400">
+                        キャンセルポリシー: {a.cancelPolicyAgreedAt ? `同意済み（${formatDate(a.cancelPolicyAgreedAt)}）` : "未同意"}
+                      </p>
+                    )}
+                    {a.cancelRequestedAt && (
+                      <p className="text-xs text-red-600">キャンセル申出: {formatDate(a.cancelRequestedAt)}</p>
+                    )}
+                    {a.cardRegistrationRequired && a.stripePaymentMethodId && (
+                      <p className="text-xs text-gray-400">カード登録: 登録済み</p>
+                    )}
+                    {a.chargeStatus === "charged" && (
+                      <p className="text-xs text-teal-600">請求済み: {(a.chargedAmount ?? 0).toLocaleString()}円</p>
+                    )}
                   </div>
                   {a.consentAt && (
                     <p className="text-xs text-teal-600 mt-1">同意: {formatDate(a.consentAt)}</p>

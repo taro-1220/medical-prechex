@@ -245,5 +245,9 @@ export interface ChargeDashboardResponse {
   collectedCount: number;
   failedChargeCount: number;
   policyAppliedCancelRate: number;
+  policyAppliedTotal: number;
+  policyAppliedCancelledCount: number;
   policyNotAppliedCancelRate: number;
+  policyNotAppliedTotal: number;
+  policyNotAppliedCancelledCount: number;
 }

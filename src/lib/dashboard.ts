@@ -16,8 +16,13 @@ export interface ChargeDashboard {
   failedChargeCount: number;
   /** キャンセルポリシー適用対象だった予約のキャンセル率 */
   policyAppliedCancelRate: number;
+  /** policyAppliedCancelRateの母数（Phase J: 母数が小さい率に件数を併記するため） */
+  policyAppliedTotal: number;
+  policyAppliedCancelledCount: number;
   /** キャンセルポリシー対象外だった予約のキャンセル率 */
   policyNotAppliedCancelRate: number;
+  policyNotAppliedTotal: number;
+  policyNotAppliedCancelledCount: number;
 }
 
 export const NO_SHOW_DETAIL_PREFIX = "no_show:";
@@ -53,6 +58,10 @@ export function computeChargeDashboard(appointments: Appointment[], chargeEvents
     collectedCount: collected.length,
     failedChargeCount,
     policyAppliedCancelRate: rate(cancelledApplied, applied.length),
+    policyAppliedTotal: applied.length,
+    policyAppliedCancelledCount: cancelledApplied,
     policyNotAppliedCancelRate: rate(cancelledNotApplied, notApplied.length),
+    policyNotAppliedTotal: notApplied.length,
+    policyNotAppliedCancelledCount: cancelledNotApplied,
   };
 }
