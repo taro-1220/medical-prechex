@@ -193,19 +193,21 @@ describe("areTierPercentsValid", () => {
   });
 });
 
-describe("computeFreeCancellationDeadline", () => {
+describe("computeFreeCancellationDeadline: 日境界化（Asia/Tokyo固定、23:59:59 JST）", () => {
+  // 2026-09-10T09:00:00.000Z（UTC）= 2026-09-10 18:00 JST
   const APPT = "2026-09-10T09:00:00.000Z";
 
-  it("percent=0の段階（最小daysBefore）から絶対日時を算出する", () => {
+  it("percent=0の段階（最小daysBefore）から「N日前 23:59:59 JST」を算出する", () => {
+    // 3日前=9/7。23:59:59 JST(=UTC+9) → UTC 14:59:59
     expect(computeFreeCancellationDeadline(APPT, [
-      { daysBefore: 3, percent: 0 }, { daysBefore: 1, percent: 30 }, { daysBefore: 0, percent: 50 },
-    ])).toBe("2026-09-07T09:00:00.000Z");
+      { daysBefore: 3, percent: 0 }, { daysBefore: 1, percent: 30 },
+    ])).toBe("2026-09-07T14:59:59.000Z");
   });
 
   it("percent=0の段階が複数あっても最小daysBefore側が境界になる", () => {
     expect(computeFreeCancellationDeadline(APPT, [
       { daysBefore: 5, percent: 0 }, { daysBefore: 3, percent: 0 }, { daysBefore: 1, percent: 30 },
-    ])).toBe("2026-09-07T09:00:00.000Z");
+    ])).toBe("2026-09-07T14:59:59.000Z");
   });
 
   it("percent=0の段階が無ければnull", () => {
@@ -215,6 +217,54 @@ describe("computeFreeCancellationDeadline", () => {
   it("tiersがnull/未設定ならnull", () => {
     expect(computeFreeCancellationDeadline(APPT, null)).toBeNull();
     expect(computeFreeCancellationDeadline(APPT, undefined)).toBeNull();
+  });
+
+  it("minDaysBefore=0（当日が0%）は日境界にせず、appointmentAtそのものを返す（ガード）", () => {
+    expect(computeFreeCancellationDeadline(APPT, [{ daysBefore: 0, percent: 0 }])).toBe(
+      new Date(APPT).toISOString(),
+    );
+  });
+
+  it("予約時刻が00:00台でも正しくN日前23:59:59になる", () => {
+    // 2026-09-10T15:10:00Z = 2026-09-11 00:10 JST（日付はJSTで9/11）
+    const apptEarlyMorning = "2026-09-10T15:10:00.000Z";
+    // 3日前=9/8。23:59:59 JST → UTC 14:59:59
+    expect(computeFreeCancellationDeadline(apptEarlyMorning, [{ daysBefore: 3, percent: 0 }])).toBe(
+      "2026-09-08T14:59:59.000Z",
+    );
+  });
+
+  it("予約時刻が23:00台でも正しくN日前23:59:59になる（日付が跨がらない側）", () => {
+    // 2026-09-10T14:30:00Z = 2026-09-10 23:30 JST
+    const apptLateNight = "2026-09-10T14:30:00.000Z";
+    expect(computeFreeCancellationDeadline(apptLateNight, [{ daysBefore: 3, percent: 0 }])).toBe(
+      "2026-09-07T14:59:59.000Z",
+    );
+  });
+
+  it("JST/UTC日跨ぎ: 予約がJST 08:00（=UTC前日23:00）でもJSTの暦日を基準にする", () => {
+    // 2026-09-09T23:00:00Z = 2026-09-10 08:00 JST（UTC暦日は9/9だがJST暦日は9/10）
+    const apptCrossesUtcDay = "2026-09-09T23:00:00.000Z";
+    // JST基準で3日前=9/7。UTC暦日基準（誤り）なら9/6になってしまうため、そうならないことを確認
+    expect(computeFreeCancellationDeadline(apptCrossesUtcDay, [{ daysBefore: 3, percent: 0 }])).toBe(
+      "2026-09-07T14:59:59.000Z",
+    );
+  });
+
+  it("月またぎでも正しく計算できる", () => {
+    // 2026-09-02T01:00:00Z = 2026-09-02 10:00 JST
+    const apptEarlySeptember = "2026-09-02T01:00:00.000Z";
+    // 3日前=8/30。23:59:59 JST → UTC 14:59:59
+    expect(computeFreeCancellationDeadline(apptEarlySeptember, [{ daysBefore: 3, percent: 0 }])).toBe(
+      "2026-08-30T14:59:59.000Z",
+    );
+  });
+
+  it("締切の23:59:59とその1秒後（翌日00:00:00）は異なる日時として区別される", () => {
+    const deadline = computeFreeCancellationDeadline(APPT, [{ daysBefore: 3, percent: 0 }])!;
+    expect(deadline).toBe("2026-09-07T14:59:59.000Z");
+    const oneSecondLater = new Date(new Date(deadline).getTime() + 1000).toISOString();
+    expect(oneSecondLater).toBe("2026-09-07T15:00:00.000Z"); // JSTでは9/8 00:00:00
   });
 });
 
@@ -234,31 +284,30 @@ describe("extractStatedDeadlineDaysBefore", () => {
 });
 
 describe("checkPolicyTierConsistency", () => {
-  const APPT = "2026-09-10T09:00:00.000Z";
   const TIERS_3DAY_FREE: CancelTier[] = [{ daysBefore: 3, percent: 0 }, { daysBefore: 1, percent: 50 }];
 
   it("本文とtiersの日数が一致すれば矛盾なし", () => {
-    const r = checkPolicyTierConsistency("予約日3日前までのキャンセルは無料です。", APPT, TIERS_3DAY_FREE);
+    const r = checkPolicyTierConsistency("予約日3日前までのキャンセルは無料です。", TIERS_3DAY_FREE);
     expect(r.mismatched).toBe(false);
     expect(r.statedDaysBefore).toBe(3);
     expect(r.tierDaysBefore).toBe(3);
   });
 
   it("本文とtiersの日数が異なれば矛盾あり", () => {
-    const r = checkPolicyTierConsistency("前日までのキャンセルは無料です。", APPT, TIERS_3DAY_FREE);
+    const r = checkPolicyTierConsistency("前日までのキャンセルは無料です。", TIERS_3DAY_FREE);
     expect(r.mismatched).toBe(true);
     expect(r.statedDaysBefore).toBe(1);
     expect(r.tierDaysBefore).toBe(3);
   });
 
   it("本文から抽出できなければ矛盾ありとしない（誤検出回避）", () => {
-    const r = checkPolicyTierConsistency("お早めにご連絡ください。", APPT, TIERS_3DAY_FREE);
+    const r = checkPolicyTierConsistency("お早めにご連絡ください。", TIERS_3DAY_FREE);
     expect(r.mismatched).toBe(false);
     expect(r.statedDaysBefore).toBeNull();
   });
 
   it("tiersに0%段階が無ければ矛盾ありとしない", () => {
-    const r = checkPolicyTierConsistency("3日前までのキャンセルは無料です。", APPT, [{ daysBefore: 1, percent: 50 }]);
+    const r = checkPolicyTierConsistency("3日前までのキャンセルは無料です。", [{ daysBefore: 1, percent: 50 }]);
     expect(r.mismatched).toBe(false);
     expect(r.tierDaysBefore).toBeNull();
   });

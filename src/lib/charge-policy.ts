@@ -119,19 +119,41 @@ export function areTierPercentsValid(tiers: CancelTier[]): boolean {
 // Phase G P0: 締切の絶対日時化・本文とtiersの整合チェック（追加のみ。上記の既存関数は変更しない）
 // ---------------------------------------------------------------------------
 
-/**
- * tiersが定める「無料キャンセル期限」の絶対日時。
- * percent=0の段階のうちdaysBeforeが最小のものを採用する
- * （ラダー判定の性質上、実際の無料/有料の境界はそこで決まるため。0%段階が複数あっても同じ結果になる）。
- * percent=0の段階が無ければ null（tiersだけでは無料期間が無い）。
- */
-export function computeFreeCancellationDeadline(appointmentAt: string, tiers: CancelTier[] | null | undefined): string | null {
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** percent=0の段階のうち最小のdaysBeforeを返す（無ければnull） */
+function minFreeDaysBefore(tiers: CancelTier[] | null | undefined): number | null {
   const freeDaysBefore = (tiers ?? [])
     .filter((t): t is CancelTier & { daysBefore: number } => typeof t.daysBefore === "number" && t.percent === 0)
     .map((t) => t.daysBefore);
-  if (freeDaysBefore.length === 0) return null;
-  const minDaysBefore = Math.min(...freeDaysBefore);
-  return new Date(new Date(appointmentAt).getTime() - minDaysBefore * 24 * 60 * 60 * 1000).toISOString();
+  return freeDaysBefore.length === 0 ? null : Math.min(...freeDaysBefore);
+}
+
+/**
+ * tiersが定める「無料キャンセル期限」の絶対日時（ISO・UTC文字列で返す。呼び出し側は
+ * 従来どおりDateに渡して表示すればよい）。
+ * percent=0の段階のうちdaysBeforeが最小のものを採用する
+ * （ラダー判定の性質上、実際の無料/有料の境界はそこで決まるため。0%段階が複数あっても同じ結果になる）。
+ * percent=0の段階が無ければ null（tiersだけでは無料期間が無い）。
+ *
+ * 日境界はAsia/Tokyo固定（+9時間、DST無し）で算出する: 予約日（JST）からminDaysBefore日引いた日の
+ * 23:59:59 JSTを締切とする。ただしminDaysBefore=0（当日が0%）の場合は日境界にせず、
+ * appointmentAtそのものを締切として返す（「当日23:59まで無料」という誤った意味にしないため）。
+ */
+export function computeFreeCancellationDeadline(appointmentAt: string, tiers: CancelTier[] | null | undefined): string | null {
+  const minDaysBefore = minFreeDaysBefore(tiers);
+  if (minDaysBefore === null) return null;
+  if (minDaysBefore === 0) return new Date(appointmentAt).toISOString();
+
+  // JST壁時計の年月日を得る（固定+9hシフトしてUTCゲッターで読む、という標準的な手法。DST非対応地域なので安全）
+  const apptJstWallClock = new Date(new Date(appointmentAt).getTime() + JST_OFFSET_MS);
+  const deadlineJstMidnightUtcMs = Date.UTC(
+    apptJstWallClock.getUTCFullYear(),
+    apptJstWallClock.getUTCMonth(),
+    apptJstWallClock.getUTCDate() - minDaysBefore,
+    23, 59, 59, 0,
+  );
+  return new Date(deadlineJstMidnightUtcMs - JST_OFFSET_MS).toISOString();
 }
 
 /**
@@ -160,12 +182,10 @@ export interface PolicyTierConsistencyResult {
  */
 export function checkPolicyTierConsistency(
   policyText: string,
-  appointmentAt: string,
   tiers: CancelTier[] | null | undefined,
 ): PolicyTierConsistencyResult {
   const statedDaysBefore = extractStatedDeadlineDaysBefore(policyText);
-  const deadline = computeFreeCancellationDeadline(appointmentAt, tiers);
-  const tierDaysBefore = deadline != null ? Math.round(daysBeforeAppointment(appointmentAt, deadline)) : null;
+  const tierDaysBefore = minFreeDaysBefore(tiers);
   const mismatched = statedDaysBefore != null && tierDaysBefore != null && statedDaysBefore !== tierDaysBefore;
   return { mismatched, statedDaysBefore, tierDaysBefore };
 }
