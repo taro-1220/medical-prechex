@@ -8,7 +8,7 @@ import {
   evaluateChargeEligibility,
 } from "./charge-policy";
 import { isChargeExecutionEnabled, executeOffSessionCharge } from "./stripe";
-import { insertChargeEvent, recordChargeResult } from "./charge-store";
+import { insertChargeEvent, recordChargeResult, findSuccessfulChargeEvent, type ExistingCharge } from "./charge-store";
 import { NO_SHOW_DETAIL_PREFIX } from "./dashboard";
 
 export interface ChargeAttemptContext {
@@ -32,6 +32,8 @@ export interface ChargeAttemptResult {
   dryRun: boolean;
   chargeStatus: ChargeStatus | null;
   paymentIntentId?: string;
+  /** Phase J: 既に成功課金が存在する場合、その記録（判定根拠の提示用） */
+  existingCharge?: ExistingCharge | null;
 }
 
 /**
@@ -52,6 +54,11 @@ export async function attemptCancelCharge(ctx: ChargeAttemptContext): Promise<Ch
   const chargeExecutionEnabled = isChargeExecutionEnabled();
   const dryRun = !chargeExecutionEnabled;
 
+  // Phase J セクション0: 重複課金防止。charge_eventsの実課金記録（dry_run=false）の有無を判定根拠にする
+  // （appt.chargeStatusはrecordChargeResultの後勝ち上書きのため単独の根拠にしない）
+  const existingCharge = await findSuccessfulChargeEvent(appt.id);
+  const alreadyCharged = !!existingCharge;
+
   // 報告・判定パネル用（フラグの状態も含めた「今まさに成立するか」）
   const eligibility = evaluateChargeEligibility({
     cancelPolicyApplied: appt.cancelPolicyApplied,
@@ -59,6 +66,7 @@ export async function attemptCancelCharge(ctx: ChargeAttemptContext): Promise<Ch
     withinGraceHours,
     hasPaymentMethod: !!appt.stripePaymentMethodId,
     chargeExecutionEnabled,
+    alreadyCharged,
   });
   // ドライラン分岐に進めるかどうかの判定（フラグ以外の実条件のみ。フラグOFFはドライランする
   // 理由であって「実行しない」理由ではないため、ここには含めない）
@@ -68,6 +76,7 @@ export async function attemptCancelCharge(ctx: ChargeAttemptContext): Promise<Ch
     withinGraceHours,
     hasPaymentMethod: !!appt.stripePaymentMethodId,
     chargeExecutionEnabled: true,
+    alreadyCharged,
   });
   const amount = appt.baseAmount != null ? computeChargeAmount(appt.baseAmount, tierMatch.percent) : 0;
   const noShowPrefix = ctx.isNoShow ? NO_SHOW_DETAIL_PREFIX + " " : "";
@@ -75,7 +84,7 @@ export async function attemptCancelCharge(ctx: ChargeAttemptContext): Promise<Ch
   const base: ChargeAttemptResult = {
     reason: tierMatch.reason, percent: tierMatch.percent, amount,
     eligible: eligibility.eligible, blockedBy: eligibility.blockedBy,
-    executed: false, dryRun, chargeStatus: null,
+    executed: false, dryRun, chargeStatus: null, existingCharge,
   };
 
   // 請求額が0（grace_hours・0%段階・非該当）なら何もしない。証跡も残さない（課金事象ではないため）
@@ -107,6 +116,8 @@ export async function attemptCancelCharge(ctx: ChargeAttemptContext): Promise<Ch
     amountJpy: amount,
     appointmentId: appt.id,
     description: `${appt.clinicName} キャンセル料（${tierMatch.percent}%）`,
+    // 同一予約への重複呼び出しでも同じPaymentIntentを返させる（アプリ層のalready_chargedガードの補完）
+    idempotencyKey: `${appt.id}:charge`,
   });
   const chargeStatus: ChargeStatus = result.requiresAction
     ? "requires_action"
@@ -157,6 +168,8 @@ export async function attemptRetryCharge(
     amountJpy: appt.chargedAmount,
     appointmentId: appt.id,
     description: `${appt.clinicName} キャンセル料（再請求）`,
+    // E-3は「retryイベント不在チェック」により生涯1回のみ呼ばれるため、charge用キーと衝突しない
+    idempotencyKey: `${appt.id}:retry`,
   });
   const chargeStatus: ChargeStatus = result.requiresAction
     ? "requires_action"

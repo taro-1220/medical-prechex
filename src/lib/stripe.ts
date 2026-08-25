@@ -105,6 +105,8 @@ export async function executeOffSessionCharge(params: {
   amountJpy: number;
   appointmentId: string;
   description: string;
+  /** Phase J: 同一操作の重複実行でも同じPaymentIntentが返るようにする（`${appointmentId}:${eventType}`形式） */
+  idempotencyKey: string;
 }): Promise<OffSessionChargeResult> {
   const stripe = getStripeClient();
   try {
@@ -119,7 +121,7 @@ export async function executeOffSessionCharge(params: {
         description: params.description,
         metadata: { appointmentId: params.appointmentId },
       },
-      { stripeAccount: params.connectedAccountId },
+      { stripeAccount: params.connectedAccountId, idempotencyKey: params.idempotencyKey },
     );
     return {
       paymentIntentId: intent.id,

@@ -4,6 +4,7 @@ import { getAppointmentById, getClinicCancelPolicySettings } from "@/lib/store";
 import { resolveCancelTier, computeChargeAmount, evaluateChargeEligibility } from "@/lib/charge-policy";
 import { isWithinGraceHours } from "@/lib/cancel-policy";
 import { isChargeExecutionEnabled } from "@/lib/stripe";
+import { findSuccessfulChargeEvent } from "@/lib/charge-store";
 
 // C-4: 判定パネル。機械判定できる事実のみを返す。金額の提案（推奨額）は一切含めない
 export async function GET(
@@ -33,6 +34,9 @@ export async function GET(
         applicable: false,
         consented: !!appt.cancelPolicyAgreedAt,
         note: "同意なし・対象外のため請求根拠なし",
+        patientName: appt.patientName,
+        appointmentAt: appt.appointmentAt,
+        description: appt.description,
       });
     }
 
@@ -51,12 +55,14 @@ export async function GET(
       isNoShow: false,
     });
     const amount = appt.baseAmount != null ? computeChargeAmount(appt.baseAmount, tierMatch.percent) : null;
+    const existingCharge = await findSuccessfulChargeEvent(appt.id);
     const eligibility = evaluateChargeEligibility({
       cancelPolicyApplied: appt.cancelPolicyApplied,
       cancelPolicyAgreedAt: appt.cancelPolicyAgreedAt ?? null,
       withinGraceHours: withinGrace,
       hasPaymentMethod: !!appt.stripePaymentMethodId,
       chargeExecutionEnabled: isChargeExecutionEnabled(),
+      alreadyCharged: !!existingCharge,
     });
 
     return NextResponse.json({
@@ -73,6 +79,10 @@ export async function GET(
       eligibility,
       chargeExecutionEnabled: isChargeExecutionEnabled(),
       currentChargeStatus: appt.chargeStatus,
+      existingCharge,
+      patientName: appt.patientName,
+      appointmentAt: appt.appointmentAt,
+      description: appt.description,
     });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });

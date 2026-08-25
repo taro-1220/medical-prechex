@@ -107,6 +107,31 @@ function toChargeEvent(row: Record<string, unknown>): ChargeEvent {
   };
 }
 
+export interface ExistingCharge {
+  amount: number;
+  chargedAt: string;
+}
+
+/**
+ * Phase J セクション0: この予約に既に実課金（event_type='charge' かつ dry_run=false）の記録が
+ * あるか。ドライラン記録・failureイベントは対象外（failureは再試行を妨げないため）。
+ * 複数件あれば最新のものを返す。
+ */
+export async function findSuccessfulChargeEvent(appointmentId: string): Promise<ExistingCharge | null> {
+  const { data, error } = await getSupabase()
+    .from("charge_events")
+    .select("amount, created_at")
+    .eq("appointment_id", appointmentId)
+    .eq("event_type", "charge")
+    .eq("dry_run", false)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return { amount: (data.amount as number | null) ?? 0, chargedAt: data.created_at as string };
+}
+
 export async function getChargeEventsForAppointment(appointmentId: string): Promise<ChargeEvent[]> {
   const { data, error } = await getSupabase()
     .from("charge_events")

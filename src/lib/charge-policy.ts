@@ -127,20 +127,23 @@ export interface ChargeEligibilityInput {
   withinGraceHours: boolean;
   hasPaymentMethod: boolean;
   chargeExecutionEnabled: boolean;
+  /** Phase J: この予約に既に成功課金（charge_events: event_type='charge' かつ dry_run=false）が存在するか */
+  alreadyCharged: boolean;
 }
 
 export interface ChargeEligibilityResult {
   eligible: boolean;
   /** 満たされていない条件（UIでの理由表示用） */
-  blockedBy: Array<"not_consented" | "within_grace_hours" | "no_payment_method" | "flag_disabled">;
+  blockedBy: Array<"not_consented" | "within_grace_hours" | "no_payment_method" | "flag_disabled" | "already_charged">;
 }
 
-/** 課金の成立条件: 同意済み ∧ grace_hours外 ∧ カード登録済み ∧ フラグtrue のAND判定 */
+/** 課金の成立条件: 同意済み ∧ grace_hours外 ∧ カード登録済み ∧ 未課金 ∧ フラグtrue のAND判定 */
 export function evaluateChargeEligibility(input: ChargeEligibilityInput): ChargeEligibilityResult {
   const blockedBy: ChargeEligibilityResult["blockedBy"] = [];
   if (!input.cancelPolicyApplied || !input.cancelPolicyAgreedAt) blockedBy.push("not_consented");
   if (input.withinGraceHours) blockedBy.push("within_grace_hours");
   if (!input.hasPaymentMethod) blockedBy.push("no_payment_method");
+  if (input.alreadyCharged) blockedBy.push("already_charged");
   if (!input.chargeExecutionEnabled) blockedBy.push("flag_disabled");
   return { eligible: blockedBy.length === 0, blockedBy };
 }

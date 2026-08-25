@@ -263,13 +263,14 @@ describe("computeChargeAmount", () => {
   });
 });
 
-describe("evaluateChargeEligibility: 成立条件4項のAND", () => {
+describe("evaluateChargeEligibility: 成立条件5項のAND", () => {
   const BASE = {
     cancelPolicyApplied: true,
     cancelPolicyAgreedAt: "2026-08-20T09:00:00.000Z",
     withinGraceHours: false,
     hasPaymentMethod: true,
     chargeExecutionEnabled: true,
+    alreadyCharged: false,
   };
 
   it("全て満たせばeligible", () => {
@@ -292,17 +293,23 @@ describe("evaluateChargeEligibility: 成立条件4項のAND", () => {
     expect(r.blockedBy).toEqual(["no_payment_method"]);
   });
 
+  it("既に成功課金が存在するならalready_charged（Phase J）", () => {
+    const r = evaluateChargeEligibility({ ...BASE, alreadyCharged: true });
+    expect(r.eligible).toBe(false);
+    expect(r.blockedBy).toEqual(["already_charged"]);
+  });
+
   it("フラグOFFならflag_disabled", () => {
     const r = evaluateChargeEligibility({ ...BASE, chargeExecutionEnabled: false });
     expect(r.blockedBy).toEqual(["flag_disabled"]);
   });
 
-  it("複数条件が同時に不成立なら全て列挙する", () => {
+  it("複数条件が同時に不成立なら全て列挙する（already_chargedはflag_disabledより先）", () => {
     const r = evaluateChargeEligibility({
       cancelPolicyApplied: false, cancelPolicyAgreedAt: null,
-      withinGraceHours: true, hasPaymentMethod: false, chargeExecutionEnabled: false,
+      withinGraceHours: true, hasPaymentMethod: false, alreadyCharged: true, chargeExecutionEnabled: false,
     });
-    expect(r.blockedBy).toEqual(["not_consented", "within_grace_hours", "no_payment_method", "flag_disabled"]);
+    expect(r.blockedBy).toEqual(["not_consented", "within_grace_hours", "no_payment_method", "already_charged", "flag_disabled"]);
   });
 });
 
