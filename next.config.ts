@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
         source: "/reports/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
+      {
+        // サイト全体を一時的に非公開（開発中）にするための共通ゲート。metaタグを持てないAPI等もヘッダーで担保する。
+        source: "/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
     ];
   },
 };
