@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAppointment } from "@/lib/store";
 import { getClinicStripeAccount, recordPaymentMethod } from "@/lib/charge-store";
-import { retrieveSetupIntent } from "@/lib/stripe";
+import { retrieveSetupIntent, attachPaymentMethodToCustomer } from "@/lib/stripe";
 
 // D-1: クライアントでの3DS込みのSetupIntent確認が終わった後、実際にsucceededしているかを
 // サーバー側で再確認してからpayment_method_idを保存する（クライアント申告のみを信用しない）
@@ -26,6 +26,13 @@ export async function POST(
     }
 
     const paymentMethodId = typeof intent.payment_method === "string" ? intent.payment_method : intent.payment_method.id;
+
+    // 検収で発覚した不具合の修正: 後日の別PaymentIntentで再利用できるよう、Customerへ明示的にattachする
+    if (intent.customer) {
+      const customerId = typeof intent.customer === "string" ? intent.customer : intent.customer.id;
+      await attachPaymentMethodToCustomer(stripeAccountId, paymentMethodId, customerId);
+    }
+
     await recordPaymentMethod(token, paymentMethodId);
 
     return NextResponse.json({ ok: true });

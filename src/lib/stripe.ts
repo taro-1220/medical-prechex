@@ -65,14 +65,24 @@ export async function fetchConnectAccountStatus(accountId: string): Promise<Conn
   return "pending";
 }
 
-/** 予約単位のカード登録用SetupIntent。医院のconnected account上に作成する（direct charge） */
+/**
+ * 予約単位のカード登録用SetupIntent。医院のconnected account上に作成する（direct charge）。
+ * 検収で発覚した不具合の修正: SetupIntentにCustomerを紐付けないと、後日の別PaymentIntentで
+ * 同じPaymentMethodを再利用できない（Stripe側の制約）。DBスキーマは変更せず、Customer IDは
+ * PaymentMethod経由（.customer）で都度参照する設計にする（executeOffSessionCharge参照）。
+ */
 export async function createAppointmentSetupIntent(params: {
   connectedAccountId: string;
   appointmentId: string;
 }): Promise<{ setupIntentId: string; clientSecret: string }> {
   const stripe = getStripeClient();
+  const customer = await stripe.customers.create(
+    { metadata: { appointmentId: params.appointmentId } },
+    { stripeAccount: params.connectedAccountId },
+  );
   const intent = await stripe.setupIntents.create(
     {
+      customer: customer.id,
       usage: "off_session",
       payment_method_types: ["card"],
       payment_method_options: { card: { request_three_d_secure: "automatic" } },
@@ -87,6 +97,16 @@ export async function createAppointmentSetupIntent(params: {
 export async function retrieveSetupIntent(connectedAccountId: string, setupIntentId: string) {
   const stripe = getStripeClient();
   return stripe.setupIntents.retrieve(setupIntentId, undefined, { stripeAccount: connectedAccountId });
+}
+
+/** SetupIntent成功確認時に、登録されたPaymentMethodをCustomerへ明示的にattachする */
+export async function attachPaymentMethodToCustomer(
+  connectedAccountId: string,
+  paymentMethodId: string,
+  customerId: string,
+): Promise<void> {
+  const stripe = getStripeClient();
+  await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId }, { stripeAccount: connectedAccountId });
 }
 
 export interface OffSessionChargeResult {
@@ -119,11 +139,28 @@ export async function executeOffSessionCharge(params: {
   idempotencyKey: string;
 }): Promise<OffSessionChargeResult | OffSessionChargeSystemError> {
   const stripe = getStripeClient();
+
+  // 課金対象のPaymentMethodがCustomerに紐付いているかを都度確認する（DBに永続化しない設計のため）。
+  // retrieve失敗・customer未紐付けはカードの問題ではないためsystemErrorとし、課金は試行しない
+  let customerId: string;
+  try {
+    const pm = await stripe.paymentMethods.retrieve(params.paymentMethodId, undefined, { stripeAccount: params.connectedAccountId });
+    const customer = pm.customer;
+    if (!customer) {
+      return { systemError: true, errorMessage: "PaymentMethod is not attached to a Customer (customer is null)" };
+    }
+    customerId = typeof customer === "string" ? customer : customer.id;
+  } catch (e) {
+    const errorMessage = e instanceof Error ? `${e.constructor.name}: ${e.message}` : String(e);
+    return { systemError: true, errorMessage: `paymentMethods.retrieve failed: ${errorMessage}` };
+  }
+
   try {
     const intent = await stripe.paymentIntents.create(
       {
         amount: params.amountJpy,
         currency: "jpy",
+        customer: customerId,
         payment_method: params.paymentMethodId,
         off_session: true,
         confirm: true,
