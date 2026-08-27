@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
+import { isSafeRedirectPath } from "@/lib/clinic-auth";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,7 +17,8 @@ export default function LoginPage() {
     setError(null);
     const { error } = await getSupabaseBrowser().auth.signInWithPassword({ email, password });
     if (error) { setError(error.message); setLoading(false); return; }
-    router.push("/clinic");
+    const next = new URLSearchParams(window.location.search).get("next");
+    router.push(isSafeRedirectPath(next) ? next : "/clinic");
   };
 
   return (

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getCurrentClinic } from "@/lib/clinic-auth";
+import { getAccessToken, getCurrentClinic, redirectToLogin } from "@/lib/clinic-auth";
 import type { ClinicProfile, OnboardingProgress, CancelPolicyScope, ClinicCancelPolicySettings, CancelTier, StripeAccountStatus } from "@/lib/types";
 import { findRiskyPolicyWording, scopeAppliesToCategory, isInsuranceAcknowledgmentSatisfied, isBasisNoteValid } from "@/lib/cancel-policy";
 import { areTierPercentsValid } from "@/lib/charge-policy";
@@ -79,7 +79,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     (async () => {
       const clinic = await getCurrentClinic();
-      if (!clinic) { router.replace("/login"); return; }
+      if (!clinic) { redirectToLogin(router); return; }
       setClinicId(clinic.id);
       await loadOnboarding(clinic.id);
       setLoading(false);

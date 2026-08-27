@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import type { AppointmentStatus, PatientDetail } from "@/lib/types";
-import { getCurrentUser, getAccessToken } from "@/lib/clinic-auth";
+import { getCurrentUser, getAccessToken, redirectToLogin } from "@/lib/clinic-auth";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmation_pending: "確認待ち",
@@ -44,10 +44,10 @@ export default function ClinicPatientDetailPage() {
   useEffect(() => {
     (async () => {
       const user = await getCurrentUser();
-      if (!user) { router.replace("/login"); return; }
+      if (!user) { redirectToLogin(router); return; }
       try {
         const token = await getAccessToken();
-        if (!token) { router.replace("/login"); return; }
+        if (!token) { redirectToLogin(router); return; }
         const res = await fetch(`/api/clinic/patients/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });

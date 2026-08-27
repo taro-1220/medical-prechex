@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Appointment, AppointmentStatus, Clinic, ChargeDashboardResponse } from "@/lib/types";
-import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken } from "@/lib/clinic-auth";
+import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin } from "@/lib/clinic-auth";
 import OnboardingGuide, { GUIDE_KEY } from "./OnboardingGuide";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
@@ -72,7 +72,7 @@ export default function ClinicPage() {
   useEffect(() => {
     (async () => {
       const user = await getCurrentUser();
-      if (!user) { router.replace("/login"); return; }
+      if (!user) { redirectToLogin(router); return; }
       const cs = await getUserClinics();
       if (cs.length === 0) { router.replace("/clinic/create"); return; }
       const current = await getCurrentClinic();

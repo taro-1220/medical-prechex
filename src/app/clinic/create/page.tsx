@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getCurrentUser, getAccessToken } from "@/lib/clinic-auth";
+import { getCurrentUser, getAccessToken, redirectToLogin } from "@/lib/clinic-auth";
 
 export default function CreateClinicPage() {
   const router = useRouter();
@@ -13,7 +13,7 @@ export default function CreateClinicPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    getCurrentUser().then(user => { if (!user) router.replace("/login"); });
+    getCurrentUser().then(user => { if (!user) redirectToLogin(router); });
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -31,3 +31,25 @@ export async function getCurrentClinic(): Promise<Clinic | null> {
   if (!res.ok) return null;
   return res.json();
 }
+
+/**
+ * "/login"へのリダイレクト先として安全なパスか（オープンリダイレクト対策）。
+ * "/"で始まり、"//"（プロトコル相対URL）にも"/\\"（バックスラッシュ経由の相対URL）にもならないこと。
+ */
+export function isSafeRedirectPath(path: string | null | undefined): path is string {
+  if (!path) return false;
+  if (!path.startsWith("/")) return false;
+  if (path.startsWith("//")) return false;
+  if (path.startsWith("/\\")) return false;
+  return true;
+}
+
+/**
+ * 未認証時に"/login"へ退避する共通ヘルパー。現在のパス＋クエリをnextとして付与し、
+ * ログイン後に元の画面（例: Stripeオンボーディングからの戻り`?stripe=return`）へ戻れるようにする。
+ */
+export function redirectToLogin(router: { replace: (href: string) => void }): void {
+  if (typeof window === "undefined") return;
+  const next = window.location.pathname + window.location.search;
+  router.replace(`/login?next=${encodeURIComponent(next)}`);
+}

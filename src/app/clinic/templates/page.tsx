@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getAccessToken, getCurrentClinic } from "@/lib/clinic-auth";
+import { getAccessToken, getCurrentClinic, redirectToLogin } from "@/lib/clinic-auth";
 import { DEFAULT_TEMPLATES, PLACEHOLDER_KEYS, renderTemplate, findUnresolvedPlaceholders } from "@/lib/message-templates";
 import type { MessageChannel, TemplateWithMeta } from "@/lib/types";
 
@@ -35,7 +35,7 @@ export default function ClinicTemplatesPage() {
   useEffect(() => {
     (async () => {
       const clinic = await getCurrentClinic();
-      if (!clinic) { router.replace("/login"); return; }
+      if (!clinic) { redirectToLogin(router); return; }
       setClinicId(clinic.id);
       const token = await getAccessToken();
       const res = await fetch(`/api/clinic/templates?clinic_id=${clinic.id}`, {
