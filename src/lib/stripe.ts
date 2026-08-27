@@ -99,15 +99,25 @@ export interface OffSessionChargeResult {
  * 発生時のみの即時課金。automatic capture・off_session・direct charge（application_fee無し）。
  * 呼び出し側が isChargeExecutionEnabled() を確認してから呼ぶ（ここでは判定しない＝二重ガード回避）。
  */
+/** Phase K: カード拒否以外の全例外（ネットワーク障害・レート制限・idempotency_error・Connect不備等）。
+ * PaymentIntentが作れていない＝カードの問題ではないため、呼び出し側はcharge_eventsに
+ * failure_kind='system_error'として記録し、患者には「別カードで」ではなく医院連絡を案内する。 */
+export interface OffSessionChargeSystemError {
+  systemError: true;
+  /** カード番号等の機微情報は含まない（Stripeエラーオブジェクトのmessage/typeのみを使う） */
+  errorMessage: string;
+}
+
 export async function executeOffSessionCharge(params: {
   connectedAccountId: string;
   paymentMethodId: string;
   amountJpy: number;
   appointmentId: string;
   description: string;
-  /** Phase J: 同一操作の重複実行でも同じPaymentIntentが返るようにする（`${appointmentId}:${eventType}`形式） */
+  /** Phase K: 同一カードでの重複実行は同じキーになり、カード変更後の再試行は新規キーになるようにする
+   * （`${appointmentId}:${eventType}:${paymentMethodId}`形式。E-3の`${appointmentId}:retry`は対象外） */
   idempotencyKey: string;
-}): Promise<OffSessionChargeResult> {
+}): Promise<OffSessionChargeResult | OffSessionChargeSystemError> {
   const stripe = getStripeClient();
   try {
     const intent = await stripe.paymentIntents.create(
@@ -136,7 +146,10 @@ export async function executeOffSessionCharge(params: {
         requiresAction: e.payment_intent.status === "requires_action",
       };
     }
-    throw e;
+    // Stripeのエラーオブジェクトはカード番号等の機微情報を含まない旨をSDKが保証する
+    // （raw PANはStripe側で保持されずトークン化されるため、message/typeに混入し得ない）
+    const errorMessage = e instanceof Error ? `${e.constructor.name}: ${e.message}` : String(e);
+    return { systemError: true, errorMessage };
   }
 }
 

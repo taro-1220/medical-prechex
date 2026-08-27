@@ -223,8 +223,8 @@ export async function getAppointmentById(id: string): Promise<Appointment | unde
 
 /**
  * confirm/チケット画面向け。getAppointment に加え、DBカラムを持たない表示専用フィールド
- * （basis_note・医院電話番号）を都度joinして返す。basis_note は show_basis_to_patient=true の
- * 場合のみ載せる（内部の金額根拠メモを無条件に患者へ見せないため）
+ * （basis_note・医院電話番号・chargeFailureKind）を都度joinして返す。basis_note は
+ * show_basis_to_patient=true の場合のみ載せる（内部の金額根拠メモを無条件に患者へ見せないため）
  */
 export async function getAppointmentForDisplay(token: string): Promise<Appointment | undefined> {
   const appt = await getAppointment(token);
@@ -242,6 +242,20 @@ export async function getAppointmentForDisplay(token: string): Promise<Appointme
     clinicPhone = (clinic?.phone as string | undefined) || undefined;
   }
 
+  // Phase K: chargeStatus='failed'のとき、患者表示の分岐（別カード導線 vs 医院連絡のみ）に使う
+  let chargeFailureKind: "card_declined" | "system_error" | null = null;
+  if (appt.chargeStatus === "failed") {
+    const { data: failureEvent } = await sb
+      .from("charge_events")
+      .select("failure_kind")
+      .eq("appointment_id", appt.id)
+      .eq("event_type", "failure")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    chargeFailureKind = (failureEvent?.failure_kind as "card_declined" | "system_error" | null | undefined) ?? null;
+  }
+
   if (appt.cancelPolicyApplied && (appt.treatmentCategory === "private" || appt.treatmentCategory === "insurance")) {
     const { data: policy } = await sb
       .from("clinic_cancel_policies")
@@ -252,13 +266,14 @@ export async function getAppointmentForDisplay(token: string): Promise<Appointme
     return {
       ...appt,
       clinicPhone,
+      chargeFailureKind,
       cancelPolicyShowBasisToPatient: (policy?.show_basis_to_patient as boolean | undefined) ?? false,
       cancelPolicyBasisNote: policy?.show_basis_to_patient ? (policy?.basis_note as string | undefined) : undefined,
       cancelPolicyTiers: (policy?.tiers as CancelTier[] | null | undefined) ?? null,
     };
   }
 
-  return { ...appt, clinicPhone };
+  return { ...appt, clinicPhone, chargeFailureKind };
 }
 
 async function findOrCreatePatient(

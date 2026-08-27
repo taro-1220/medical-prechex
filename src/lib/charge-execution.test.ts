@@ -86,12 +86,69 @@ describe("attemptCancelCharge: 重複課金ガード（0-4a）", () => {
     expect(executeOffSessionChargeMock).toHaveBeenCalledTimes(1); // 増えていない
   });
 
-  it("executeOffSessionChargeにidempotencyKey `${appointmentId}:charge` を渡す", async () => {
+  it("executeOffSessionChargeにidempotencyKey `${appointmentId}:charge:${paymentMethodId}` を渡す（Phase K-A）", async () => {
     findSuccessfulChargeEventMock.mockResolvedValueOnce(null);
     await attemptCancelCharge(makeCtx());
     expect(executeOffSessionChargeMock).toHaveBeenCalledWith(
-      expect.objectContaining({ idempotencyKey: "appt-1:charge" }),
+      expect.objectContaining({ idempotencyKey: "appt-1:charge:pm_123" }),
     );
+  });
+
+  it("同一カードでの2回目はidempotencyKeyが一致し、新カードでの再試行はキーが変わる（Phase K-A）", async () => {
+    findSuccessfulChargeEventMock.mockResolvedValue(null);
+    await attemptCancelCharge(makeCtx());
+    const firstKey = executeOffSessionChargeMock.mock.calls[0][0].idempotencyKey;
+
+    await attemptCancelCharge(makeCtx()); // 同一カードでの2回目呼び出し
+    const secondKey = executeOffSessionChargeMock.mock.calls[1][0].idempotencyKey;
+    expect(secondKey).toBe(firstKey);
+
+    const newCardAppt = { ...BASE_APPT, stripePaymentMethodId: "pm_456" };
+    await attemptCancelCharge(makeCtx({ appointment: newCardAppt })); // 新カードでの再試行
+    const thirdKey = executeOffSessionChargeMock.mock.calls[2][0].idempotencyKey;
+    expect(thirdKey).not.toBe(firstKey);
+    expect(thirdKey).toBe("appt-1:charge:pm_456");
+  });
+});
+
+describe("attemptCancelCharge: 例外時の証跡記録（Phase K-B）", () => {
+  it("idempotency_error相当の例外はfailure_kind='system_error'でcharge_eventsに記録され、例外は投げない", async () => {
+    findSuccessfulChargeEventMock.mockResolvedValueOnce(null);
+    executeOffSessionChargeMock.mockResolvedValueOnce({
+      systemError: true,
+      errorMessage: "StripeInvalidRequestError: Keys for idempotent requests can only be used with the same parameters",
+    });
+    const result = await attemptCancelCharge(makeCtx());
+    expect(result.chargeStatus).toBe("failed");
+    expect(result.executed).toBe(false);
+    expect(insertChargeEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: "failure",
+      failureKind: "system_error",
+      dryRun: false,
+    }));
+    expect(recordChargeResultMock).toHaveBeenCalledWith("appt-1", expect.objectContaining({ chargeStatus: "failed" }));
+  });
+
+  it("ネットワーク例外でも同様にfailure_kind='system_error'で記録される", async () => {
+    findSuccessfulChargeEventMock.mockResolvedValueOnce(null);
+    executeOffSessionChargeMock.mockResolvedValueOnce({
+      systemError: true,
+      errorMessage: "StripeConnectionError: An error occurred while communicating with Stripe",
+    });
+    const result = await attemptCancelCharge(makeCtx());
+    expect(result.chargeStatus).toBe("failed");
+    expect(insertChargeEventMock).toHaveBeenCalledWith(expect.objectContaining({ failureKind: "system_error" }));
+  });
+
+  it("カード拒否は従来どおりfailure_kind='card_declined'で記録される", async () => {
+    findSuccessfulChargeEventMock.mockResolvedValueOnce(null);
+    executeOffSessionChargeMock.mockResolvedValueOnce({ paymentIntentId: "pi_declined", status: "requires_payment_method", requiresAction: false });
+    const result = await attemptCancelCharge(makeCtx());
+    expect(result.chargeStatus).toBe("failed");
+    expect(insertChargeEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: "failure",
+      failureKind: "card_declined",
+    }));
   });
 });
 
@@ -128,12 +185,25 @@ describe("attemptRetryCharge: E-3リトライはalready_chargedの影響を受�
     expect(findSuccessfulChargeEventMock).toHaveBeenCalledTimes(1); // failedAttempt側の1回のみ（retryでは呼ばれない）
   });
 
-  it("attemptRetryChargeはidempotencyKey `${appointmentId}:retry` を渡す", async () => {
+  it("attemptRetryChargeはidempotencyKey `${appointmentId}:retry` を渡す（Phase K-Aでも変更しない）", async () => {
     const apptForRetry: Appointment = { ...BASE_APPT, chargeStatus: "failed", chargedAmount: 10000 };
     await attemptRetryCharge(apptForRetry, "acct_1");
     expect(executeOffSessionChargeMock).toHaveBeenCalledWith(
       expect.objectContaining({ idempotencyKey: "appt-1:retry" }),
     );
+  });
+
+  it("system_error対象のリトライも1回だけ通り、eventType='retry'のまま記録される（Phase K-E）", async () => {
+    executeOffSessionChargeMock.mockResolvedValueOnce({ systemError: true, errorMessage: "StripeConnectionError: timeout" });
+    const apptForRetry: Appointment = { ...BASE_APPT, chargeStatus: "failed", chargedAmount: 10000 };
+    const retryResult = await attemptRetryCharge(apptForRetry, "acct_1");
+    expect(retryResult.attempted).toBe(true);
+    expect(retryResult.chargeStatus).toBe("failed");
+    expect(executeOffSessionChargeMock).toHaveBeenCalledTimes(1);
+    expect(insertChargeEventMock).toHaveBeenCalledWith(expect.objectContaining({ eventType: "retry" }));
+    // failure_kindはevent_type='failure'専用のDB制約があるため、retryイベントには含めない
+    const call = insertChargeEventMock.mock.calls.find((c) => c[0].eventType === "retry");
+    expect(call?.[0].failureKind).toBeUndefined();
   });
 });
 

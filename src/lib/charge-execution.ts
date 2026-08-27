@@ -116,9 +116,27 @@ export async function attemptCancelCharge(ctx: ChargeAttemptContext): Promise<Ch
     amountJpy: amount,
     appointmentId: appt.id,
     description: `${appt.clinicName} キャンセル料（${tierMatch.percent}%）`,
-    // 同一予約への重複呼び出しでも同じPaymentIntentを返させる（アプリ層のalready_chargedガードの補完）
-    idempotencyKey: `${appt.id}:charge`,
+    // Phase K: カードIDをキーに含める（同一カードの重複実行は同じキー＝Stripe側でも重複排除、
+    // カード変更後の再試行は別キー＝新規リクエストとして正しく通す）
+    idempotencyKey: `${appt.id}:charge:${appt.stripePaymentMethodId}`,
   });
+
+  // Phase K: カード拒否以外の例外（ネットワーク障害・idempotency_error等）。PaymentIntent自体が
+  // 作れていないため、appt.chargeStatusは'failed'にしつつfailure_kind='system_error'で区別する
+  if ("systemError" in result) {
+    await recordChargeResult(appt.id, {
+      chargeStatus: "failed",
+      chargedAmount: amount,
+      chargeExecutedAt: ctx.eventAt,
+    });
+    await insertChargeEvent({
+      appointmentId: appt.id, clinicId: appt.clinicId!, eventType: "failure", failureKind: "system_error",
+      amount, actor: ctx.actor, dryRun: false,
+      detail: `${noShowPrefix}システムエラー: ${result.errorMessage}`,
+    });
+    return { ...base, executed: false, dryRun: false, chargeStatus: "failed" };
+  }
+
   const chargeStatus: ChargeStatus = result.requiresAction
     ? "requires_action"
     : result.status === "succeeded" ? "charged" : "failed";
@@ -133,6 +151,7 @@ export async function attemptCancelCharge(ctx: ChargeAttemptContext): Promise<Ch
   await insertChargeEvent({
     appointmentId: appt.id, clinicId: appt.clinicId!,
     eventType: chargeStatus === "failed" ? "failure" : "charge",
+    failureKind: chargeStatus === "failed" ? "card_declined" : null,
     amount, stripeReferenceId: result.paymentIntentId, actor: ctx.actor, dryRun: false,
     detail: `${noShowPrefix}${tierMatch.percent}% (${chargeStatus})`,
   });
@@ -169,8 +188,26 @@ export async function attemptRetryCharge(
     appointmentId: appt.id,
     description: `${appt.clinicName} キャンセル料（再請求）`,
     // E-3は「retryイベント不在チェック」により生涯1回のみ呼ばれるため、charge用キーと衝突しない
+    // （Phase K-Aのカード単位キー化はattemptCancelCharge側のみで、ここは変更しない）
     idempotencyKey: `${appt.id}:retry`,
   });
+
+  // Phase K: リトライ自体がシステムエラーで失敗した場合も、eventType='retry'のまま記録する
+  // （failure_kindはevent_type='failure'専用のDB制約があるため、ここでは常にnullのまま）
+  if ("systemError" in result) {
+    await recordChargeResult(appt.id, {
+      chargeStatus: "failed",
+      chargedAmount: appt.chargedAmount,
+      chargeExecutedAt: now,
+    });
+    await insertChargeEvent({
+      appointmentId: appt.id, clinicId: appt.clinicId!, eventType: "retry",
+      amount: appt.chargedAmount, actor: "system", dryRun: false,
+      detail: `再試行結果: システムエラー: ${result.errorMessage}`,
+    });
+    return { attempted: true, dryRun: false, chargeStatus: "failed" };
+  }
+
   const chargeStatus: ChargeStatus = result.requiresAction
     ? "requires_action"
     : result.status === "succeeded" ? "charged" : "failed";

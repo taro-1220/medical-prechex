@@ -73,6 +73,8 @@ export type ChargeStatus = "none" | "charged" | "failed" | "requires_action" | "
 // charge_events の1行（全操作の証跡）
 export type ChargeEventType = "charge" | "failure" | "retry" | "notice";
 export type ChargeEventActor = "system" | "staff";
+// Phase K: event_type='failure' のときのみ意味を持つ付加情報（それ以外は常にnull）
+export type ChargeFailureKind = "card_declined" | "system_error";
 
 export interface ChargeEvent {
   id: string;
@@ -84,6 +86,7 @@ export interface ChargeEvent {
   actor: ChargeEventActor;
   dryRun: boolean;
   detail: string | null;
+  failureKind: ChargeFailureKind | null;
   createdAt: string;
 }
 
@@ -189,6 +192,8 @@ export interface Appointment {
   cancelPolicyShowBasisToPatient?: boolean;
   cancelPolicyTiers?: CancelTier[] | null;
   clinicPhone?: string;
+  // Phase K: chargeStatus='failed'のときのみ、直近のcharge_eventsから都度joinする表示専用フィールド
+  chargeFailureKind?: ChargeFailureKind | null;
   // MVP+2: カード登録・課金状態
   baseAmount: number | null;
   cardRegistrationRequired: boolean;
@@ -244,6 +249,8 @@ export interface ChargeDashboardResponse {
   collectedAmount: number;
   collectedCount: number;
   failedChargeCount: number;
+  /** Phase K: failedChargeCountからsystem_errorを除いた別枠（医院がカード拒否と誤認しないため） */
+  systemErrorCount: number;
   policyAppliedCancelRate: number;
   policyAppliedTotal: number;
   policyAppliedCancelledCount: number;

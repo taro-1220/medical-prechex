@@ -16,7 +16,8 @@ function appt(overrides: Partial<Appointment>): Appointment {
 function event(overrides: Partial<ChargeEvent>): ChargeEvent {
   return {
     id: "e1", appointmentId: "a1", clinicId: "c1", eventType: "charge", amount: 3000,
-    stripeReferenceId: null, actor: "system", dryRun: false, detail: null, createdAt: "2026-09-02T00:00:00Z",
+    stripeReferenceId: null, actor: "system", dryRun: false, detail: null, failureKind: null,
+    createdAt: "2026-09-02T00:00:00Z",
     ...overrides,
   };
 }
@@ -26,7 +27,7 @@ describe("computeChargeDashboard", () => {
     const d = computeChargeDashboard([], []);
     expect(d).toEqual({
       totalAppointments: 0, cancelledCount: 0, cancelRate: 0, noShowCount: 0,
-      collectedAmount: 0, collectedCount: 0, failedChargeCount: 0,
+      collectedAmount: 0, collectedCount: 0, failedChargeCount: 0, systemErrorCount: 0,
       policyAppliedCancelRate: 0, policyAppliedTotal: 0, policyAppliedCancelledCount: 0,
       policyNotAppliedCancelRate: 0, policyNotAppliedTotal: 0, policyNotAppliedCancelledCount: 0,
     });
@@ -83,5 +84,31 @@ describe("computeChargeDashboard", () => {
     const appts = [appt({ id: "1", chargeStatus: "failed" }), appt({ id: "2", chargeStatus: "charged" }), appt({ id: "3", chargeStatus: "none" })];
     const d = computeChargeDashboard(appts, []);
     expect(d.failedChargeCount).toBe(1);
+  });
+
+  it("Phase K: failure_kind='system_error'はfailedChargeCountから除きsystemErrorCountに計上する", () => {
+    const appts = [
+      appt({ id: "1", chargeStatus: "failed" }), // カード拒否
+      appt({ id: "2", chargeStatus: "failed" }), // システムエラー
+      appt({ id: "3", chargeStatus: "charged" }),
+    ];
+    const events = [
+      event({ id: "e1", appointmentId: "1", eventType: "failure", failureKind: "card_declined" }),
+      event({ id: "e2", appointmentId: "2", eventType: "failure", failureKind: "system_error" }),
+    ];
+    const d = computeChargeDashboard(appts, events);
+    expect(d.failedChargeCount).toBe(1);
+    expect(d.systemErrorCount).toBe(1);
+  });
+
+  it("Phase K: 同一予約に複数failureイベントがあれば最新のfailure_kindを採用する", () => {
+    const appts = [appt({ id: "1", chargeStatus: "failed" })];
+    const events = [
+      event({ id: "e1", appointmentId: "1", eventType: "failure", failureKind: "system_error", createdAt: "2026-09-01T00:00:00Z" }),
+      event({ id: "e2", appointmentId: "1", eventType: "failure", failureKind: "card_declined", createdAt: "2026-09-02T00:00:00Z" }), // より新しい
+    ];
+    const d = computeChargeDashboard(appts, events);
+    expect(d.failedChargeCount).toBe(1);
+    expect(d.systemErrorCount).toBe(0);
   });
 });

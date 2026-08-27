@@ -8,6 +8,7 @@ import type {
   ChargeEvent,
   ChargeEventType,
   ChargeEventActor,
+  ChargeFailureKind,
   Appointment,
 } from "./types";
 
@@ -76,6 +77,8 @@ export interface InsertChargeEventInput {
   actor: ChargeEventActor;
   dryRun: boolean;
   detail?: string | null;
+  /** Phase K: event_type='failure'のときのみ意味を持つ（それ以外はnullのまま挿入すること） */
+  failureKind?: ChargeFailureKind | null;
 }
 
 export async function insertChargeEvent(input: InsertChargeEventInput): Promise<void> {
@@ -88,6 +91,7 @@ export async function insertChargeEvent(input: InsertChargeEventInput): Promise<
     actor: input.actor,
     dry_run: input.dryRun,
     detail: input.detail ?? null,
+    failure_kind: input.failureKind ?? null,
   });
   if (error) throw new Error(error.message);
 }
@@ -103,6 +107,7 @@ function toChargeEvent(row: Record<string, unknown>): ChargeEvent {
     actor: row.actor as ChargeEventActor,
     dryRun: row.dry_run as boolean,
     detail: (row.detail as string | null) ?? null,
+    failureKind: (row.failure_kind as ChargeFailureKind | null | undefined) ?? null,
     createdAt: row.created_at as string,
   };
 }

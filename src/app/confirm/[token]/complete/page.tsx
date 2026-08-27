@@ -143,26 +143,38 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
         </p>
       ) : appt.chargeStatus === "failed" ? (
         <div className="space-y-3">
-          <p className="text-sm text-red-600 font-bold">カードのお手続きが完了できませんでした</p>
-          <p className="text-xs text-gray-500">
-            請求額 <span className="font-bold text-gray-700">{formatYen(appt.chargedAmount ?? 0)}</span> のお引き落としができませんでした。
-          </p>
-          {retryingCard ? (
-            <CardRegistration
-              token={token!}
-              clinicName={appt.clinicName}
-              category={TREATMENT_CATEGORY_LABEL[appt.treatmentCategory] ?? appt.treatmentCategory}
-              tiers={appt.cancelPolicyTiers ?? null}
-              baseAmount={appt.baseAmount ?? null}
-              onRegistered={() => { setRetryingCard(false); refetchAppointment(); }}
-            />
+          {/* Phase K-C: system_errorは別カード導線を出さず、医院連絡のみ案内する（誤誘導防止） */}
+          {appt.chargeFailureKind === "system_error" ? (
+            <>
+              <p className="text-sm text-red-600 font-bold">お手続きを完了できませんでした</p>
+              <p className="text-xs text-gray-500">
+                請求額 <span className="font-bold text-gray-700">{formatYen(appt.chargedAmount ?? 0)}</span> の処理中にシステムエラーが発生しました。お手数ですが医院までご連絡ください。
+              </p>
+            </>
           ) : (
-            <button
-              onClick={() => setRetryingCard(true)}
-              className="w-full py-3 rounded-xl bg-gray-900 text-white font-bold text-sm hover:bg-gray-800 transition"
-            >
-              別のカードでお手続きする
-            </button>
+            <>
+              <p className="text-sm text-red-600 font-bold">カードのお手続きが完了できませんでした</p>
+              <p className="text-xs text-gray-500">
+                請求額 <span className="font-bold text-gray-700">{formatYen(appt.chargedAmount ?? 0)}</span> のお引き落としができませんでした。
+              </p>
+              {retryingCard ? (
+                <CardRegistration
+                  token={token!}
+                  clinicName={appt.clinicName}
+                  category={TREATMENT_CATEGORY_LABEL[appt.treatmentCategory] ?? appt.treatmentCategory}
+                  tiers={appt.cancelPolicyTiers ?? null}
+                  baseAmount={appt.baseAmount ?? null}
+                  onRegistered={() => { setRetryingCard(false); refetchAppointment(); }}
+                />
+              ) : (
+                <button
+                  onClick={() => setRetryingCard(true)}
+                  className="w-full py-3 rounded-xl bg-gray-900 text-white font-bold text-sm hover:bg-gray-800 transition"
+                >
+                  別のカードでお手続きする
+                </button>
+              )}
+            </>
           )}
           {appt.clinicPhone && (
             <a href={`tel:${appt.clinicPhone}`} className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-gray-200 text-gray-700 font-bold text-sm hover:bg-gray-50 transition">

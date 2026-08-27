@@ -14,6 +14,8 @@ export interface ChargeDashboard {
   collectedAmount: number;
   collectedCount: number;
   failedChargeCount: number;
+  /** Phase K: failedChargeCountからsystem_errorを除いた別枠（医院がカード拒否と誤認しないため） */
+  systemErrorCount: number;
   /** キャンセルポリシー適用対象だった予約のキャンセル率 */
   policyAppliedCancelRate: number;
   /** policyAppliedCancelRateの母数（Phase J: 母数が小さい率に件数を併記するため） */
@@ -47,7 +49,16 @@ export function computeChargeDashboard(appointments: Appointment[], chargeEvents
   const collected = chargeEvents.filter((e) => e.eventType === "charge" && !e.dryRun);
   const collectedAmount = collected.reduce((sum, e) => sum + (e.amount ?? 0), 0);
 
-  const failedChargeCount = appointments.filter((a) => a.chargeStatus === "failed").length;
+  // Phase K: 予約ごとに最新のfailureイベントのfailure_kindを見て、system_errorをfailedChargeCountから分離する
+  const latestFailureKind = (appointmentId: string): "card_declined" | "system_error" | null => {
+    const failures = chargeEvents
+      .filter((e) => e.appointmentId === appointmentId && e.eventType === "failure")
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return failures[0]?.failureKind ?? null;
+  };
+  const failedAppointments = appointments.filter((a) => a.chargeStatus === "failed");
+  const systemErrorCount = failedAppointments.filter((a) => latestFailureKind(a.id) === "system_error").length;
+  const failedChargeCount = failedAppointments.length - systemErrorCount;
 
   return {
     totalAppointments: total,
@@ -57,6 +68,7 @@ export function computeChargeDashboard(appointments: Appointment[], chargeEvents
     collectedAmount,
     collectedCount: collected.length,
     failedChargeCount,
+    systemErrorCount,
     policyAppliedCancelRate: rate(cancelledApplied, applied.length),
     policyAppliedTotal: applied.length,
     policyAppliedCancelledCount: cancelledApplied,

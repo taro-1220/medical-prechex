@@ -247,7 +247,7 @@ export default function ClinicPage() {
             </div>
 
             {/* 従属指標 */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-4 border-t border-gray-100">
               <div>
                 <p className="text-xs text-gray-400">キャンセル率</p>
                 <p className="text-lg font-bold text-gray-900">{formatRate(dashboard.cancelRate, dashboard.cancelledCount, dashboard.totalAppointments)}</p>
@@ -256,9 +256,14 @@ export default function ClinicPage() {
                 <p className="text-xs text-gray-400">無断件数</p>
                 <p className="text-lg font-bold text-gray-900">{dashboard.noShowCount}件</p>
               </div>
+              {/* Phase K-D: カード拒否とシステムエラーを分離表示（医院が拒否と誤認しないため） */}
               <div>
                 <p className="text-xs text-gray-400">課金失敗</p>
                 <p className={`text-lg font-bold ${dashboard.failedChargeCount > 0 ? "text-red-600" : "text-gray-900"}`}>{dashboard.failedChargeCount}件</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">システムエラー</p>
+                <p className={`text-lg font-bold ${dashboard.systemErrorCount > 0 ? "text-amber-600" : "text-gray-900"}`}>{dashboard.systemErrorCount}件</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400">同意済み予約のキャンセル率</p>
