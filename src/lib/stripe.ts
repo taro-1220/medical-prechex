@@ -30,13 +30,31 @@ export function isChargeExecutionEnabled(): boolean {
   return process.env.ENABLE_CHARGE_EXECUTION === "true";
 }
 
+/**
+ * 入金スケジュール（settings.payouts.schedule）は本関数で明示指定しない。
+ * Stripeの国別デフォルト（JPのExpressアカウントは現状 週次・金曜・4日据え置き）が
+ * 適用されたままにしておく方針とし、医院側の希望があればExpressダッシュボード
+ * （accounts.stripe.com）から各医院が個別に変更できるようにする。
+ * medipre側で一律固定・強制する要件は今のところ無い。
+ */
 export async function createConnectExpressAccount(email: string): Promise<string> {
   const stripe = getStripeClient();
   const account = await stripe.accounts.create({
     type: "express",
     country: "JP",
     email,
-    capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
+    capabilities: {
+      card_payments: { requested: true },
+      transfers: { requested: true },
+      // card_payments/transfers以外（欧州の決済手段等）はrequestedを明示しないと自動的に
+      // activeになる（本人確認不要な決済手段のため）。SetupIntent側はpayment_method_types:
+      // ["card"]のみを指定しており患者に提示されることは無いが、意図しない決済手段が
+      // Stripe側で有効化された状態を残さないため、明示的にfalseで抑制する
+      bancontact_payments: { requested: false },
+      eps_payments: { requested: false },
+      ideal_payments: { requested: false },
+      link_payments: { requested: false },
+    },
   });
   return account.id;
 }

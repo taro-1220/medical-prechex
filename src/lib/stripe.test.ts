@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 process.env.STRIPE_SECRET_KEY = "sk_test_phasek_dummy_key_for_testing_only";
 
 import Stripe from "stripe";
-import { executeOffSessionCharge, getStripeClient, createAppointmentSetupIntent, attachPaymentMethodToCustomer } from "./stripe";
+import { executeOffSessionCharge, getStripeClient, createAppointmentSetupIntent, attachPaymentMethodToCustomer, createConnectExpressAccount } from "./stripe";
 
 const BASE_PARAMS = {
   connectedAccountId: "acct_1",
@@ -181,5 +181,26 @@ describe("attachPaymentMethodToCustomer: confirm後の明示attach（検収で�
     await attachPaymentMethodToCustomer("acct_1", "pm_1", "cus_1");
     expect(attachSpy).toHaveBeenCalledWith("pm_1", { customer: "cus_1" }, { stripeAccount: "acct_1" });
     attachSpy.mockRestore();
+  });
+});
+
+describe("createConnectExpressAccount: 未要求の決済手段を明示的に抑制する", () => {
+  it("card_payments/transfersはrequested:true、それ以外はrequested:falseを明示する", async () => {
+    const client = getStripeClient();
+    const createSpy = vi.spyOn(client.accounts, "create").mockResolvedValueOnce({ id: "acct_new1" } as never);
+    await createConnectExpressAccount("clinic@example.com");
+    expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({
+      type: "express",
+      country: "JP",
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+        bancontact_payments: { requested: false },
+        eps_payments: { requested: false },
+        ideal_payments: { requested: false },
+        link_payments: { requested: false },
+      },
+    }));
+    createSpy.mockRestore();
   });
 });
