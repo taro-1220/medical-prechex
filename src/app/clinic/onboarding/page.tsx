@@ -22,6 +22,7 @@ const INSURANCE_ACK_TEXT =
 export default function OnboardingPage() {
   const router = useRouter();
   const [clinicId, setClinicId] = useState<string | null>(null);
+  const [isSettingsMode, setIsSettingsMode] = useState(false);
   const [progress, setProgress] = useState<OnboardingProgress | null>(null);
   const [profile, setProfile] = useState<ClinicProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,6 +79,7 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     (async () => {
+      setIsSettingsMode(new URLSearchParams(window.location.search).get("mode") === "settings");
       const clinic = await getCurrentClinic();
       if (!clinic) { redirectToLogin(router); return; }
       setClinicId(clinic.id);
@@ -215,7 +217,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <header className="border-b border-gray-200 bg-white px-6 py-4">
         <button onClick={() => router.push("/clinic")} className="text-gray-400 text-sm hover:text-gray-900 transition">← 管理画面へ</button>
-        <h1 className="text-xl font-black mt-1">初期設定</h1>
+        <h1 className="text-xl font-black mt-1">{isSettingsMode ? "医院設定" : "初期設定"}</h1>
       </header>
 
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-4">

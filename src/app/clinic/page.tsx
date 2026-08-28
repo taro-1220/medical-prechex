@@ -197,6 +197,9 @@ export default function ClinicPage() {
           <Link href="/clinic/templates" className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition">
             テンプレート設定
           </Link>
+          <Link href="/clinic/onboarding?mode=settings" className="px-4 py-2 rounded-xl border border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition">
+            医院設定
+          </Link>
           <Link href="/clinic/checkin" className="px-4 py-2 bg-emerald-600 rounded-xl font-bold text-sm text-white hover:bg-emerald-700 transition">
             QR受付
           </Link>
@@ -232,16 +235,16 @@ export default function ClinicPage() {
           ))}
         </div>
 
-        {/* MVP+2 C-5 / Phase J セクションC: キャンセル料回収ダッシュボード（回収額を主指標にする） */}
+        {/* MVP+2 C-5 / Phase J セクションC: キャンセル料管理ダッシュボード（表示文言のみ変更。キャンセル料回収→キャンセル料管理） */}
         {dashboard && (
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 mb-10">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-gray-700">キャンセル料回収（{dashboard.month}）</h2>
+              <h2 className="text-base font-bold text-gray-700">キャンセル料管理（{dashboard.month}）</h2>
             </div>
 
-            {/* 主指標: 回収額 */}
+            {/* 主指標: キャンセル料 */}
             <div className="mb-5">
-              <p className="text-xs text-gray-400">回収額</p>
+              <p className="text-xs text-gray-400">キャンセル料</p>
               <p className="text-4xl font-black text-teal-600">{dashboard.collectedAmount.toLocaleString()}円</p>
               <p className="text-xs text-gray-400 mt-0.5">{dashboard.collectedCount}件</p>
             </div>
