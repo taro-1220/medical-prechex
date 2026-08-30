@@ -96,6 +96,8 @@ export interface Patient {
   phone: string;
   email: string;
   userId?: string | null; // Phase2+: populated on LINE login / email OTP
+  // MVP+3: 空き枠自動通知の受信設定（安全側デフォルトOFF）
+  notifyAvailableSlot?: boolean;
   createdAt?: string;
 }
 
@@ -144,6 +146,8 @@ export interface ClinicProfile {
   // MVP+2
   stripeAccountId: string | null;
   stripeAccountStatus: StripeAccountStatus;
+  // MVP+3: 空き枠自動通知の医院単位ON/OFF（安全側デフォルトOFF）
+  autoNotifyAvailableSlot: boolean;
   createdAt: string;
   updatedAt: string;
 }

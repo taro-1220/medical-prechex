@@ -28,6 +28,8 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
   const [reauthenticating, setReauthenticating] = useState(false);
   const [reauthError, setReauthError] = useState<string | null>(null);
   const [retryingCard, setRetryingCard] = useState(false);
+  const [notifyAvailableSlot, setNotifyAvailableSlot] = useState(false);
+  const [notifySaving, setNotifySaving] = useState(false);
 
   useEffect(() => {
     params.then(({ token: t }) => setToken(t));
@@ -43,6 +45,27 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
       })
       .catch(() => setErrorType("load_failed"));
   }, [token]);
+
+  // MVP+3: 空き枠通知の受信設定（患者単位。予約単位ではないため別APIで取得する）
+  useEffect(() => {
+    if (!token) return;
+    fetch(`/api/appointments/${token}/notification-preference`)
+      .then(async (res) => { if (res.ok) setNotifyAvailableSlot((await res.json()).enabled); })
+      .catch(() => {});
+  }, [token]);
+
+  const toggleNotifyAvailableSlot = async () => {
+    if (!token || notifySaving) return;
+    const next = !notifyAvailableSlot;
+    setNotifySaving(true);
+    setNotifyAvailableSlot(next);
+    await fetch(`/api/appointments/${token}/notification-preference`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: next }),
+    }).catch(() => {});
+    setNotifySaving(false);
+  };
 
   if (errorType === "not_found") {
     return (
@@ -377,6 +400,23 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
             <span className={`text-sm font-bold ${alreadyRequestedCancel ? "text-gray-400" : "text-gray-800"}`}>
               {alreadyRequestedCancel ? "医院へキャンセルのご連絡を受け付けました" : "キャンセルを申し出る"}
             </span>
+          </button>
+        </div>
+
+        {/* MVP+3: 空き枠自動通知の受信設定 */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3.5 mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-bold text-gray-800">急な空き枠のお知らせを受け取る</p>
+            <p className="text-xs text-gray-400 mt-0.5">予約のキャンセル等により空きが出た際、医院からお知らせを受け取れます。</p>
+          </div>
+          <button
+            onClick={toggleNotifyAvailableSlot}
+            disabled={notifySaving}
+            role="switch"
+            aria-checked={notifyAvailableSlot}
+            className={`shrink-0 w-11 h-6 rounded-full transition relative disabled:opacity-50 ${notifyAvailableSlot ? "bg-teal-600" : "bg-gray-200"}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition ${notifyAvailableSlot ? "translate-x-5" : ""}`} />
           </button>
         </div>
 

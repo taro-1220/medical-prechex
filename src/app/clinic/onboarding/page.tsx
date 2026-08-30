@@ -48,6 +48,10 @@ export default function OnboardingPage() {
   const [connectingStripe, setConnectingStripe] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
 
+  // MVP+3: 空き枠自動通知
+  const [autoNotifySlot, setAutoNotifySlot] = useState(false);
+  const [savingSlotSettings, setSavingSlotSettings] = useState(false);
+
   async function loadOnboarding(cid: string) {
     const token = await getAccessToken();
     const res = await fetch(`/api/clinic/onboarding?clinic_id=${cid}`, {
@@ -61,6 +65,7 @@ export default function OnboardingPage() {
         setPf({ clinicDisplayName: prof.clinicDisplayName, directorName: prof.directorName, phone: prof.phone, email: prof.email, postalCode: prof.postalCode, address: prof.address, websiteUrl: prof.websiteUrl });
         setPolicy(prof.cancellationPolicy);
         setMessage(prof.defaultMessage);
+        setAutoNotifySlot(prof.autoNotifyAvailableSlot);
       }
     }
 
@@ -141,6 +146,19 @@ export default function OnboardingPage() {
     }
     await loadOnboarding(clinicId);
     setSaving(false);
+  }
+
+  async function saveAvailableSlotSettings(nextEnabled: boolean) {
+    if (!clinicId) return;
+    setSavingSlotSettings(true);
+    setAutoNotifySlot(nextEnabled);
+    const token = await getAccessToken();
+    await fetch("/api/clinic/available-slot-settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ clinicId, enabled: nextEnabled }),
+    });
+    setSavingSlotSettings(false);
   }
 
   const cpAppliesTo = (category: "private" | "insurance") => cpScope != null && scopeAppliesToCategory(cpScope, category);
@@ -509,6 +527,27 @@ export default function OnboardingPage() {
               </button>
             </div>
           )}
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-bold text-gray-900">空き枠自動通知</p>
+              <p className="text-xs text-gray-400 mt-0.5">患者のキャンセルにより再予約可能な枠が発生した際、通知を許可している患者へ自動でお知らせします。</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {autoNotifySlot
+                ? <span className="text-teal-600 font-bold text-sm">✓ 有効</span>
+                : <span className="text-xs text-gray-400">通知OFF</span>}
+              <button
+                onClick={() => saveAvailableSlotSettings(!autoNotifySlot)}
+                disabled={savingSlotSettings}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                {savingSlotSettings ? "保存中..." : autoNotifySlot ? "OFFにする" : "即時通知をONにする"}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className={`rounded-2xl border shadow-sm p-5 flex items-center justify-between ${allDone ? "border-teal-200 bg-teal-50" : "border-gray-200 bg-white"}`}>

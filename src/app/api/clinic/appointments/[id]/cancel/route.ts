@@ -3,6 +3,7 @@ import { getSupabase } from "@/lib/supabase";
 import { getAppointmentById, getClinicCancelPolicySettings, updateStatus } from "@/lib/store";
 import { getClinicStripeAccount } from "@/lib/charge-store";
 import { attemptCancelCharge } from "@/lib/charge-execution";
+import { handleAppointmentCancelledForSlotReopen } from "@/lib/available-slot-notify";
 
 // C-4: スタッフによるキャンセル記録（判定パネルでの確認後）。E-1のスタッフ起点
 export async function POST(
@@ -29,6 +30,9 @@ export async function POST(
 
     const now = new Date().toISOString();
     await updateStatus(appt.token, "cancelled", { cancelledAt: now });
+
+    // MVP+3: 空き枠自動通知。cancel-request側と同じく、キャンセル処理とは独立させる
+    await handleAppointmentCancelledForSlotReopen({ ...appt, status: "cancelled" }, appt.status).catch(() => {});
 
     let chargeResult = null;
     if (appt.cancelPolicyApplied && appt.treatmentCategory !== "other") {

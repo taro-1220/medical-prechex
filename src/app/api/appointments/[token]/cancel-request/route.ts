@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAppointment, getClinicCancelPolicySettings, requestCancellation, updateStatus } from "@/lib/store";
 import { getClinicStripeAccount } from "@/lib/charge-store";
 import { attemptCancelCharge } from "@/lib/charge-execution";
+import { handleAppointmentCancelledForSlotReopen } from "@/lib/available-slot-notify";
 
 // 患者側チケット画面からの［キャンセルを申し出る］。
 // MVP+1: 医院への連絡手段として cancel_requested_at を記録。
@@ -21,6 +22,11 @@ export async function POST(
 
     const now = new Date().toISOString();
     await updateStatus(token, "cancelled", { cancelledAt: now });
+
+    // MVP+3: 空き枠自動通知。キャンセル処理・キャンセル料処理とは独立した機能のため、
+    // ここで失敗してもキャンセル自体は成立済みとして扱う（Vercelのサーバーレス実行が応答後に
+    // 打ち切られないよう、レスポンスを返す前にawaitして完了させる。例外は投げない設計だが念のため囲む）
+    await handleAppointmentCancelledForSlotReopen({ ...appt, status: "cancelled" }, appt.status).catch(() => {});
 
     let chargeResult = null;
     if (appt.cancelPolicyApplied && appt.clinicId && appt.treatmentCategory !== "other") {

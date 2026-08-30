@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
     cancelPolicyInsuranceAcknowledged: (prof.cancel_policy_insurance_acknowledged as boolean | null | undefined) ?? false,
     stripeAccountId: (prof.stripe_account_id as string | null | undefined) ?? null,
     stripeAccountStatus: (prof.stripe_account_status as StripeAccountStatus | null | undefined) ?? "not_connected",
+    autoNotifyAvailableSlot: (prof.auto_notify_available_slot as boolean | null | undefined) ?? false,
     createdAt: prof.created_at as string,
     updatedAt: prof.updated_at as string,
   } : null;
