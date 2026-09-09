@@ -79,6 +79,8 @@ export interface InsertChargeEventInput {
   detail?: string | null;
   /** Phase K: event_type='failure'のときのみ意味を持つ（それ以外はnullのまま挿入すること） */
   failureKind?: ChargeFailureKind | null;
+  /** Medipre取り分（円）。実課金が成立した場合のみ渡す */
+  applicationFeeAmount?: number | null;
 }
 
 export async function insertChargeEvent(input: InsertChargeEventInput): Promise<void> {
@@ -92,6 +94,7 @@ export async function insertChargeEvent(input: InsertChargeEventInput): Promise<
     dry_run: input.dryRun,
     detail: input.detail ?? null,
     failure_kind: input.failureKind ?? null,
+    application_fee_amount: input.applicationFeeAmount ?? null,
   });
   if (error) throw new Error(error.message);
 }
@@ -108,6 +111,7 @@ function toChargeEvent(row: Record<string, unknown>): ChargeEvent {
     dryRun: row.dry_run as boolean,
     detail: (row.detail as string | null) ?? null,
     failureKind: (row.failure_kind as ChargeFailureKind | null | undefined) ?? null,
+    applicationFeeAmount: (row.application_fee_amount as number | null | undefined) ?? null,
     createdAt: row.created_at as string,
   };
 }
@@ -215,4 +219,21 @@ export async function getClinicChargeDashboard(
   if (eventErr) throw new Error(eventErr.message);
 
   return computeChargeDashboard((apptRows ?? []).map(toAppt), (eventRows ?? []).map(toChargeEvent));
+}
+
+/**
+ * Medipre運営者向け: 期間内のapplication_fee合計（全医院横断）。
+ * 画面実装は今回のスコープ外のため、集計できる関数として用意するのみ。
+ * fromIso/toIsoはcharge_events.created_atを[fromIso, toIso)で絞る。
+ */
+export async function getApplicationFeeTotal(fromIso: string, toIso: string): Promise<number> {
+  const { data, error } = await getSupabase()
+    .from("charge_events")
+    .select("application_fee_amount")
+    .eq("event_type", "charge")
+    .eq("dry_run", false)
+    .gte("created_at", fromIso)
+    .lt("created_at", toIso);
+  if (error) throw new Error(error.message);
+  return (data ?? []).reduce((sum, row) => sum + ((row.application_fee_amount as number | null) ?? 0), 0);
 }

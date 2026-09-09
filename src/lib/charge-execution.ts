@@ -154,6 +154,7 @@ export async function attemptCancelCharge(ctx: ChargeAttemptContext): Promise<Ch
     failureKind: chargeStatus === "failed" ? "card_declined" : null,
     amount, stripeReferenceId: result.paymentIntentId, actor: ctx.actor, dryRun: false,
     detail: `${noShowPrefix}${tierMatch.percent}% (${chargeStatus})`,
+    applicationFeeAmount: result.applicationFeeAmount,
   });
 
   return { ...base, executed: true, dryRun: false, chargeStatus, paymentIntentId: result.paymentIntentId };
@@ -222,6 +223,7 @@ export async function attemptRetryCharge(
     appointmentId: appt.id, clinicId: appt.clinicId!, eventType: "retry",
     amount: appt.chargedAmount, stripeReferenceId: result.paymentIntentId,
     actor: "system", dryRun: false, detail: `再試行結果: ${chargeStatus}`,
+    applicationFeeAmount: result.applicationFeeAmount,
   });
 
   return { attempted: true, dryRun: false, chargeStatus };

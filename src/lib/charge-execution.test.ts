@@ -228,3 +228,29 @@ describe("attemptCancelCharge: dry-run（フラグOFF）時の2回目の扱い�
     expect(insertChargeEventMock).toHaveBeenNthCalledWith(2, expect.objectContaining({ dryRun: true, eventType: "charge" }));
   });
 });
+
+describe("attemptCancelCharge: application_fee_amountのcharge_events記録", () => {
+  it("課金成功時、Stripeが返したapplication_fee_amountをcharge_eventsへそのまま記録する", async () => {
+    findSuccessfulChargeEventMock.mockResolvedValueOnce(null);
+    executeOffSessionChargeMock.mockResolvedValueOnce({
+      paymentIntentId: "pi_ok", status: "succeeded", requiresAction: false, applicationFeeAmount: 250,
+    });
+    const result = await attemptCancelCharge(makeCtx());
+    expect(result.chargeStatus).toBe("charged");
+    expect(insertChargeEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: "charge",
+      applicationFeeAmount: 250,
+    }));
+  });
+
+  it("リトライ課金でもapplicationFeeAmountを記録する", async () => {
+    executeOffSessionChargeMock.mockResolvedValueOnce({
+      paymentIntentId: "pi_retry_fee", status: "succeeded", requiresAction: false, applicationFeeAmount: 500,
+    });
+    await attemptRetryCharge({ ...BASE_APPT, chargedAmount: 10000 }, "acct_1");
+    expect(insertChargeEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: "retry",
+      applicationFeeAmount: 500,
+    }));
+  });
+});

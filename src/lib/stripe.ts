@@ -4,12 +4,19 @@
 // - オーソリ(manual capture)は使わない。SetupIntent（登録・課金ゼロ）と
 //   automatic captureのPaymentIntent（off_session）のみ
 // - direct charge: 全てのSetupIntent/PaymentIntentは stripeAccount オプション付きで
-//   医院のconnected account上に作成する。application_fee_amountは設定しない
+//   医院のconnected account上に作成する
 // - 課金実行（executeOffSessionCharge）だけがENABLE_CHARGE_EXECUTIONフラグの対象。
 //   SetupIntent作成・Connectオンボーディングはフラグに関係なく常に実際にStripeを呼ぶ
 //   （課金そのものではないため）
+//
+// application_fee: Medipre取り分。APPLICATION_FEE_PERCENT（環境変数、未設定時0）を
+// 患者請求額(amount)に乗じて算出し、PaymentIntent作成時にapplication_fee_amountとして
+// 指定する（direct chargeの仕組み上、amount自体は変わらず、その内訳の一部がMedipre側の
+// プラットフォームアカウントへ振り替わるのみ）。旧: 「application_fee_amountは設定しない」
+// としていたが、Medipre取り分の記録・徴収を開始するため方針を変更した。
 
 import Stripe from "stripe";
+import { computeChargeAmount } from "./charge-policy";
 
 let _client: Stripe | null = null;
 
@@ -28,6 +35,12 @@ export function getStripeClient(): Stripe {
 /** 課金実行フラグ。false（既定）の間は課金APIを一切呼ばずドライランする */
 export function isChargeExecutionEnabled(): boolean {
   return process.env.ENABLE_CHARGE_EXECUTION === "true";
+}
+
+/** Medipre取り分の料率（%）。未設定・不正値は0（手数料なし）を返す安全側デフォルト */
+export function getApplicationFeePercent(): number {
+  const raw = Number(process.env.APPLICATION_FEE_PERCENT);
+  return Number.isFinite(raw) && raw > 0 ? raw : 0;
 }
 
 /**
@@ -131,10 +144,13 @@ export interface OffSessionChargeResult {
   paymentIntentId: string;
   status: Stripe.PaymentIntent.Status;
   requiresAction: boolean;
+  /** Medipre取り分（円）。PaymentIntentのレスポンス値をそのまま使う（DB-Stripe間の乖離を避けるため） */
+  applicationFeeAmount: number;
 }
 
 /**
- * 発生時のみの即時課金。automatic capture・off_session・direct charge（application_fee無し）。
+ * 発生時のみの即時課金。automatic capture・off_session・direct charge。
+ * application_fee_amountはgetApplicationFeePercent()に基づき算出し、0円の場合は指定しない。
  * 呼び出し側が isChargeExecutionEnabled() を確認してから呼ぶ（ここでは判定しない＝二重ガード回避）。
  */
 /** Phase K: カード拒否以外の全例外（ネットワーク障害・レート制限・idempotency_error・Connect不備等）。
@@ -173,6 +189,9 @@ export async function executeOffSessionCharge(params: {
     return { systemError: true, errorMessage: `paymentMethods.retrieve failed: ${errorMessage}` };
   }
 
+  const applicationFeePercent = getApplicationFeePercent();
+  const requestedApplicationFeeAmount = computeChargeAmount(params.amountJpy, applicationFeePercent);
+
   try {
     const intent = await stripe.paymentIntents.create(
       {
@@ -185,6 +204,7 @@ export async function executeOffSessionCharge(params: {
         capture_method: "automatic",
         description: params.description,
         metadata: { appointmentId: params.appointmentId },
+        ...(requestedApplicationFeeAmount > 0 ? { application_fee_amount: requestedApplicationFeeAmount } : {}),
       },
       { stripeAccount: params.connectedAccountId, idempotencyKey: params.idempotencyKey },
     );
@@ -192,6 +212,7 @@ export async function executeOffSessionCharge(params: {
       paymentIntentId: intent.id,
       status: intent.status,
       requiresAction: intent.status === "requires_action",
+      applicationFeeAmount: intent.application_fee_amount ?? 0,
     };
   } catch (e) {
     if (e instanceof Stripe.errors.StripeCardError && e.payment_intent) {
@@ -199,6 +220,7 @@ export async function executeOffSessionCharge(params: {
         paymentIntentId: e.payment_intent.id,
         status: e.payment_intent.status,
         requiresAction: e.payment_intent.status === "requires_action",
+        applicationFeeAmount: e.payment_intent.application_fee_amount ?? 0,
       };
     }
     // Stripeのエラーオブジェクトはカード番号等の機微情報を含まない旨をSDKが保証する

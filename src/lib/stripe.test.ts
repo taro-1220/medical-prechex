@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 process.env.STRIPE_SECRET_KEY = "sk_test_phasek_dummy_key_for_testing_only";
 
 import Stripe from "stripe";
-import { executeOffSessionCharge, getStripeClient, createAppointmentSetupIntent, attachPaymentMethodToCustomer, createConnectExpressAccount } from "./stripe";
+import { executeOffSessionCharge, getStripeClient, createAppointmentSetupIntent, attachPaymentMethodToCustomer, createConnectExpressAccount, getApplicationFeePercent } from "./stripe";
 
 const BASE_PARAMS = {
   connectedAccountId: "acct_1",
@@ -202,5 +202,90 @@ describe("createConnectExpressAccount: 未要求の決済手段を明示的に�
       },
     }));
     createSpy.mockRestore();
+  });
+});
+
+describe("getApplicationFeePercent", () => {
+  const original = process.env.APPLICATION_FEE_PERCENT;
+  afterEach(() => { process.env.APPLICATION_FEE_PERCENT = original; });
+
+  it("未設定なら0を返す（安全側デフォルト）", () => {
+    delete process.env.APPLICATION_FEE_PERCENT;
+    expect(getApplicationFeePercent()).toBe(0);
+  });
+
+  it("不正な値（数値でない）なら0を返す", () => {
+    process.env.APPLICATION_FEE_PERCENT = "abc";
+    expect(getApplicationFeePercent()).toBe(0);
+  });
+
+  it("設定値をそのまま返す", () => {
+    process.env.APPLICATION_FEE_PERCENT = "5";
+    expect(getApplicationFeePercent()).toBe(5);
+  });
+});
+
+describe("executeOffSessionCharge: application_fee_amount（Medipre取り分）", () => {
+  let createSpy: ReturnType<typeof vi.spyOn>;
+  let retrieveSpy: ReturnType<typeof vi.spyOn>;
+  const originalPercent = process.env.APPLICATION_FEE_PERCENT;
+
+  beforeEach(() => {
+    const client = getStripeClient();
+    retrieveSpy = vi.spyOn(client.paymentMethods, "retrieve").mockResolvedValue({ customer: "cus_default" } as never);
+    createSpy = vi.spyOn(client.paymentIntents, "create");
+  });
+
+  afterEach(() => {
+    createSpy.mockRestore();
+    retrieveSpy.mockRestore();
+    process.env.APPLICATION_FEE_PERCENT = originalPercent;
+  });
+
+  it("5%設定・5,000円請求時、application_fee_amount=250円をPaymentIntentへ指定する", async () => {
+    process.env.APPLICATION_FEE_PERCENT = "5";
+    createSpy.mockResolvedValueOnce({ id: "pi_ok", status: "succeeded", application_fee_amount: 250 } as never);
+    const result = await executeOffSessionCharge({ ...BASE_PARAMS, amountJpy: 5000 });
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ application_fee_amount: 250 }),
+      expect.anything(),
+    );
+    expect("systemError" in result).toBe(false);
+    if (!("systemError" in result)) {
+      expect(result.applicationFeeAmount).toBe(250);
+    }
+  });
+
+  it("端数（4,999円）は切り捨てられ249円になる", async () => {
+    process.env.APPLICATION_FEE_PERCENT = "5";
+    createSpy.mockResolvedValueOnce({ id: "pi_ok", status: "succeeded", application_fee_amount: 249 } as never);
+    await executeOffSessionCharge({ ...BASE_PARAMS, amountJpy: 4999 });
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ application_fee_amount: 249 }),
+      expect.anything(),
+    );
+  });
+
+  it("APPLICATION_FEE_PERCENT未設定（0%）ならapplication_fee_amountを指定しない", async () => {
+    delete process.env.APPLICATION_FEE_PERCENT;
+    createSpy.mockResolvedValueOnce({ id: "pi_ok", status: "succeeded" } as never);
+    await executeOffSessionCharge({ ...BASE_PARAMS, amountJpy: 5000 });
+    const calledParams = createSpy.mock.calls[0][0] as Record<string, unknown>;
+    expect(calledParams).not.toHaveProperty("application_fee_amount");
+  });
+
+  it("カード拒否時もStripeが返すPaymentIntent上のapplication_fee_amountを結果へ反映する", async () => {
+    process.env.APPLICATION_FEE_PERCENT = "5";
+    const cardError = new Stripe.errors.StripeCardError({
+      message: "Your card was declined.",
+      type: "card_error",
+      payment_intent: { id: "pi_declined", status: "requires_payment_method", application_fee_amount: 250 },
+    } as never);
+    createSpy.mockRejectedValueOnce(cardError);
+    const result = await executeOffSessionCharge({ ...BASE_PARAMS, amountJpy: 5000 });
+    expect("systemError" in result).toBe(false);
+    if (!("systemError" in result)) {
+      expect(result.applicationFeeAmount).toBe(250);
+    }
   });
 });

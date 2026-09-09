@@ -17,6 +17,7 @@ function event(overrides: Partial<ChargeEvent>): ChargeEvent {
   return {
     id: "e1", appointmentId: "a1", clinicId: "c1", eventType: "charge", amount: 3000,
     stripeReferenceId: null, actor: "system", dryRun: false, detail: null, failureKind: null,
+    applicationFeeAmount: null,
     createdAt: "2026-09-02T00:00:00Z",
     ...overrides,
   };

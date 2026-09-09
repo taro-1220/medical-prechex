@@ -87,6 +87,8 @@ export interface ChargeEvent {
   dryRun: boolean;
   detail: string | null;
   failureKind: ChargeFailureKind | null;
+  /** Medipre取り分（円）。実課金が成立した場合のみ値を持つ */
+  applicationFeeAmount: number | null;
   createdAt: string;
 }
 
