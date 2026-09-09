@@ -7,7 +7,15 @@ export const config = {
 };
 
 const COOKIE_NAME = "mp_gate";
-const BYPASS_PATHS = ["/site-gate", "/api/site-gate", "/api/cron"];
+// MVP+2/+3: 患者向けの正規リンク（予約確認・空き枠通知・配信停止）はsite-gate対象外にする。
+// /api/appointments はスタッフ用の一覧取得/新規作成(token無し)も含むが、各ルート自身の
+// Supabase Bearer認証で保護されているため、site-gate層を外しても実質的な保護は失われない。
+const BYPASS_PATHS = [
+  "/site-gate", "/api/site-gate", "/api/cron",
+  "/slots", "/api/slots",
+  "/confirm", "/api/appointments",
+  "/patient/notifications/unsubscribe", "/api/patient/notifications/unsubscribe",
+];
 
 async function expectedCookieValue(password: string, secret: string) {
   const data = new TextEncoder().encode(`${password}:${secret}`);
