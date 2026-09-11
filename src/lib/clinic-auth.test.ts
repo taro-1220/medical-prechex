@@ -3,7 +3,7 @@
 // /login側の実際の遷移は `router.push(isSafeRedirectPath(next) ? next : "/clinic")` という
 // 単純な三項演算のみで構成されており、この関数の真偽値がそのまま遷移先を決定する。
 import { describe, it, expect } from "vitest";
-import { isSafeRedirectPath } from "./clinic-auth";
+import { isSafeRedirectPath, getClinicApprovalRedirect } from "./clinic-auth";
 
 describe("isSafeRedirectPath: /loginのnextパラメータ検証（オープンリダイレクト対策）", () => {
   it("同一オリジンの絶対パス（クエリ付き）は安全と判定する", () => {
@@ -34,5 +34,19 @@ describe("isSafeRedirectPath: /loginのnextパラメータ検証（オープン�
 
   it("\"/\"で始まらない相対パスは拒否する", () => {
     expect(isSafeRedirectPath("clinic/onboarding")).toBe(false);
+  });
+});
+
+describe("getClinicApprovalRedirect: Phase P1 承認制の退避判定", () => {
+  it("activeならリダイレクト不要(null)", () => {
+    expect(getClinicApprovalRedirect("active")).toBeNull();
+  });
+
+  it("pending_approvalなら/clinic/pending-approvalへ退避する", () => {
+    expect(getClinicApprovalRedirect("pending_approval")).toBe("/clinic/pending-approval");
+  });
+
+  it("rejectedも同じ画面へ退避する（画面側でメッセージを出し分ける）", () => {
+    expect(getClinicApprovalRedirect("rejected")).toBe("/clinic/pending-approval");
   });
 });

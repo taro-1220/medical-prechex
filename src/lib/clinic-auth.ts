@@ -1,6 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 import { getSupabaseBrowser } from "./supabase-browser";
-import type { Clinic } from "./types";
+import type { Clinic, ClinicStatus } from "./types";
 
 export async function getCurrentUser(): Promise<User | null> {
   const { data: { user } } = await getSupabaseBrowser().auth.getUser();
@@ -52,4 +52,13 @@ export function redirectToLogin(router: { replace: (href: string) => void }): vo
   if (typeof window === "undefined") return;
   const next = window.location.pathname + window.location.search;
   router.replace(`/login?next=${encodeURIComponent(next)}`);
+}
+
+/**
+ * Phase P1: 承認制の医院がまだ利用開始できない場合、退避すべきパスを返す（純粋関数）。
+ * 'active'ならnull（そのまま進んでよい）。/clinic・/clinic/onboarding双方の入口で共通利用する。
+ */
+export function getClinicApprovalRedirect(status: ClinicStatus): string | null {
+  if (status === "active") return null;
+  return "/clinic/pending-approval";
 }

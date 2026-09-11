@@ -20,13 +20,15 @@ export async function GET(req: NextRequest) {
 
   const sb = getSupabase();
 
-  const [clinicsRes, apptRes, patientRes, onboardingRes] = await Promise.all([
+  const [clinicsRes, apptRes, patientRes, onboardingRes, profileRes] = await Promise.all([
     sb.from("clinics").select("id, name, slug, status, created_at").order("created_at", { ascending: false }),
     sb.from("appointments")
       .select("clinic_id, appointment_at, status, consent_at, line_sent_at, sms_sent_at, email_sent_at, created_at")
       .not("clinic_id", "is", null),
     sb.from("patients").select("clinic_id").not("clinic_id", "is", null),
     sb.from("onboarding_progress").select("clinic_id, activated_at"),
+    // Phase P1: 承認待ちセクションで申込内容（院長名・連絡先）を表示するために取得する
+    sb.from("clinic_profile").select("clinic_id, director_name, email"),
   ]);
 
   if (clinicsRes.error) return NextResponse.json({ error: "internal_error" }, { status: 500 });
@@ -67,6 +69,14 @@ export async function GET(req: NextRequest) {
   const activatedMap: Record<string, string | null> = {};
   for (const r of onboardingRes.data ?? []) activatedMap[r.clinic_id as string] = r.activated_at as string | null;
 
+  const profileMap: Record<string, { directorName: string; email: string }> = {};
+  for (const r of profileRes.data ?? []) {
+    profileMap[r.clinic_id as string] = {
+      directorName: (r.director_name as string) ?? "",
+      email:        (r.email as string) ?? "",
+    };
+  }
+
   const clinics = clinicRows.map(c => {
     const id = c.id as string;
     const a = agg[id];
@@ -84,6 +94,9 @@ export async function GET(req: NextRequest) {
       lineSentCount:     a?.line ?? 0,
       smsSentCount:      a?.sms ?? 0,
       emailSentCount:    a?.email ?? 0,
+      // Phase P1: 承認待ち一覧の申込内容表示用
+      directorName:      profileMap[id]?.directorName ?? "",
+      contactEmail:      profileMap[id]?.email ?? "",
     };
   });
 

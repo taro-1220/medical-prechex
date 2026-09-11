@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
-import type { Clinic } from "@/lib/types";
+import type { Clinic, ClinicStatus } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get("Authorization")?.replace("Bearer ", "");
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     phone:     clinic.phone      as string | null,
     email:     clinic.email      as string | null,
     address:   clinic.address    as string | null,
-    status:    clinic.status     as string,
+    status:    clinic.status     as ClinicStatus,
     createdAt: clinic.created_at as string,
     updatedAt: clinic.updated_at as string,
   };

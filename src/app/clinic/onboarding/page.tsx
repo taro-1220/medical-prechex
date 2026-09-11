@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getCurrentClinic, redirectToLogin } from "@/lib/clinic-auth";
+import { getAccessToken, getCurrentClinic, redirectToLogin, getClinicApprovalRedirect } from "@/lib/clinic-auth";
 import type { ClinicProfile, OnboardingProgress, CancelPolicyScope, ClinicCancelPolicySettings, CancelTier, StripeAccountStatus } from "@/lib/types";
 import { findRiskyPolicyWording, scopeAppliesToCategory, isInsuranceAcknowledgmentSatisfied, isBasisNoteValid } from "@/lib/cancel-policy";
 import { areTierPercentsValid } from "@/lib/charge-policy";
@@ -87,6 +87,8 @@ export default function OnboardingPage() {
       setIsSettingsMode(new URLSearchParams(window.location.search).get("mode") === "settings");
       const clinic = await getCurrentClinic();
       if (!clinic) { redirectToLogin(router); return; }
+      const approvalRedirect = getClinicApprovalRedirect(clinic.status);
+      if (approvalRedirect) { router.replace(approvalRedirect); return; }
       setClinicId(clinic.id);
       await loadOnboarding(clinic.id);
       setLoading(false);
@@ -226,6 +228,8 @@ export default function OnboardingPage() {
   }
 
   const allDone = !!progress?.profileCompleted && !!progress?.policyCompleted && !!progress?.notificationCompleted;
+  const REQUIRED_TOTAL = 3;
+  const requiredCompletedCount = [progress?.profileCompleted, progress?.policyCompleted, progress?.notificationCompleted].filter(Boolean).length;
 
   if (loading) {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400 text-sm">読み込み中...</div>;
@@ -236,6 +240,13 @@ export default function OnboardingPage() {
       <header className="border-b border-gray-200 bg-white px-6 py-4">
         <button onClick={() => router.push("/clinic")} className="text-gray-400 text-sm hover:text-gray-900 transition">← 管理画面へ</button>
         <h1 className="text-xl font-black mt-1">{isSettingsMode ? "医院設定" : "初期設定"}</h1>
+        {!isSettingsMode && (
+          <p className="text-xs text-gray-400 mt-1">
+            {allDone
+              ? `必須項目 ${REQUIRED_TOTAL}/${REQUIRED_TOTAL} 完了`
+              : `必須項目 ${requiredCompletedCount}/${REQUIRED_TOTAL} 完了・あと${REQUIRED_TOTAL - requiredCompletedCount}項目で利用開始できます`}
+          </p>
+        )}
       </header>
 
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-4">

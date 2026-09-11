@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
-import type { Clinic } from "@/lib/types";
+import type { Clinic, ClinicStatus } from "@/lib/types";
 
 function toClinic(r: Record<string, unknown>): Clinic {
   return {
@@ -10,7 +10,7 @@ function toClinic(r: Record<string, unknown>): Clinic {
     phone:     r.phone     as string | null,
     email:     r.email     as string | null,
     address:   r.address   as string | null,
-    status:    r.status    as string,
+    status:    r.status    as ClinicStatus,
     createdAt: r.created_at as string,
     updatedAt: r.updated_at as string,
   };

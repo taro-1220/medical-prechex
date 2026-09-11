@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Appointment, AppointmentStatus, Clinic, ChargeDashboardResponse } from "@/lib/types";
-import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin } from "@/lib/clinic-auth";
+import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin, getClinicApprovalRedirect } from "@/lib/clinic-auth";
 import OnboardingGuide, { GUIDE_KEY } from "./OnboardingGuide";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
@@ -76,9 +76,12 @@ export default function ClinicPage() {
       const cs = await getUserClinics();
       if (cs.length === 0) { router.replace("/clinic/create"); return; }
       const current = await getCurrentClinic();
+      const activeClinic = current ?? cs[0];
+      const approvalRedirect = getClinicApprovalRedirect(activeClinic.status);
+      if (approvalRedirect) { router.replace(approvalRedirect); return; }
       setClinics(cs);
-      setClinic(current ?? cs[0]);
-      const cid = current?.id ?? cs[0].id;
+      setClinic(activeClinic);
+      const cid = activeClinic.id;
       const token = await getAccessToken();
       const obRes = await fetch(`/api/clinic/onboarding?clinic_id=${cid}`, {
         headers: { Authorization: `Bearer ${token}` },

@@ -1,5 +1,8 @@
 export type ClinicRole = "owner" | "manager" | "staff";
 
+// Phase P1: セルフサインアップの承認制ステータス（既存 clinics.status 列を拡張）
+export type ClinicStatus = "active" | "pending_approval" | "rejected";
+
 export interface Clinic {
   id: string;
   name: string;
@@ -7,7 +10,7 @@ export interface Clinic {
   phone: string | null;
   email: string | null;
   address: string | null;
-  status: string;
+  status: ClinicStatus;
   createdAt: string;
   updatedAt: string;
 }

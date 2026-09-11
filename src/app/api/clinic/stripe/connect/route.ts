@@ -25,6 +25,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // Phase P1: 承認制。未承認（pending_approval/rejected）の医院はConnectアカウントを作成できない
+  const { data: clinic } = await getSupabase()
+    .from("clinics")
+    .select("status")
+    .eq("id", clinicId)
+    .maybeSingle();
+  if (clinic?.status !== "active") {
+    return NextResponse.json({ error: "Forbidden: clinic not approved" }, { status: 403 });
+  }
+
   try {
     let { stripeAccountId } = await getClinicStripeAccount(clinicId);
     if (!stripeAccountId) {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { buildAvailableSlotEmail, isEmailSendEnabled, sendAvailableSlotEmail } from "./notify-email";
+import { buildAvailableSlotEmail, isEmailSendEnabled, sendAvailableSlotEmail, buildClinicApprovedEmail, sendClinicApprovedEmail } from "./notify-email";
 
 const BASE_INPUT = {
   to: "patient-b@example.com",
@@ -75,5 +75,37 @@ describe("sendAvailableSlotEmail", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
     const result = await sendAvailableSlotEmail(BASE_INPUT);
     expect(result).toEqual({ ok: false, error: "network down" });
+  });
+});
+
+describe("buildClinicApprovedEmail / sendClinicApprovedEmail: Phase P1 承認完了通知", () => {
+  const APPROVED_INPUT = {
+    to: "clinic-owner@example.com",
+    clinicName: "検収クリニック",
+    loginUrl: "http://localhost:3000/clinic",
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("件名・医院名・ログインURLを含む", () => {
+    const payload = buildClinicApprovedEmail(APPROVED_INPUT);
+    expect(payload.to).toBe(APPROVED_INPUT.to);
+    expect(payload.subject).toContain("承認");
+    expect(payload.text).toContain(APPROVED_INPUT.clinicName);
+    expect(payload.text).toContain(APPROVED_INPUT.loginUrl);
+  });
+
+  it("既存の空き枠通知と同じResend送信基盤(sendEmailViaResend)を使う", async () => {
+    process.env.RESEND_API_KEY = "re_test_dummy";
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await sendClinicApprovedEmail(APPROVED_INPUT);
+    expect(result).toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.resend.com/emails",
+      expect.objectContaining({ method: "POST" }),
+    );
   });
 });

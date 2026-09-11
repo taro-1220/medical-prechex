@@ -17,6 +17,8 @@ type ClinicRow = {
   lineSentCount: number;
   smsSentCount: number;
   emailSentCount: number;
+  directorName: string;
+  contactEmail: string;
 };
 
 type Summary = {
@@ -58,29 +60,58 @@ export default function OpsPage() {
   const [forbidden, setForbidden] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [approvalActionId, setApprovalActionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const token = await getAccessToken();
-      if (!token) { setForbidden(true); setLoading(false); return; }
-      try {
-        const res = await fetch("/api/ops/clinics", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.status === 401 || res.status === 403) { setForbidden(true); setLoading(false); return; }
-        if (!res.ok) { setError(true); setLoading(false); return; }
-        const data = await res.json();
-        setSummary(data.summary);
-        setClinics(data.clinics ?? []);
-        setRecentAppointments(data.recentAppointments ?? []);
-        setRecentClinics(data.recentClinics ?? []);
-      } catch {
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const loadClinics = async () => {
+    const token = await getAccessToken();
+    if (!token) { setForbidden(true); setLoading(false); return; }
+    try {
+      const res = await fetch("/api/ops/clinics", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401 || res.status === 403) { setForbidden(true); setLoading(false); return; }
+      if (!res.ok) { setError(true); setLoading(false); return; }
+      const data = await res.json();
+      setSummary(data.summary);
+      setClinics(data.clinics ?? []);
+      setRecentAppointments(data.recentAppointments ?? []);
+      setRecentClinics(data.recentClinics ?? []);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadClinics(); }, []);
+
+  const pendingApprovalClinics = useMemo(
+    () => clinics.filter(c => c.status === "pending_approval"),
+    [clinics],
+  );
+
+  const handleApprove = async (clinicId: string) => {
+    setApprovalActionId(clinicId);
+    const token = await getAccessToken();
+    await fetch(`/api/ops/clinics/${clinicId}/approve`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    await loadClinics();
+    setApprovalActionId(null);
+  };
+
+  const handleReject = async (clinicId: string) => {
+    if (!confirm("この医院を却下しますか？")) return;
+    setApprovalActionId(clinicId);
+    const token = await getAccessToken();
+    await fetch(`/api/ops/clinics/${clinicId}/reject`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    await loadClinics();
+    setApprovalActionId(null);
+  };
 
   const filtered = useMemo(() => clinics.filter(c => {
     if (query) {
@@ -216,6 +247,43 @@ export default function OpsPage() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Phase P1: 承認待ちセクション */}
+        {pendingApprovalClinics.length > 0 && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 shadow-sm p-5 mb-8">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-700 mb-3">
+              承認待ち（{pendingApprovalClinics.length}件）
+            </p>
+            <ul className="space-y-3">
+              {pendingApprovalClinics.map(c => (
+                <li key={c.id} className="bg-white rounded-xl border border-amber-100 p-4 flex items-center justify-between gap-4 flex-wrap">
+                  <div>
+                    <p className="font-bold text-gray-900">{c.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      院長: {c.directorName || "—"}　連絡先: {c.contactEmail || "—"}　申込日: {fmt(c.createdAt)}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleApprove(c.id)}
+                      disabled={approvalActionId === c.id}
+                      className="px-4 py-2 bg-teal-600 rounded-lg text-white text-sm font-bold hover:bg-teal-700 transition disabled:opacity-50"
+                    >
+                      {approvalActionId === c.id ? "処理中..." : "承認する"}
+                    </button>
+                    <button
+                      onClick={() => handleReject(c.id)}
+                      disabled={approvalActionId === c.id}
+                      className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm font-bold hover:bg-gray-50 transition disabled:opacity-50"
+                    >
+                      却下する
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {/* Search + Filter */}
