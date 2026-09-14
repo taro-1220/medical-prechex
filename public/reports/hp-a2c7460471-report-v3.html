@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>ホームページの現状と、次にやること｜まごめの歯科・矯正歯科さま</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0F1B2D; --navy-2:#1B2C45; --navy-3:#2A3F5C;
+    --teal:#338189; --teal-ink:#1E5A60; --teal-mist:#EAF3F4;
+    --amber:#E7A33E; --amber-ink:#7A4B0A; --amber-mist:#FDF4E6;
+    --red:#B4453A; --green:#2E7D5B; --green-mist:#EAF5F0;
+    --ink:#1B1F23; --ink-2:#4B5560; --ink-3:#7A838F;
+    --line:#DDE3E9; --stone:#F4F6F8; --paper:#fff;
+    --serif:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif;
+    --sans:"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    --w:1000px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--stone);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.9;font-feature-settings:"palt";-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4{font-family:var(--serif);font-weight:600;margin:0;letter-spacing:.01em}
+  a{color:inherit}
+  table{border-collapse:collapse;width:100%}
+  .num{font-variant-numeric:tabular-nums}
+
+  .page{max-width:var(--w);margin:0 auto 22px;background:var(--paper);padding:44px 52px 40px;position:relative;box-shadow:0 2px 16px -8px rgba(15,27,45,.25)}
+  .page-num{position:absolute;right:52px;bottom:16px;font-size:11px;color:var(--ink-3)}
+  .page-tag{position:absolute;left:52px;bottom:16px;font-size:11px;color:var(--ink-3)}
+  .eyebrow{font-size:11px;letter-spacing:.16em;font-weight:700;color:var(--teal);margin-bottom:8px}
+  .eyebrow.amber{color:var(--amber-ink)}
+  .eyebrow.navy{color:var(--navy-3)}
+  .eyebrow.green{color:var(--green)}
+  h2.sec{font-size:26px;line-height:1.5;margin-bottom:6px}
+  .sub{color:var(--ink-2);font-size:14px;margin:8px 0 26px;max-width:820px}
+
+  /* 表紙 */
+  .cover{background:radial-gradient(120% 80% at 85% 0%,#23395B 0%,transparent 55%),var(--navy);color:#fff;padding:56px 52px 48px;box-shadow:none}
+  .cover .eyebrow{color:var(--amber)}
+  .cover h1{font-size:38px;line-height:1.45;color:#fff;margin-bottom:16px}
+  .cover .lead{color:rgba(255,255,255,.8);font-size:15px;max-width:730px}
+  .cover-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:34px}
+  .cc{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:20px 20px 18px}
+  .cc .mark{font-size:13px;font-weight:700;margin-bottom:8px}
+  .cc.ok .mark{color:#6FD6A6}.cc.hit .mark{color:var(--amber)}.cc.next .mark{color:#8FC7E8}
+  .cc p{margin:0;font-size:13.5px;color:rgba(255,255,255,.86);line-height:1.8}
+  .cover-meta{display:flex;gap:30px;flex-wrap:wrap;margin-top:30px;padding-top:20px;border-top:1px solid rgba(255,255,255,.16);font-size:12px;color:rgba(255,255,255,.6)}
+  .cover-meta b{display:block;color:#fff;font-family:var(--serif);font-size:14px;font-weight:600}
+
+  /* 5段階 */
+  .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:26px 0 8px}
+  .fs{border:1px solid var(--line);border-radius:10px;padding:16px 14px;text-align:center;background:var(--paper)}
+  .fs .n{font-size:10.5px;letter-spacing:.14em;color:var(--ink-3);font-weight:700}
+  .fs h4{font-size:16px;margin:6px 0 6px}
+  .fs p{margin:0;font-size:11.5px;color:var(--ink-2);line-height:1.7;min-height:36px}
+  .fs .badge{display:inline-block;margin-top:10px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px}
+  .fs.done{border-color:#B7DCC9;background:var(--green-mist)}.fs.done .badge{background:var(--green);color:#fff}
+  .fs.now{border-color:var(--amber);background:var(--amber-mist);box-shadow:0 6px 18px -10px rgba(231,163,62,.9)}.fs.now .badge{background:var(--amber);color:var(--amber-ink)}
+  .fs.later .badge{background:var(--stone);color:var(--ink-2)}
+  .flow-note{margin-top:20px;font-size:13.5px;color:var(--ink-2);line-height:1.9}
+  .flow-note b{color:var(--ink)}
+
+  .terms{margin-top:24px;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .terms .th{background:var(--navy);color:#fff;font-size:12px;letter-spacing:.08em;padding:9px 16px;font-weight:700}
+  .terms dl{margin:0;display:grid;grid-template-columns:170px 1fr}
+  .terms dt{padding:13px 16px;font-weight:700;font-size:13.5px;border-bottom:1px solid var(--line);background:var(--stone)}
+  .terms dd{margin:0;padding:13px 18px;font-size:13px;color:var(--ink-2);border-bottom:1px solid var(--line);line-height:1.8}
+  .terms dl>:nth-last-child(-n+2){border-bottom:0}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:8px 0 24px}
+  .st{border:1px solid var(--line);border-top:3px solid var(--red);border-radius:10px;padding:16px 16px 14px}
+  .st.good{border-top-color:var(--green)}
+  .st .v{font-family:var(--serif);font-size:30px;line-height:1;color:var(--navy)}
+  .st .v small{font-size:14px;color:var(--ink-3);margin-left:2px}
+  .st .k{margin-top:8px;font-size:12px;color:var(--ink-2);line-height:1.7}
+
+  table.data{font-size:12.5px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  table.data thead th{background:var(--navy);color:#fff;font-weight:700;font-size:11.5px;padding:10px 12px;text-align:left;white-space:nowrap}
+  table.data td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.7}
+  table.data tbody tr:last-child td{border-bottom:0}
+  table.data tbody tr:nth-child(even){background:#FAFBFC}
+  .flag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .flag.bad{background:#FBEAE8;color:var(--red)}
+  .flag.ok{background:var(--green-mist);color:var(--green)}
+  .flag.wait{background:var(--stone);color:var(--ink-2)}
+  .cap{font-size:11.5px;color:var(--ink-3);margin-top:8px;line-height:1.7}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:22px}
+  .logic{background:var(--stone);border-left:3px solid var(--navy);border-radius:0 10px 10px 0;padding:12px 16px}
+  .logic h4{font-family:var(--sans);font-size:13px;font-weight:700;margin-bottom:6px}
+  .logic p{margin:0;font-size:12px;color:var(--ink-2);line-height:1.55}
+  .logic p+p{margin-top:6px}
+  .logic b{color:var(--ink);background:linear-gradient(transparent 62%,#FDE9C4 62%)}
+  .todo{background:var(--teal-mist);border-radius:10px;padding:12px 16px}
+  .todo h4{font-family:var(--sans);font-size:13px;font-weight:700;margin-bottom:6px;color:var(--teal-ink)}
+  .todo ul{margin:0;padding:0;list-style:none}
+  .todo li{position:relative;padding-left:22px;font-size:12px;color:var(--ink-2);line-height:1.55;margin-bottom:6px}
+  .todo li:last-child{margin-bottom:0}
+  .todo li::before{content:"✓";position:absolute;left:0;top:0;color:var(--teal);font-weight:700}
+  .todo li b{color:var(--ink)}
+
+  table.hyp{font-size:13px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  table.hyp thead th{background:var(--navy);color:#fff;font-size:11.5px;padding:10px 14px;text-align:left}
+  table.hyp td{padding:14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.8}
+  table.hyp tr:last-child td{border-bottom:0}
+  table.hyp td:first-child{width:200px;font-weight:700;background:var(--stone)}
+  table.hyp td:first-child span{display:block;font-weight:400;font-size:11.5px;color:var(--ink-3);margin-top:3px}
+
+  .goods{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:6px}
+  .good{border:1px solid #C6E3D5;background:var(--green-mist);border-radius:10px;padding:20px}
+  .good .mark{font-size:11.5px;letter-spacing:.12em;font-weight:700;color:var(--green);margin-bottom:8px}
+  .good h4{font-size:17px;margin-bottom:8px}
+  .good p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.85}
+  .good .quote{margin:0 0 8px;font-size:13px;color:var(--ink);font-family:var(--serif);font-style:italic;line-height:1.7}
+
+  .shotframe{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper);box-shadow:0 18px 40px -26px rgba(15,27,45,.6)}
+  .shotframe .bar{height:34px;background:#E9ECF0;display:flex;align-items:center;gap:7px;padding:0 14px;font-size:11px;color:#7A838F}
+  .shotframe .bar i{width:9px;height:9px;border-radius:50%;background:#C9D0D8}
+  .shotframe .bar span{margin-left:10px;background:#fff;border-radius:5px;padding:3px 12px;flex:1;max-width:460px;color:#5B6572}
+  .shotframe .body{background:linear-gradient(180deg,#fff,#F2F6F7);height:200px;overflow:hidden}
+  .shotframe .body img{display:block;width:100%;height:200px;object-fit:cover;object-position:top}
+  .shotframe .body .noshot{height:200px;display:grid;place-items:center;color:var(--ink-3);font-size:13px;text-align:center;padding:24px;line-height:1.9}
+  .kept{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+  .kept div{border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-size:11.5px;color:var(--ink-2);line-height:1.5}
+  .kept b{display:block;font-family:var(--serif);font-size:15px;color:var(--navy);margin-bottom:6px}
+
+  .road{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 6px}
+  .rd{border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .rd.first{border-color:var(--green);background:var(--green-mist)}
+  .rd .w{font-size:11px;letter-spacing:.12em;color:var(--ink-3);font-weight:700}
+  .rd h4{font-size:15px;margin:4px 0 6px}
+  .rd p{margin:0;font-size:11.5px;color:var(--ink-2);line-height:1.6}
+  .rd .tag{display:inline-block;margin-top:6px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--stone);color:var(--ink-2)}
+  .rd.first .tag{background:var(--green);color:#fff}
+
+  table.plan{font-size:13px;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:6px}
+  table.plan thead th{background:var(--navy);color:#fff;font-size:11.5px;padding:10px 14px;text-align:left}
+  table.plan td{padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.6}
+  table.plan tr:last-child td{border-bottom:0}
+  table.plan tr.rec td{background:var(--amber-mist)}
+  table.plan td:first-child{width:180px;font-weight:700;background:var(--stone)}
+  table.plan tr.rec td:first-child{background:#F8E9CE}
+  .rec-badge{display:inline-block;font-size:10.5px;font-weight:700;background:var(--amber);color:var(--amber-ink);padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle}
+
+  table.sum{font-size:13.5px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  table.sum td{padding:15px 16px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.9}
+  table.sum tr:last-child td{border-bottom:0}
+  table.sum td:first-child{width:170px;font-weight:700;background:var(--navy);color:#fff;font-size:12.5px}
+  .foot-note{margin-top:22px;font-size:11.5px;color:var(--ink-3);line-height:1.9;border-top:1px solid var(--line);padding-top:14px}
+
+  .cta-box{background:var(--navy);color:#fff;border-radius:14px;padding:32px 34px;display:grid;grid-template-columns:1.3fr 1fr;gap:26px;align-items:center;margin-top:24px}
+  .cta-box h3{font-size:22px;color:#fff;margin-bottom:8px}
+  .cta-box p{margin:0;font-size:13.5px;color:rgba(255,255,255,.8);line-height:1.9}
+  .cta-box .side{font-size:13px;color:rgba(255,255,255,.85);border-left:1px solid rgba(255,255,255,.2);padding-left:24px;line-height:2}
+
+  @media (max-width:900px){
+    .page{padding:28px 20px 34px}
+    .flow,.stats,.cover-cards,.goods,.road,.kept,.twocol{grid-template-columns:1fr}
+    .cta-box{grid-template-columns:1fr}
+    .cta-box .side{border-left:0;border-top:1px solid rgba(255,255,255,.2);padding:16px 0 0}
+    .cover h1{font-size:27px}
+    table.data{display:block;overflow-x:auto}
+  }
+  @media print{
+    body{background:#fff}
+    .page{max-width:none;margin:0;box-shadow:none;padding:14mm 14mm 12mm;page-break-after:always}
+    .page:last-child{page-break-after:auto}
+    .page-num,.page-tag{display:none}
+    .st,.fs,.good,.rd,.cc,.logic,.todo,.kept div{break-inside:avoid}
+    tr{break-inside:avoid}
+    /* 印刷時のレイアウト幅は900px未満のモバイル用1カラムグリッドになってしまうため、
+       PC相当の列数へ明示的に戻す（proposal-lp.htmlの印刷時と同じ根本原因。
+       1カラムのままだと5段階・数字カード等が縦積みになりA4横1枚に収まらない） */
+    .flow{grid-template-columns:repeat(5,1fr)}
+    .stats{grid-template-columns:repeat(4,1fr)}
+    .cover-cards{grid-template-columns:repeat(3,1fr)}
+    .goods{grid-template-columns:repeat(3,1fr)}
+    .road{grid-template-columns:repeat(4,1fr)}
+    .kept{grid-template-columns:repeat(3,1fr)}
+    .twocol{grid-template-columns:1fr 1fr}
+    .cta-box{grid-template-columns:1.3fr 1fr}
+    @page{size:A4 landscape;margin:0}
+  }
+</style>
+</head>
+<body>
+
+<!-- 1 表紙 -->
+<section class="page cover">
+  <p class="eyebrow">ホームページ調査レポート ／ 2026年8月</p>
+  <h1>ホームページの現状と、<br>次にやること</h1>
+  <p class="lead">貴院のホームページ31ページと、そこにある画像242枚を、1つずつ数えて調べました。いま何ができていて、次に何をすればよいかをまとめています。まごめの歯科・矯正歯科さまへ。</p>
+  <div class="cover-cards">
+    <div class="cc ok"><div class="mark">◎ できていること</div><p>ページ数・診療科目の数など、情報の土台は十分にあります。</p></div>
+    <div class="cc hit"><div class="mark">▲ いちばんの課題</div><p>Googleにうまく伝わっていない部分があります。</p></div>
+    <div class="cc next"><div class="mark">→ 次にやること</div><p>トップページの作り直しと、Googleに正しく伝わっていない部分の修正です。作り直した見本を、実際に見られる形でご用意しました。</p></div>
+  </div>
+  <div class="cover-meta">
+    <div><b>調べたもの</b>magomenoshika-clinic.jp の31ページ</div>
+    <div><b>調べ方</b>ページを開いて1つずつ数えました（推測は入れていません）</div>
+    <div><b>お渡しするもの</b>このレポートと、作り直した見本ページ</div>
+    <div><b>費用</b>ここまでは無料です</div>
+  </div>
+</section>
+
+<!-- 2 5段階 -->
+<section class="page">
+  <p class="eyebrow navy">はじめに</p>
+  <h2 class="sec">患者さんが来院するまでの、5つの段階</h2>
+  <p class="sub">ホームページの良し悪しは、この5つの段階のどこで止まっているかで決まります。このレポートの目的は、いまどこで止まっているのかを、数字ではっきりさせることです。</p>
+
+  <div class="flow">
+    
+    <div class="fs now"><div class="n">段階 1</div><h4>見つかる</h4><p>検索や地図で<br>医院を見つける</p><span class="badge">いちばんの課題</span></div>
+    
+    <div class="fs later"><div class="n">段階 2</div><h4>第一印象</h4><p>トップページを見て<br>「ここにしよう」と思う</p><span class="badge">次に取りかかる</span></div>
+    
+    <div class="fs later"><div class="n">段階 3</div><h4>納得</h4><p>治療の内容や費用、<br>先生のことを確かめる</p><span class="badge">道すじを整える</span></div>
+    
+    <div class="fs later"><div class="n">段階 4</div><h4>予約</h4><p>電話やネット予約に<br>進んでもらう</p><span class="badge">道すじを整える</span></div>
+    
+    <div class="fs later"><div class="n">段階 5</div><h4>来院する</h4><p>初診、そして<br>通い続けてもらう</p><span class="badge">最終的な目標</span></div>
+    
+  </div>
+
+  <p class="flow-note">今回調べた結果、止まっているのは<b>段階1（見つかる）</b>だと分かりました。次のページから、その理由を1つずつお見せします。<br>
+  大事なのは、<b>足りないものを新しく作る必要は、ほとんどないということです。</b>すでに貴院のホームページに書いてあることが、活かされていないだけです。</p>
+
+  <div class="terms">
+    <div class="th">このレポートで出てくる、2つの言葉</div>
+    <dl>
+      <dt>最初の1画面</dt><dd>ホームページを開いたとき、指を動かす前に見えている範囲のことです。多くの人はここだけを見て、続きを読むか、閉じるかを決めています。</dd>
+      <dt>Googleへの伝わり方</dt><dd>Googleが「この医院は何をしているところか」を正しく読み取れているか、ということです。人が読んで分かる文章でも、決まった書き方をしていないとGoogleには伝わりません。</dd>
+    </dl>
+  </div>
+  <span class="page-tag">調べたページ: magomenoshika-clinic.jp ／ 2026年8月</span><span class="page-num">2</span>
+</section>
+
+<!-- 3 数字 -->
+<section class="page">
+  <p class="eyebrow navy">調べて分かった数字</p>
+  <h2 class="sec">数字で見た、いまの状態</h2>
+  <p class="sub">31ページすべてを開いて、1つずつ数えた結果です。「だいたいこのくらい」という推測や、業界の平均値は入れていません。</p>
+
+  <div class="stats">
+    
+    <div class="st "><div class="v num">29<small>/31</small></div><div class="k">ページで、Googleへの案内札が二重に付いています</div></div>
+    
+    <div class="st "><div class="v num">146<small>/242</small></div><div class="k">枚の画像に、説明文が付いていません</div></div>
+    
+    <div class="st "><div class="v num">26<small>/31</small></div><div class="k">ページで、検索結果に出る紹介文が途中で切れています</div></div>
+    
+    <div class="st "><div class="v num">0<small>/30</small></div><div class="k">トップページの写真のうち、貴院で撮った写真の枚数です</div></div>
+    
+  </div>
+  <div class="stats">
+    
+    <div class="st "><div class="v num">3<small>件</small></div><div class="k">診療科目のリンクを押すと、エラー画面が出ます</div></div>
+    
+    <div class="st "><div class="v num">1<small>種類</small></div><div class="k">Googleに渡している医院情報の種類です</div></div>
+    
+    <div class="st good"><div class="v num">0<small>件</small></div><div class="k">電話番号と住所の書き方のズレです</div></div>
+    
+    <div class="st good"><div class="v num">12<small>科目</small></div><div class="k">載せている診療科目の数です</div></div>
+    
+  </div>
+
+  <div class="twocol">
+    <div class="logic">
+      <h4>なぜ「できている」と言えるのか</h4>
+      <p>全31ページという分量、12科目の掲載。長く丁寧に運用されてきたホームページの証です。ゼロから作り直す必要はありません。</p>
+    </div>
+    <div class="logic" style="border-left-color:var(--amber)">
+      <h4>なぜ「段階1で止まっている」と言えるのか</h4>
+      
+      <p>Googleへ情報が正しく伝わっていない部分があります。</p>
+    </div>
+  </div>
+  <span class="page-tag">31ページすべてを開いて数えました（2026年8月）</span><span class="page-num">3</span>
+</section>
+
+
+<!-- 4 詰まり01: 強みの所在 -->
+<section class="page">
+  <p class="eyebrow amber">課題 1 ／ 段階 2（第一印象）</p>
+  <h2 class="sec">いちばんの強みが、トップページに1つも出ていません</h2>
+  <p class="sub">貴院にしか書けない情報が、いちばん見られる場所を素通りしています。</p>
+
+  
+  <table class="data">
+    <thead><tr><th>ホームページに書かれていること</th><th>いま載っている場所</th><th>トップページ</th></tr></thead>
+    <tbody>
+      
+      <tr><td>高山健嗣</td><td>/about/ と /greeting/</td><td><span class="flag bad">出ていない</span></td></tr>
+      
+      <tr><td>高山可奈子</td><td>/about/ と /greeting/</td><td><span class="flag bad">出ていない</span></td></tr>
+      
+      <tr><td>EMSエアフロー</td><td>/about/ と /greeting/</td><td><span class="flag bad">出ていない</span></td></tr>
+      
+      <tr><td>ほか7件</td><td>/about/ と /greeting/</td><td><span class="flag bad">出ていない</span></td></tr>
+      
+    </tbody>
+  </table>
+  
+  <p class="cap">※ 載っている場所は、実際のページを開いて言葉を探し、確かめたものです。</p>
+
+  <div class="twocol">
+    <div class="logic">
+      <h4>なぜ、こうなってしまうのか</h4>
+      <p>多くの医院のホームページは「トップページは入り口、詳しい話は奥のページ」という作りになっています。パンフレットとしては、これで正しい形です。</p>
+      <p>ただ、見る人の動きは違います。スマートフォンで開いて数秒だけ眺め、奥のページまで進まずに閉じてしまう方がほとんどです。奥に置いた情報は、その方にとっては無いのと同じになります。</p>
+      <p>つまり情報が足りないのではなく、順番が逆になっているということです。</p>
+    </div>
+    <div class="todo">
+      <h4>やること</h4>
+      <ul>
+        <li>最初の1画面の見出しを、<b>地元の医院だと分かる言葉</b>に変えます。</li>
+        <li>高山健嗣先生のご経歴と、EMSエアフロー・メディカルライトエアーなど8点の機器名を、トップページに置きます。</li>
+        <li>いまの奥のページは<b>そのまま残します。</b>トップに要点を置いて、詳しくはそちらへご案内する形です。</li>
+      </ul>
+    </div>
+  </div>
+  <span class="page-tag">出所: /about/ と /greeting/ほか</span><span class="page-num">4</span>
+</section>
+
+
+
+<!-- 詰まり02: 写真 -->
+<section class="page">
+  <p class="eyebrow amber">課題 2 ／ 段階 2（第一印象）</p>
+  <h2 class="sec">トップページの写真30枚は、すべて既製品の写真でした</h2>
+  <p class="sub">医院選びでいちばん見られる「院内の様子」が、他の医院と同じ写真で作られています。</p>
+
+  <div class="stats" style="grid-template-columns:repeat(3,1fr)">
+    <div class="st"><div class="v num">30<small>/30</small></div><div class="k">枚が、ホームページの型（テンプレート）に最初から付いていた写真です</div></div>
+    <div class="st"><div class="v num">0<small>枚</small></div><div class="k">トップページに載っている、貴院で撮った写真の枚数</div></div>
+    <div class="st"><div class="v num">146<small>/242</small></div><div class="k">枚の画像に説明文が付いていません</div></div>
+  </div>
+
+  <div class="twocol">
+    <div class="logic">
+      <h4>なぜ、これが問題なのか</h4>
+      <p>ホームページの型に最初から付いている写真は、同じ型を使っている全国の医院が、同じものを使っています。患者さんがいくつかの医院を見比べたとき、どこかで見た写真が並ぶことになります。</p>
+      <p>また、説明文が付いていない画像は、Googleにとって「中身の分からない絵」です。写真から医院のことが伝わる機会を逃しています。</p>
+    </div>
+    <div class="todo">
+      <h4>やること</h4>
+      <ul>
+        <li>トップページの写真を、<b>院内・スタッフ・診療室の実際の写真</b>に置き換えます。</li>
+        <li>撮るのが難しい場所は、<b>既製品の写真で埋めず、写真を使わないデザインに切り替えます。</b></li>
+        <li>画像の説明文は、<b>医院名と場面が分かる文</b>にします。</li>
+      </ul>
+    </div>
+  </div>
+  <span class="page-tag">画像242枚をすべて確認しました</span><span class="page-num">5</span>
+</section>
+
+
+
+<!-- 詰まり03: 診療案内・404 -->
+<section class="page">
+  <p class="eyebrow amber">課題 3 ／ 段階 3（納得する）</p>
+  
+  
+  <h2 class="sec">診療案内から、3件のページに行けなくなっています</h2>
+  <p class="sub">いま載せていない科目へのリンクが残っていて、押すとエラー画面が出ます。</p>
+
+  <table class="data">
+    <thead><tr><th>リンク先</th><th>押すとどうなるか</th></tr></thead>
+    <tbody>
+      
+      <tr><td>/information/visit/</td><td><span class="flag bad">エラー画面</span></td></tr>
+      
+      <tr><td>/information/oral/</td><td><span class="flag bad">エラー画面</span></td></tr>
+      
+      <tr><td>/information/implant/</td><td><span class="flag bad">エラー画面</span></td></tr>
+      
+    </tbody>
+  </table>
+  <p class="cap">※ 実際にリンクを押して、応答を確かめています。</p>
+  
+  
+
+  <div class="twocol">
+    <div class="logic">
+      <h4>なぜ、こうなっているのか</h4>
+      
+      <p>リンクは「隠す」という形で残っています。画面には出ませんが、リンクだけが残り続けている状態です。</p>
+      <p>もう診療されていないのか、ページを準備中なのかは、外からは分かりません。もう載せないと決められたのであれば、リンクごと消すのが正しい形です。</p>
+      
+      <p>診療案内が科目名だけの一覧になっている点も気になります。説明文がまだ用意されていない科目があります。</p>
+    </div>
+    <div class="todo">
+      <h4>やること</h4>
+      <ul>
+        <li>各科目について<b>「もう診療していない」のか「準備中」なのか</b>をお聞かせください。</li>
+        <li>診療案内を、科目名の一覧から12科目それぞれの「写真＋2行の説明＋詳しいページへの案内」というカードの形に変えます。</li>
+        <li>ホワイトニング・矯正歯科・メタルフリー治療・保険外治療のカードには、費用・治療の内容・通う回数・気をつけることへの案内を入れます。</li>
+      </ul>
+    </div>
+  </div>
+  <span class="page-tag">すべてのリンクを実際に確認しました（2026年8月）</span><span class="page-num">6</span>
+  
+</section>
+
+
+
+<!-- 詰まり04: 技術 -->
+<section class="page">
+  <p class="eyebrow amber">課題 4 ／ 段階 1（見つかる）</p>
+  <h2 class="sec">Googleに、うまく伝わっていない部分があります</h2>
+  <p class="sub">すぐに順位が下がるような問題ではありませんが、正しく評価されにくい状態があります。</p>
+
+  
+  <table class="data">
+    <thead><tr><th>調べた項目</th><th>結果</th><th>優先度</th></tr></thead>
+    <tbody>
+      
+      <tr><td>Googleへの案内札</td><td>29/31ページ</td><td><span class="flag bad">先に直す</span></td></tr>
+      
+      <tr><td>医院情報の受け渡し</td><td>BreadcrumbListのみ</td><td><span class="flag bad">先に直す</span></td></tr>
+      
+      <tr><td>検索結果に出る紹介文</td><td>26/31ページ</td><td><span class="flag wait">次に直す</span></td></tr>
+      
+      <tr><td>ページの大見出し</td><td>トップページ</td><td><span class="flag wait">次に直す</span></td></tr>
+      
+    </tbody>
+  </table>
+  
+
+  <div class="twocol">
+    <div class="logic">
+      <h4>なぜ、まとめて直せるのか</h4>
+      <p>これらはどれもページの「ひな形」に原因があります。ページを1枚ずつ直す作業ではありません。ひな形を1回直せば、全部のページに反映されます。</p>
+      <p>そしてデザインの作り直しと同時にできる種類の作業です。トップページを直すタイミングで一緒に片づけるのが、いちばん手間がかからない進め方になります。</p>
+    </div>
+    <div class="todo">
+      <h4>やること</h4>
+      <ul>
+        <li>Googleへの案内札を、<b>1ページにつき1枚だけ</b>にします。</li>
+        <li><b>医院名・住所・電話・診療時間・診療科目</b>を、Googleが読み取れる形で渡せるようにします。</li>
+        <li>トップページに<b>意味のある大見出しを1つ</b>置きます。</li>
+      </ul>
+    </div>
+  </div>
+  <span class="page-tag">31ページすべてを調べました</span><span class="page-num">7</span>
+</section>
+
+
+
+<!-- 良好項目 -->
+<section class="page">
+  <p class="eyebrow green">よくできていたところ</p>
+  <h2 class="sec">問題が見つからなかった項目</h2>
+  <p class="sub">こうした調査は「直すべき点」ばかりが並びがちですが、すでに良い状態にあるところも、同じように調べています。</p>
+
+  <div class="goods">
+    
+    <div class="good"><div class="mark">◎ 書き方の統一</div><h4>ズレ 0件</h4><p>全31ページで、電話番号（03-6451-8242）と住所の書き方が完全に揃っていました。</p></div>
+    
+    <div class="good"><div class="mark">◎ 情報の量</div><h4>診療科目 12件</h4><p>一般歯科・歯周病・ホワイトニングなど12科目。載せている科目の数は十分です。新しく情報を作る必要はほとんどありません。</p></div>
+    
+    <div class="good"><div class="mark">◎ 先生の言葉</div><h4>ご自身の言葉がある</h4><p class="quote">「地元である馬込で、10年20年経っても時代に合った治療・衛生設備を整えられる医院を作りたいと学生の頃から考えていました。」</p><p>ご挨拶のページに、先生ご自身の言葉が載っています。貴院にしか書けない文章です。</p></div>
+    
+  </div>
+
+  <div class="logic" style="margin-top:26px;border-left-color:var(--green)">
+    <h4>これが意味すること</h4>
+    <p>今回のご提案は「作り直し」ではなく「置き直し」だということです。材料は揃っていますし、書き方の管理も行き届いています。足りないのは、それを患者さんが最初に見る場所に持ってくる、という工夫だけです。</p>
+    <p>ゼロから作るホームページより、短い期間・少ない費用で結果が変わりやすい状態にあります。</p>
+  </div>
+  <span class="page-tag">31ページすべての実測にもとづきます</span><span class="page-num">8</span>
+</section>
+
+
+
+<!-- 可能性A/B/C -->
+<section class="page">
+  <p class="eyebrow navy">いちばん気になったこと</p>
+  <h2 class="sec">Googleの評価を、活かしきれているか</h2>
+  <p class="sub">地図に出てくる医院情報（Googleビジネスプロフィール）を調べて分かったことと、まだ分からないことです。</p>
+
+  
+  <div class="stats" style="grid-template-columns:repeat(4,1fr)">
+    
+    <div class="st"><div class="v num">4.6</div><div class="k">Googleの評価（口コミ27件）</div></div>
+    
+    <div class="st"><div class="v num">空欄</div><div class="k">医院の紹介文</div></div>
+    
+    <div class="st"><div class="v num">2<small>項目</small></div><div class="k">設定されている情報</div></div>
+    
+    <div class="st"><div class="v num">5<small>/27</small></div><div class="k">今回、中身を確認できた口コミの件数です</div></div>
+    
+  </div>
+
+  
+  <p style="font-size:13.5px;color:var(--ink-2);margin:0 0 16px;line-height:1.9">正直に申し上げますと、<b>27件のうち22件は、今回確認できていません。</b>以下は確認できた範囲から見えたことであり、断定ではありません。</p>
+  
+
+  <table class="hyp">
+    <thead><tr><th>考えられること</th><th>そう思う理由</th><th>確かめる方法</th></tr></thead>
+    <tbody>
+      
+      <tr><td>評価は高いのに、使いきれていない</td><td>評価4.6・27件という実績がある一方、医院の紹介文は空欄、設定情報も2つだけです。</td><td>紹介文・設定情報・写真を整えて、地図から来る方がどう変わるかをみてみます。</td></tr>
+      
+      <tr><td>説明の受け取り方に差がある</td><td>確認できた5件の中に、評価の低い声が1件ありました。件数が少ないため、傾向とまでは言えません。</td><td>「はじめての方へ」に、初診の流れと費用の見通しが分かる時期を書いておきます。</td></tr>
+      
+    </tbody>
+  </table>
+  
+
+  <div class="todo" style="margin-top:20px">
+    <h4>やること</h4>
+    <ul>
+      <li>まずは<b>Googleの医院紹介文と設定情報を整えるところから。</b>ホームページの作り直しを待たずにでき、費用もかかりません。</li>
+      <li>ホームページには<b>Googleの評価の数字は載せません。</b>国の決まりで、口コミや評価の掲載には制限があるためです。</li>
+    </ul>
+  </div>
+  <span class="page-tag">出所: Googleの医院情報の公開部分（2026年8月時点）</span><span class="page-num">9</span>
+</section>
+
+
+<!-- 見本 -->
+<section class="page">
+  <p class="eyebrow">作り直した見本</p>
+  <h2 class="sec">実際に触れる見本を、ご用意しました</h2>
+  <p class="sub">資料の中の絵ではなく、ブラウザで動く本物のページです。スマートフォンでもご覧いただけます。</p>
+
+  <div class="shotframe">
+    <div class="bar"><i></i><i></i><i></i><span>hp-a2c7460471-hp-a.html</span></div>
+    <div class="body">
+      <img src="hp-a2c7460471-hp-a-hero.png" alt="改善イメージ（A案）のトップページ">
+      
+    </div>
+  </div>
+
+  <div class="kept">
+    <div><b>そのまま残したもの</b>医院名、電話番号、診療科目の名前、キャッチコピーの中身。これまで積み上げてこられたものは、そのまま使っています。</div>
+    <div><b>変えたもの</b>情報を並べる順番です。奥に眠っていた強みをトップへ。科目の一覧を、説明つきのカードへ。</div>
+    <div><b>あえて入れなかったもの</b>Googleの評価の数字、他の医院との比べ方、比較優良を示す言葉。国の決まりに沿って、患者さん向けのページには載せていません。</div>
+  </div>
+
+  <div class="twocol" style="margin-top:8px">
+    <div class="logic">
+      <h4>この段階で、まだ調べていないこと</h4>
+      <p>検索順位、ホームページを見た人の数、予約の数といった実際の成績は調べていません。それらのデータを見せていただいていないためです。</p>
+      <p>また見本の写真はまだ仮のもので、診療時間と住所も、確認前の状態のまま入っています。実際の情報への差し替えは、ご相談のあとに行います。</p>
+    </div>
+    <div class="todo">
+      <h4>ご覧いただくときのお願い</h4>
+      <ul>
+        <li><b>スマートフォンでも開いてみてください。</b>患者さんのほとんどは、スマートフォンで見ています。</li>
+        <li>「ここは違う」「これは残したい」を、<b>遠慮なくおっしゃってください。</b>見本ですので、何度でも無料で作り直します。</li>
+      </ul>
+    </div>
+  </div>
+  <span class="page-tag">見本: hp-a2c7460471-hp-a.html</span><span class="page-num">10</span>
+</section>
+
+<!-- 進め方 -->
+<section class="page">
+  <p class="eyebrow navy">これからの進め方</p>
+  <h2 class="sec">3か月で整える、4つの順番</h2>
+  <p class="sub">いきなり大きく作り直すのではなく、効果が見えやすいものから順に手をつけます。</p>
+
+  <div class="road">
+    <div class="rd first"><div class="w">今回</div><h4>いまを知る</h4><p>31ページを調べ、止まっている場所を見つけ、見本を作りました。</p><span class="tag">完了・無料</span></div>
+    <div class="rd"><div class="w">〜2週間</div><h4>すぐできること</h4><p>Googleの医院情報を整え、エラーになるリンクを片づけ、案内札の重なりを直します。</p><span class="tag">費用は小さい</span></div>
+    <div class="rd"><div class="w">2週間〜1か月半</div><h4>トップページを作る</h4><p>見本をもとに、実際の情報と写真を入れて公開します。</p><span class="tag">中心の作業</span></div>
+    <div class="rd"><div class="w">1か月半〜3か月</div><h4>奥のページと確認</h4><p>診療案内と初診案内を整え、数字の変化をみます。</p><span class="tag">仕上げ</span></div>
+  </div>
+
+  <p style="font-size:12px;color:var(--ink-2);margin-top:8px;line-height:1.5">この順番には理由があります。Googleの医院情報を整える作業（〜2週間）は、ホームページの作り直しを待たずにでき、費用もほとんどかかりません。効果が早く出やすいことを前に置き、大きな作業はそのあとに回しています。</p>
+
+  <p class="eyebrow navy" style="margin-top:16px">ご一緒する範囲</p>
+  <h3 style="font-size:18px;margin-bottom:8px">どこまでご一緒するかは、3つからお選びいただけます</h3>
+
+  <table class="plan">
+    <thead><tr><th></th><th>内容</th><th>この場合どうなるか</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>1｜ご相談だけ</td>
+        <td>このレポートと見本をお渡しして、貴院か、いまの制作会社さまで進めていただく形です。</td>
+        <td>このレポートの中身は、ご自由にお使いいただけます。どなたが作業されるかは問いません。</td>
+      </tr>
+      <tr class="rec">
+        <td>2｜トップページを作る<span class="rec-badge">おすすめ</span></td>
+        <td>見本をもとにトップページを作り、案内札・医院情報の受け渡し・エラーリンクの整理も一緒にやります。</td>
+        <td>今回見つかった課題のうち、いちばん影響の大きい「第一印象」が変わります。いまの奥のページは、そのまま活かします。</td>
+      </tr>
+      <tr>
+        <td>3｜続けてご一緒する</td>
+        <td>2に加えて、奥のページの整備、Googleの医院情報の運用、毎月の数字のご報告、予約までの道すじづくり。</td>
+        <td>「作って終わり」ではなく、数字を見ながら続けて良くしていく形です。</td>
+      </tr>
+    </tbody>
+  </table>
+  <span class="page-tag">このレポートと見本の作成まで、費用はいただいておりません</span><span class="page-num">11</span>
+</section>
+
+<!-- まとめ -->
+<section class="page">
+  <p class="eyebrow navy">まとめ</p>
+  <h2 class="sec">今回のまとめ</h2>
+
+  <table class="sum">
+    <tbody>
+      <tr><td>できていること</td><td>全31ページという分量、12科目の掲載。長く丁寧に運用されてきたホームページの証です。ゼロから作り直す必要はありません。</td></tr>
+      <tr><td>止まっている場所</td><td>患者さんが来院するまでの5つの段階のうち、<b>段階1（見つかる）</b>です。</td></tr>
+      <tr><td>次にすること</td><td>まずは見本を実際にご覧ください。「ここは違う」「これは残したい」をお聞かせいただければ、無料で作り直します。30分ほどお時間をいただければ、画面を見ながらご説明いたします。</td></tr>
+    </tbody>
+  </table>
+
+  <div class="cta-box">
+    <div>
+      <h3>まずは、画面をご覧ください。</h3>
+      <p>作り直した見本： hp-a2c7460471-hp-a.html</p>
+    </div>
+    <div class="side">
+      ご返信いただければ、<br>候補の日を3つお送りします。<br>数字の根拠になったページも、<br>すべてお見せいたします。
+    </div>
+  </div>
+
+  <p class="foot-note">
+  ※ このレポートの数字は、2026年8月の時点で公開されているホームページと、Googleの医院情報から取ったものです。推測や業界の平均値は入れていません。<br>
+  ※ ホームページの分析ツール、Googleの管理画面、予約システムは見せていただいていないため、実際の閲覧数・予約数・ふだんの運用は評価に入れていません。<br>
+  ※ 見本の写真・診療時間・住所は、まだ仮の状態です。検索順位や集客の効果をお約束するものではありません。
+  </p>
+  <span class="page-tag">まごめの歯科・矯正歯科さま｜ホームページ調査レポート</span><span class="page-num">12</span>
+</section>
+
+</body>
+</html>
