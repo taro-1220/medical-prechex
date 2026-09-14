@@ -23,6 +23,7 @@ const BYPASS_PATHS = [
   "/patient/notifications/unsubscribe", "/api/patient/notifications/unsubscribe",
   "/signup", "/api/clinic/signup",
   "/clinic", "/api/clinic", "/login",
+  "/reports",
 ];
 
 async function expectedCookieValue(password: string, secret: string) {
