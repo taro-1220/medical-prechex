@@ -28,6 +28,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: signUpErr?.message ?? "signup_failed" }, { status: 400 });
   }
 
+  // Confirm email有効時、既に登録済み(確認済み)のメールで signUp() すると
+  // GoTrueはエラーを返さず、実在しないIDを持つ obfuscated/fake user object を返す
+  // （公式仕様: @supabase/auth-js GoTrueClient.d.ts の signUp() コメント参照）。
+  // identitiesが空配列であることがその判別シグナル。
+  if (!signUpData.user.identities || signUpData.user.identities.length === 0) {
+    return NextResponse.json({ error: "email_already_registered" }, { status: 409 });
+  }
+
   const { data: clinic, error: clinicErr } = await sb
     .from("clinics")
     .insert({ name: clinicName, phone: "", email, address: "", status: "pending_approval" })
@@ -38,12 +46,20 @@ export async function POST(req: NextRequest) {
   const { error: profileErr } = await sb
     .from("clinic_profile")
     .insert({ clinic_id: clinic.id, clinic_display_name: clinicName, director_name: directorName, email });
-  if (profileErr) return NextResponse.json({ error: profileErr.message }, { status: 500 });
+  if (profileErr) {
+    // clinic_profile/clinic_usersはclinics(id) on delete cascadeなので、
+    // clinicsを削除すればここまでに作成した行はまとめて片付く。
+    await sb.from("clinics").delete().eq("id", clinic.id);
+    return NextResponse.json({ error: profileErr.message }, { status: 500 });
+  }
 
   const { error: cuErr } = await sb
     .from("clinic_users")
     .insert({ clinic_id: clinic.id, user_id: signUpData.user.id, role: "owner", selected: true });
-  if (cuErr) return NextResponse.json({ error: cuErr.message }, { status: 500 });
+  if (cuErr) {
+    await sb.from("clinics").delete().eq("id", clinic.id);
+    return NextResponse.json({ error: cuErr.message }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }
