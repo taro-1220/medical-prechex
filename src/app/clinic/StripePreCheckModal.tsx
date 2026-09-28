@@ -69,7 +69,6 @@ export default function StripePreCheckModal({
         <p className={sectionHeadingCls}>7. 補足</p>
         <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 leading-relaxed mb-4 space-y-1">
           <p className="font-bold">院長ご本人が入力してください</p>
-          <p>途中で閉じても、この画面から続きから再開できます</p>
           <p>ボタンを押すと Stripe の画面が開きます。案内のリンクは数分で無効になるため、そのまま最後まで入力してください</p>
         </div>
         <p className="text-sm text-gray-700 leading-relaxed mb-6">
