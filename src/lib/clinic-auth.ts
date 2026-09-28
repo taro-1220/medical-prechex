@@ -5,14 +5,18 @@ import type { Clinic, ClinicStatus, StripeAccountStatus } from "./types";
 const STRIPE_CONNECT_GENERIC_ERROR = "現在お支払い連携を開始できません。運営事務局までご連絡ください";
 
 /**
- * セクションC: 問い合わせ先。値は運営側から別途指定される想定のため、現時点では空にしておく。
- * 空のときは呼び出し側（F-4の案内文・事前準備モーダルの補足）で連絡先の行を一切出さない。
+ * セクションC: 問い合わせ先。F-4の失敗案内文・事前準備モーダルの補足の両方が参照する。
+ * 空にすれば両方とも連絡先の行を出さない。
  */
-export const SUPPORT_CONTACT_TEXT = "";
+export const SUPPORT_CONTACT_TEXT = "support@medipre.jp";
 
-/** SUPPORT_CONTACT_TEXTが空ならnull（連絡先の行を出さない）。値が入れば「お困りの場合：（連絡先）」を返す。 */
+/** 空文字ならnull（連絡先の行を出さない）。値があれば「お困りの場合：（連絡先）」を返す。 */
+export function formatSupportContactLine(contactText: string): string | null {
+  return contactText ? `お困りの場合：${contactText}` : null;
+}
+
 export function getSupportContactLine(): string | null {
-  return SUPPORT_CONTACT_TEXT ? `お困りの場合：${SUPPORT_CONTACT_TEXT}` : null;
+  return formatSupportContactLine(SUPPORT_CONTACT_TEXT);
 }
 
 /**

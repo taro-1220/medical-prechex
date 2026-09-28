@@ -13,6 +13,8 @@ import {
   requestStripeConnectUrl,
   calculateFeeExampleReceivedAmount,
   getSupportContactLine,
+  formatSupportContactLine,
+  SUPPORT_CONTACT_TEXT,
 } from "./clinic-auth";
 
 describe("isSafeRedirectPath: /loginのnextパラメータ検証（オープンリダイレクト対策）", () => {
@@ -135,9 +137,12 @@ describe("requestStripeConnectUrl: セクションF-4 失敗時に生の内部�
     global.fetch = originalFetch;
   });
 
-  it("tokenが無い場合は案内文を返す（APIは呼ばない）", async () => {
+  it("tokenが無い場合は案内文（連絡先つき）を返す（APIは呼ばない）", async () => {
     const result = await requestStripeConnectUrl("clinic-1", null);
-    expect(result).toEqual({ ok: false, error: "現在お支払い連携を開始できません。運営事務局までご連絡ください" });
+    expect(result).toEqual({
+      ok: false,
+      error: "現在お支払い連携を開始できません。運営事務局までご連絡ください\nお困りの場合：support@medipre.jp",
+    });
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
@@ -150,13 +155,16 @@ describe("requestStripeConnectUrl: セクションF-4 失敗時に生の内部�
     expect(result).toEqual({ ok: true, url: "https://connect.stripe.com/setup/xxx" });
   });
 
-  it("APIがエラーを返しても、生のエラー文ではなく日本語の案内文を返す（STRIPE_SECRET_KEY未設定時の想定を含む）", async () => {
+  it("APIがエラーを返しても、生のエラー文ではなく日本語の案内文（連絡先つき）を返す（STRIPE_SECRET_KEY未設定時の想定を含む）", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: false,
       json: async () => ({ error: "Error: STRIPE_SECRET_KEY is not set" }),
     });
     const result = await requestStripeConnectUrl("clinic-1", "token-1");
-    expect(result).toEqual({ ok: false, error: "現在お支払い連携を開始できません。運営事務局までご連絡ください" });
+    expect(result).toEqual({
+      ok: false,
+      error: "現在お支払い連携を開始できません。運営事務局までご連絡ください\nお困りの場合：support@medipre.jp",
+    });
   });
 });
 
@@ -166,8 +174,19 @@ describe("calculateFeeExampleReceivedAmount: セクションF-B6 手数料例（
   });
 });
 
-describe("getSupportContactLine: セクションC 問い合わせ先", () => {
-  it("SUPPORT_CONTACT_TEXTが空の現状ではnull（連絡先の行を出さない）", () => {
-    expect(getSupportContactLine()).toBeNull();
+describe("formatSupportContactLine: セクションC 問い合わせ先（空・値ありの両方を検証）", () => {
+  it("空文字ならnull（連絡先の行を出さない）", () => {
+    expect(formatSupportContactLine("")).toBeNull();
+  });
+
+  it("値があれば「お困りの場合：（連絡先）」を返す", () => {
+    expect(formatSupportContactLine("support@medipre.jp")).toBe("お困りの場合：support@medipre.jp");
+  });
+});
+
+describe("getSupportContactLine: 実際のSUPPORT_CONTACT_TEXTの値で組み立てる", () => {
+  it("現在設定されているSUPPORT_CONTACT_TEXT(support@medipre.jp)から案内文を返す", () => {
+    expect(SUPPORT_CONTACT_TEXT).toBe("support@medipre.jp");
+    expect(getSupportContactLine()).toBe("お困りの場合：support@medipre.jp");
   });
 });
