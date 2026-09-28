@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Appointment, AppointmentStatus, Clinic, ClinicProfile, ChargeDashboardResponse } from "@/lib/types";
-import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin, getClinicApprovalRedirect, isStripePendingBannerVisible } from "@/lib/clinic-auth";
+import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin, getClinicApprovalRedirect, isStripePendingBannerVisibleOnDashboard } from "@/lib/clinic-auth";
 import OnboardingGuide, { GUIDE_KEY } from "./OnboardingGuide";
 import StripePendingBanner from "./StripePendingBanner";
 
@@ -215,7 +215,7 @@ export default function ClinicPage() {
         </div>
       </header>
       {showGuide && <OnboardingGuide onClose={() => setShowGuide(false)} />}
-      {clinic && isStripePendingBannerVisible(profile?.stripeAccountStatus) && (
+      {clinic && isStripePendingBannerVisibleOnDashboard(activatedAt, profile?.stripeAccountStatus) && (
         <StripePendingBanner clinicId={clinic.id} />
       )}
       {activatedAt === null && (

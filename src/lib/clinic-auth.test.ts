@@ -9,6 +9,7 @@ import {
   shouldShowStripePreCheck,
   getStripeStatusLabel,
   isStripePendingBannerVisible,
+  isStripePendingBannerVisibleOnDashboard,
   requestStripeConnectUrl,
 } from "./clinic-auth";
 
@@ -85,9 +86,9 @@ describe("getStripeStatusLabel: セクションF-3 Stripe欄の表示文言", ()
     expect(getStripeStatusLabel("not_connected", null)).toBe("未接続");
   });
 
-  it("pendingかつdetailsSubmitted不明/false は「未完了（続きから再開できます）」", () => {
-    expect(getStripeStatusLabel("pending", false)).toBe("未完了（続きから再開できます）");
-    expect(getStripeStatusLabel("pending", null)).toBe("未完了（続きから再開できます）");
+  it("pendingかつdetailsSubmitted不明/false は「未完了」（再開できることはバナー・ボタン文言で伝える）", () => {
+    expect(getStripeStatusLabel("pending", false)).toBe("未完了");
+    expect(getStripeStatusLabel("pending", null)).toBe("未完了");
   });
 
   it("pendingかつdetailsSubmitted=true（提出済み）は「Stripeで確認中」", () => {
@@ -104,6 +105,22 @@ describe("isStripePendingBannerVisible: セクションF-2 再開バナーの表
     expect(isStripePendingBannerVisible("active")).toBe(false);
     expect(isStripePendingBannerVisible("not_connected")).toBe(false);
     expect(isStripePendingBannerVisible(undefined)).toBe(false);
+  });
+});
+
+describe("isStripePendingBannerVisibleOnDashboard: /clinicでは初期設定完了後だけStripeバナーを出す", () => {
+  it("初期設定未完了(activatedAtがnull/undefined)なら、pendingでもfalse（初期設定バナーのみ出す）", () => {
+    expect(isStripePendingBannerVisibleOnDashboard(null, "pending")).toBe(false);
+    expect(isStripePendingBannerVisibleOnDashboard(undefined, "pending")).toBe(false);
+  });
+
+  it("初期設定完了(activatedAtが日時文字列)かつpendingならtrue", () => {
+    expect(isStripePendingBannerVisibleOnDashboard("2026-09-01T00:00:00Z", "pending")).toBe(true);
+  });
+
+  it("初期設定完了していてもactive/not_connectedならfalse", () => {
+    expect(isStripePendingBannerVisibleOnDashboard("2026-09-01T00:00:00Z", "active")).toBe(false);
+    expect(isStripePendingBannerVisibleOnDashboard("2026-09-01T00:00:00Z", "not_connected")).toBe(false);
   });
 });
 

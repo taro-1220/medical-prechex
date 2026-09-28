@@ -80,13 +80,25 @@ export function getStripeStatusLabel(
   detailsSubmitted: boolean | null | undefined,
 ): string {
   if (status === "active") return "✓ 有効";
-  if (status === "pending") return detailsSubmitted ? "Stripeで確認中" : "未完了（続きから再開できます）";
+  if (status === "pending") return detailsSubmitted ? "Stripeで確認中" : "未完了";
   return "未接続";
 }
 
 /** セクションF-2: 再開バナーはpendingのときだけ表示する。 */
 export function isStripePendingBannerVisible(status: StripeAccountStatus | null | undefined): boolean {
   return status === "pending";
+}
+
+/**
+ * /clinic（ダッシュボード）専用: Stripe連携はキャンセル料回収時にのみ必要な設定のため、
+ * 初期設定（activate）が完了するまではStripeバナーを出さず、初期設定バナーのみ見せる。
+ * /clinic/onboardingではこの制約を適用しない（そちらは元々Stripeバナーの表示のみ）。
+ */
+export function isStripePendingBannerVisibleOnDashboard(
+  activatedAt: string | null | undefined,
+  status: StripeAccountStatus | null | undefined,
+): boolean {
+  return !!activatedAt && isStripePendingBannerVisible(status);
 }
 
 /**
