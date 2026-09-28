@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getCurrentUser, getCurrentClinic, redirectToLogin } from "@/lib/clinic-auth";
+import { getCurrentUser, getCurrentClinic, redirectToLogin, getSupportContactLine } from "@/lib/clinic-auth";
 import type { ClinicStatus } from "@/lib/types";
 
 type ViewState = "loading" | "pending_approval" | "rejected";
@@ -25,6 +25,8 @@ export default function ClinicPendingApprovalPage() {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400 text-sm">読み込み中...</div>;
   }
 
+  const contactLine = getSupportContactLine();
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
       <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
@@ -46,6 +48,7 @@ export default function ClinicPendingApprovalPage() {
             </p>
           </>
         )}
+        {contactLine && <p className="text-xs text-gray-400 mt-4">{contactLine}</p>}
       </div>
     </div>
   );

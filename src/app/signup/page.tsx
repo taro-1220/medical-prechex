@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { getSupportContactLine } from "@/lib/clinic-auth";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -9,12 +10,14 @@ export default function SignupPage() {
   const [email, setEmail]               = useState("");
   const [password, setPassword]         = useState("");
   const [error, setError]               = useState<string | null>(null);
+  const [isEmailAlreadyRegistered, setIsEmailAlreadyRegistered] = useState(false);
   const [loading, setLoading]           = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setIsEmailAlreadyRegistered(false);
     const res = await fetch("/api/clinic/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -22,16 +25,19 @@ export default function SignupPage() {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      const message =
-        body.error === "email_already_registered"
-          ? "このメールアドレスは既に登録されています。ログインまたはパスワード再設定をご利用ください。"
-          : (body.error ?? "登録に失敗しました");
+      const alreadyRegistered = body.error === "email_already_registered";
+      const message = alreadyRegistered
+        ? "このメールアドレスは既に登録されています。ログインまたはパスワード再設定をご利用ください。"
+        : (body.error ?? "登録に失敗しました");
       setError(message);
+      setIsEmailAlreadyRegistered(alreadyRegistered);
       setLoading(false);
       return;
     }
     router.push("/signup/check-email");
   };
+
+  const contactLine = getSupportContactLine();
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-10">
@@ -82,6 +88,9 @@ export default function SignupPage() {
               />
             </div>
             {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && isEmailAlreadyRegistered && contactLine && (
+              <p className="text-xs text-gray-400">{contactLine}</p>
+            )}
             <button
               type="submit" disabled={loading}
               className="w-full py-2.5 bg-teal-600 rounded-xl font-bold text-sm text-white hover:bg-teal-700 transition disabled:opacity-50"
