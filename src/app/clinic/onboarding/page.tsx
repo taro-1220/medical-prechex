@@ -1,18 +1,27 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getCurrentClinic, redirectToLogin, getClinicApprovalRedirect } from "@/lib/clinic-auth";
-import type { ClinicProfile, OnboardingProgress, CancelPolicyScope, ClinicCancelPolicySettings, CancelTier, StripeAccountStatus } from "@/lib/types";
+import {
+  getAccessToken,
+  getCurrentClinic,
+  redirectToLogin,
+  getClinicApprovalRedirect,
+  requestStripeConnectUrl,
+  shouldShowStripePreCheck,
+  getStripeStatusLabel,
+  isStripePendingBannerVisible,
+} from "@/lib/clinic-auth";
+import type { ClinicProfile, OnboardingProgress, CancelPolicyScope, ClinicCancelPolicySettings, CancelTier } from "@/lib/types";
 import { findRiskyPolicyWording, scopeAppliesToCategory, isInsuranceAcknowledgmentSatisfied, isBasisNoteValid } from "@/lib/cancel-policy";
 import { areTierPercentsValid } from "@/lib/charge-policy";
+import StripePreCheckModal from "../StripePreCheckModal";
+import StripePendingBanner from "../StripePendingBanner";
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500";
 const labelCls = "block text-xs text-gray-500 mb-1";
 
 type CategoryForm = { policyText: string; basisNote: string; showBasisToPatient: boolean; graceHours: number; tiers: CancelTier[] | null };
 const EMPTY_CATEGORY_FORM: CategoryForm = { policyText: "", basisNote: "", showBasisToPatient: false, graceHours: 24, tiers: null };
-
-const STRIPE_STATUS_LABEL: Record<StripeAccountStatus, string> = { not_connected: "未接続", pending: "審査中", active: "有効" };
 
 const CATEGORY_LABEL: Record<"private" | "insurance", string> = { private: "自由診療", insurance: "保険診療" };
 
@@ -47,6 +56,8 @@ export default function OnboardingPage() {
   // MVP+2: Stripe Connect
   const [connectingStripe, setConnectingStripe] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
+  const [stripeDetailsSubmitted, setStripeDetailsSubmitted] = useState<boolean | null>(null);
+  const [showStripePreCheck, setShowStripePreCheck] = useState(false);
 
   // MVP+3: 空き枠自動通知
   const [autoNotifySlot, setAutoNotifySlot] = useState(false);
@@ -66,6 +77,19 @@ export default function OnboardingPage() {
         setPolicy(prof.cancellationPolicy);
         setMessage(prof.defaultMessage);
         setAutoNotifySlot(prof.autoNotifyAvailableSlot);
+      }
+
+      // セクションF-3: pendingのときだけ「入力途中」か「提出済み」かを追加取得する
+      if (prof?.stripeAccountStatus === "pending" && prof.stripeAccountId) {
+        const stripeStatusRes = await fetch(`/api/clinic/stripe/status?clinic_id=${cid}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (stripeStatusRes.ok) {
+          const { detailsSubmitted } = await stripeStatusRes.json();
+          setStripeDetailsSubmitted(!!detailsSubmitted);
+        }
+      } else {
+        setStripeDetailsSubmitted(null);
       }
     }
 
@@ -105,21 +129,24 @@ export default function OnboardingPage() {
 
   async function connectStripe() {
     if (!clinicId) return;
+    setShowStripePreCheck(false);
     setStripeError(null);
     setConnectingStripe(true);
     const token = await getAccessToken();
-    const res = await fetch("/api/clinic/stripe/connect", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ clinicId }),
-    });
-    if (res.ok) {
-      const { url } = await res.json();
-      window.location.href = url;
+    const result = await requestStripeConnectUrl(clinicId, token);
+    if (result.ok) {
+      window.location.href = result.url;
     } else {
-      const { error } = await res.json().catch(() => ({ error: "接続に失敗しました" }));
-      setStripeError(String(error));
+      setStripeError(result.error);
       setConnectingStripe(false);
+    }
+  }
+
+  function onClickStripeConnectButton() {
+    if (shouldShowStripePreCheck(profile?.stripeAccountStatus)) {
+      setShowStripePreCheck(true);
+    } else {
+      connectStripe();
     }
   }
 
@@ -249,6 +276,14 @@ export default function OnboardingPage() {
         )}
       </header>
 
+      {clinicId && isStripePendingBannerVisible(profile?.stripeAccountStatus) && (
+        <StripePendingBanner clinicId={clinicId} />
+      )}
+
+      {showStripePreCheck && (
+        <StripePreCheckModal onProceed={connectStripe} onClose={() => setShowStripePreCheck(false)} />
+      )}
+
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-4">
 
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
@@ -339,12 +374,10 @@ export default function OnboardingPage() {
               <p className="text-xs text-gray-400 mt-0.5">キャンセル料の回収先口座。カード登録・請求を行う場合のみ必要です</p>
             </div>
             <div className="flex items-center gap-3">
-              {profile?.stripeAccountStatus === "active"
-                ? <span className="text-teal-600 font-bold text-sm">✓ 有効</span>
-                : profile?.stripeAccountStatus === "pending"
-                  ? <span className="text-amber-600 font-bold text-sm">審査中</span>
-                  : <span className="text-xs text-gray-400">未接続</span>}
-              <button onClick={connectStripe} disabled={connectingStripe} className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+              <span className={`font-bold text-sm ${profile?.stripeAccountStatus === "active" ? "text-teal-600" : profile?.stripeAccountStatus === "pending" ? "text-amber-600" : "text-xs text-gray-400 font-normal"}`}>
+                {getStripeStatusLabel(profile?.stripeAccountStatus, stripeDetailsSubmitted)}
+              </span>
+              <button onClick={onClickStripeConnectButton} disabled={connectingStripe} className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
                 {connectingStripe ? "接続中..." : profile?.stripeAccountStatus === "active" ? "管理画面を開く" : profile?.stripeAccountStatus === "pending" ? "続きを設定する" : "Stripeに接続する"}
               </button>
             </div>

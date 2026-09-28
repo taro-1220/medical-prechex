@@ -1,6 +1,8 @@
 import type { User } from "@supabase/supabase-js";
 import { getSupabaseBrowser } from "./supabase-browser";
-import type { Clinic, ClinicStatus } from "./types";
+import type { Clinic, ClinicStatus, StripeAccountStatus } from "./types";
+
+const STRIPE_CONNECT_GENERIC_ERROR = "現在お支払い連携を開始できません。運営事務局までご連絡ください";
 
 export async function getCurrentUser(): Promise<User | null> {
   const { data: { user } } = await getSupabaseBrowser().auth.getUser();
@@ -61,4 +63,57 @@ export function redirectToLogin(router: { replace: (href: string) => void }): vo
 export function getClinicApprovalRedirect(status: ClinicStatus): string | null {
   if (status === "active") return null;
   return "/clinic/pending-approval";
+}
+
+/**
+ * Phase P1 セクションF-1: 「Stripeに接続する」押下時、事前準備モーダルを挟むべきか。
+ * 初回接続（not_connected/未取得）のときだけガイドが必要。再開(pending)・管理(active)は
+ * 既存のconnectStripe()を直接呼ぶ。
+ */
+export function shouldShowStripePreCheck(status: StripeAccountStatus | null | undefined): boolean {
+  return !status || status === "not_connected";
+}
+
+/** セクションF-3: Stripe欄の表示文言。pendingは提出済み(detailsSubmitted)かどうかで出し分ける。 */
+export function getStripeStatusLabel(
+  status: StripeAccountStatus | null | undefined,
+  detailsSubmitted: boolean | null | undefined,
+): string {
+  if (status === "active") return "✓ 有効";
+  if (status === "pending") return detailsSubmitted ? "Stripeで確認中" : "未完了（続きから再開できます）";
+  return "未接続";
+}
+
+/** セクションF-2: 再開バナーはpendingのときだけ表示する。 */
+export function isStripePendingBannerVisible(status: StripeAccountStatus | null | undefined): boolean {
+  return status === "pending";
+}
+
+/**
+ * セクションF-2/F-4: Stripe Connectのオンボーディングリンクを要求する。
+ * 失敗時（token無し・API失敗いずれも）は内部エラー文をそのまま出さず、
+ * 案内事務局への問い合わせを促す日本語文言に統一する。
+ */
+export async function requestStripeConnectUrl(
+  clinicId: string,
+  token: string | null,
+): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  if (!token) return { ok: false, error: STRIPE_CONNECT_GENERIC_ERROR };
+  const res = await fetch("/api/clinic/stripe/connect", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ clinicId }),
+  });
+  if (!res.ok) return { ok: false, error: STRIPE_CONNECT_GENERIC_ERROR };
+  const { url } = await res.json();
+  return { ok: true, url };
+}
+
+/** セクションF-2: クリック即ブラウザ遷移まで行う薄いラッパー（ダッシュボード・初期設定画面で共用）。 */
+export async function startStripeConnect(clinicId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const token = await getAccessToken();
+  const result = await requestStripeConnectUrl(clinicId, token);
+  if (!result.ok) return result;
+  if (typeof window !== "undefined") window.location.href = result.url;
+  return { ok: true };
 }

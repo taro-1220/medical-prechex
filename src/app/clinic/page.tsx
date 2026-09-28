@@ -2,9 +2,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Appointment, AppointmentStatus, Clinic, ChargeDashboardResponse } from "@/lib/types";
-import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin, getClinicApprovalRedirect } from "@/lib/clinic-auth";
+import type { Appointment, AppointmentStatus, Clinic, ClinicProfile, ChargeDashboardResponse } from "@/lib/types";
+import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin, getClinicApprovalRedirect, isStripePendingBannerVisible } from "@/lib/clinic-auth";
 import OnboardingGuide, { GUIDE_KEY } from "./OnboardingGuide";
+import StripePendingBanner from "./StripePendingBanner";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmation_pending: "確認待ち",
@@ -61,6 +62,7 @@ export default function ClinicPage() {
   const [clinic, setClinic]   = useState<Clinic | null>(null);
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [activatedAt, setActivatedAt] = useState<string | null | undefined>(undefined);
+  const [profile, setProfile] = useState<ClinicProfile | null>(null);
   const [dashboard, setDashboard] = useState<ChargeDashboardResponse | null>(null);
 
   useEffect(() => {
@@ -87,8 +89,9 @@ export default function ClinicPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (obRes.ok) {
-        const { progress } = await obRes.json();
+        const { progress, profile: prof } = await obRes.json();
         setActivatedAt(progress?.activatedAt ?? null);
+        setProfile(prof ?? null);
       } else {
         setActivatedAt(null);
       }
@@ -212,6 +215,9 @@ export default function ClinicPage() {
         </div>
       </header>
       {showGuide && <OnboardingGuide onClose={() => setShowGuide(false)} />}
+      {clinic && isStripePendingBannerVisible(profile?.stripeAccountStatus) && (
+        <StripePendingBanner clinicId={clinic.id} />
+      )}
       {activatedAt === null && (
         <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between">
           <p className="text-sm text-amber-800 font-medium">初期設定が完了していません</p>

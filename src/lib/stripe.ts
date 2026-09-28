@@ -97,6 +97,16 @@ export async function fetchConnectAccountStatus(accountId: string): Promise<Conn
 }
 
 /**
+ * Phase P1 セクションF-3: "pending"は「入力途中」と「提出済み・審査待ち」の両方を含むため、
+ * details_submittedのみを別途取得して画面表示の出し分けに使う（DBには保存しない、都度Stripeから取得）。
+ */
+export async function fetchConnectAccountDetailsSubmitted(accountId: string): Promise<boolean> {
+  const stripe = getStripeClient();
+  const account = await stripe.accounts.retrieve(accountId);
+  return !!account.details_submitted;
+}
+
+/**
  * 予約単位のカード登録用SetupIntent。医院のconnected account上に作成する（direct charge）。
  * 検収で発覚した不具合の修正: SetupIntentにCustomerを紐付けないと、後日の別PaymentIntentで
  * 同じPaymentMethodを再利用できない（Stripe側の制約）。DBスキーマは変更せず、Customer IDは

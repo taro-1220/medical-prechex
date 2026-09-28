@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getClinicStripeAccount, upsertClinicStripeAccount } from "@/lib/charge-store";
-import { fetchConnectAccountStatus } from "@/lib/stripe";
+import { fetchConnectAccountStatus, fetchConnectAccountDetailsSubmitted } from "@/lib/stripe";
 
 // オンボーディング画面訪問時などにStripe側の最新状態をポーリングして反映する
 // （Webhook基盤は今回新設しない。A-3で報告済みのスコープ判断）
@@ -30,7 +30,9 @@ export async function GET(req: NextRequest) {
     if (status !== account.stripeAccountStatus) {
       await upsertClinicStripeAccount(clinicId, { stripeAccountStatus: status });
     }
-    return NextResponse.json({ stripeAccountId: account.stripeAccountId, stripeAccountStatus: status });
+    // セクションF-3: "pending"のときだけ、入力途中か提出済みかを画面表示用に追加取得する（DB保存はしない）
+    const detailsSubmitted = status === "pending" ? await fetchConnectAccountDetailsSubmitted(account.stripeAccountId) : undefined;
+    return NextResponse.json({ stripeAccountId: account.stripeAccountId, stripeAccountStatus: status, detailsSubmitted });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
