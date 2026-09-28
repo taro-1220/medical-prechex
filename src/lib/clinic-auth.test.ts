@@ -11,6 +11,8 @@ import {
   isStripePendingBannerVisible,
   isStripePendingBannerVisibleOnDashboard,
   requestStripeConnectUrl,
+  calculateFeeExampleReceivedAmount,
+  getSupportContactLine,
 } from "./clinic-auth";
 
 describe("isSafeRedirectPath: /loginのnextパラメータ検証（オープンリダイレクト対策）", () => {
@@ -155,5 +157,17 @@ describe("requestStripeConnectUrl: セクションF-4 失敗時に生の内部�
     });
     const result = await requestStripeConnectUrl("clinic-1", "token-1");
     expect(result).toEqual({ ok: false, error: "現在お支払い連携を開始できません。運営事務局までご連絡ください" });
+  });
+});
+
+describe("calculateFeeExampleReceivedAmount: セクションF-B6 手数料例（表示専用、application_fee計算とは無関係）", () => {
+  it("10,000円の例で受取額9,140円になる（Stripe3.6%＋Medipre5%を控除）", () => {
+    expect(calculateFeeExampleReceivedAmount(10000)).toBe(9140);
+  });
+});
+
+describe("getSupportContactLine: セクションC 問い合わせ先", () => {
+  it("SUPPORT_CONTACT_TEXTが空の現状ではnull（連絡先の行を出さない）", () => {
+    expect(getSupportContactLine()).toBeNull();
   });
 });

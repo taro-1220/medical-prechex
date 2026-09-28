@@ -4,6 +4,30 @@ import type { Clinic, ClinicStatus, StripeAccountStatus } from "./types";
 
 const STRIPE_CONNECT_GENERIC_ERROR = "現在お支払い連携を開始できません。運営事務局までご連絡ください";
 
+/**
+ * セクションC: 問い合わせ先。値は運営側から別途指定される想定のため、現時点では空にしておく。
+ * 空のときは呼び出し側（F-4の案内文・事前準備モーダルの補足）で連絡先の行を一切出さない。
+ */
+export const SUPPORT_CONTACT_TEXT = "";
+
+/** SUPPORT_CONTACT_TEXTが空ならnull（連絡先の行を出さない）。値が入れば「お困りの場合：（連絡先）」を返す。 */
+export function getSupportContactLine(): string | null {
+  return SUPPORT_CONTACT_TEXT ? `お困りの場合：${SUPPORT_CONTACT_TEXT}` : null;
+}
+
+/**
+ * セクションF-B6: 手数料の説明に使う「表示専用」の料率。実際の入金額を決めるapplication_fee計算
+ * （getApplicationFeePercent, src/lib/stripe.ts）とは無関係で、運用環境変数(APPLICATION_FEE_PERCENT)
+ * を書き換えても自動反映されない。料率が変わった場合はここだけ直せばよいよう1か所にまとめる。
+ */
+export const STRIPE_FEE_RATE_DISPLAY = 0.036;
+export const MEDIPRE_FEE_RATE_DISPLAY = 0.05;
+
+/** 上記の表示専用料率から、案内文中の受取額の例を計算する。 */
+export function calculateFeeExampleReceivedAmount(amount: number): number {
+  return Math.round(amount * (1 - STRIPE_FEE_RATE_DISPLAY - MEDIPRE_FEE_RATE_DISPLAY));
+}
+
 export async function getCurrentUser(): Promise<User | null> {
   const { data: { user } } = await getSupabaseBrowser().auth.getUser();
   return user;
@@ -106,17 +130,22 @@ export function isStripePendingBannerVisibleOnDashboard(
  * 失敗時（token無し・API失敗いずれも）は内部エラー文をそのまま出さず、
  * 案内事務局への問い合わせを促す日本語文言に統一する。
  */
+function buildStripeConnectErrorMessage(): string {
+  const contactLine = getSupportContactLine();
+  return contactLine ? `${STRIPE_CONNECT_GENERIC_ERROR}\n${contactLine}` : STRIPE_CONNECT_GENERIC_ERROR;
+}
+
 export async function requestStripeConnectUrl(
   clinicId: string,
   token: string | null,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  if (!token) return { ok: false, error: STRIPE_CONNECT_GENERIC_ERROR };
+  if (!token) return { ok: false, error: buildStripeConnectErrorMessage() };
   const res = await fetch("/api/clinic/stripe/connect", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify({ clinicId }),
   });
-  if (!res.ok) return { ok: false, error: STRIPE_CONNECT_GENERIC_ERROR };
+  if (!res.ok) return { ok: false, error: buildStripeConnectErrorMessage() };
   const { url } = await res.json();
   return { ok: true, url };
 }

@@ -371,7 +371,7 @@ export default function OnboardingPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-bold text-gray-900">お支払い連携（Stripe）</p>
-              <p className="text-xs text-gray-400 mt-0.5">キャンセル料の回収先口座。カード登録・請求を行う場合のみ必要です</p>
+              <p className="text-xs text-gray-400 mt-0.5">キャンセル料を、患者さんが登録したカードから自動で回収し、医院の口座へ振り込むための設定です。キャンセル料を回収する場合のみ必要です。</p>
             </div>
             <div className="flex items-center gap-3">
               <span className={`font-bold text-sm ${profile?.stripeAccountStatus === "active" ? "text-teal-600" : profile?.stripeAccountStatus === "pending" ? "text-amber-600" : "text-xs text-gray-400 font-normal"}`}>
