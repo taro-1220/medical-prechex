@@ -368,16 +368,16 @@ export default function OnboardingPage() {
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-bold text-gray-900">お支払い連携（Stripe）</p>
               <p className="text-xs text-gray-400 mt-0.5">キャンセル料を、患者さんが登録したカードから自動で回収し、医院の口座へ振り込むための設定です。キャンセル料を回収する場合のみ必要です。</p>
             </div>
-            <div className="flex items-center gap-3">
-              <span className={`font-bold text-sm ${profile?.stripeAccountStatus === "active" ? "text-teal-600" : profile?.stripeAccountStatus === "pending" ? "text-amber-600" : "text-xs text-gray-400 font-normal"}`}>
+            <div className="flex items-center gap-3 sm:shrink-0">
+              <span className={`whitespace-nowrap font-bold text-sm ${profile?.stripeAccountStatus === "active" ? "text-teal-600" : profile?.stripeAccountStatus === "pending" ? "text-amber-600" : "text-xs text-gray-400 font-normal"}`}>
                 {getStripeStatusLabel(profile?.stripeAccountStatus, stripeDetailsSubmitted)}
               </span>
-              <button onClick={onClickStripeConnectButton} disabled={connectingStripe} className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
+              <button onClick={onClickStripeConnectButton} disabled={connectingStripe} className="whitespace-nowrap px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition disabled:opacity-50">
                 {connectingStripe ? "接続中..." : profile?.stripeAccountStatus === "active" ? "管理画面を開く" : profile?.stripeAccountStatus === "pending" ? "続きを設定する" : "Stripeに接続する"}
               </button>
             </div>
