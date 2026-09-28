@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
     );
     return NextResponse.json({ url });
   } catch (e) {
+    console.error("[api/clinic/stripe/connect] failed", { clinicId, error: e });
     return NextResponse.json({ error: String(e) }, { status: 500 });
   }
 }
