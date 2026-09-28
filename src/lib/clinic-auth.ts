@@ -23,6 +23,9 @@ export function getSupportContactLine(): string | null {
 export const STRIPE_FEE_RATE_DISPLAY = 0.036;
 export const MEDIPRE_FEE_RATE_DISPLAY = 0.05;
 
+/** 手数料説明の例で使う回収額（表示専用）。 */
+export const FEE_EXAMPLE_AMOUNT = 1000;
+
 /** 上記の表示専用料率から、案内文中の受取額の例を計算する。 */
 export function calculateFeeExampleReceivedAmount(amount: number): number {
   return Math.round(amount * (1 - STRIPE_FEE_RATE_DISPLAY - MEDIPRE_FEE_RATE_DISPLAY));

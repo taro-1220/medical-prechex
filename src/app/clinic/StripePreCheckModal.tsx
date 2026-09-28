@@ -4,6 +4,7 @@ import {
   getSupportContactLine,
   STRIPE_FEE_RATE_DISPLAY,
   MEDIPRE_FEE_RATE_DISPLAY,
+  FEE_EXAMPLE_AMOUNT,
 } from "@/lib/clinic-auth";
 
 const sectionHeadingCls = "text-xs font-bold text-gray-500 mb-1";
@@ -21,7 +22,7 @@ export default function StripePreCheckModal({
   onProceed: () => void;
   onClose: () => void;
 }) {
-  const exampleAmount = 10000;
+  const exampleAmount = FEE_EXAMPLE_AMOUNT;
   const exampleReceived = calculateFeeExampleReceivedAmount(exampleAmount);
   const contactLine = getSupportContactLine();
 

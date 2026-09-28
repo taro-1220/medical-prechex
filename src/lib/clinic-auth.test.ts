@@ -161,8 +161,8 @@ describe("requestStripeConnectUrl: セクションF-4 失敗時に生の内部�
 });
 
 describe("calculateFeeExampleReceivedAmount: セクションF-B6 手数料例（表示専用、application_fee計算とは無関係）", () => {
-  it("10,000円の例で受取額9,140円になる（Stripe3.6%＋Medipre5%を控除）", () => {
-    expect(calculateFeeExampleReceivedAmount(10000)).toBe(9140);
+  it("1,000円の例で受取額914円になる（Stripe3.6%＋Medipre5%を控除）", () => {
+    expect(calculateFeeExampleReceivedAmount(1000)).toBe(914);
   });
 });
 
