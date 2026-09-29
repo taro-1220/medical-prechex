@@ -19,7 +19,7 @@ export default function TermsPage() {
             <div className="space-y-2">
               <h3 className="text-sm font-bold text-gray-800">第1条（適用）</h3>
               <ol className="list-decimal pl-5 space-y-1.5 text-sm text-gray-700 leading-relaxed">
-                <li>本規約は、Medicloud（以下「当方」）が、医院からの委託を受けて提供する、予約確認、キャンセルポリシーへの同意、キャンセル料の自動請求、空き枠通知等のサービス（以下「本サービス」）を、患者が利用する際の条件を定めます。</li>
+                <li>本規約は、Medipre（以下「当方」）が、医院からの委託を受けて提供する、予約確認、キャンセルポリシーへの同意、キャンセル料の自動請求、空き枠通知等のサービス（以下「本サービス」）を、患者が利用する際の条件を定めます。</li>
                 <li>患者は、本サービスの一部（キャンセルポリシーへの同意、カードの登録、通知の受信設定など）を利用することにより、本規約に同意したものとみなします。</li>
                 <li>本サービスに関する予約、診療、キャンセル料の請求そのものの当事者は、患者と医院です。当方は、その間のやり取りを、システムを通じて仲介する者です。</li>
               </ol>
@@ -197,8 +197,7 @@ export default function TermsPage() {
             <h2 className="text-base font-bold text-gray-900">附則</h2>
             <ul className="list-disc pl-5 space-y-1.5 text-sm text-gray-700 leading-relaxed">
               <li>施行日：2026年9月29日</li>
-              <li>運営者：Medicloud（個人事業主）</li>
-              <li>所在地：東京都港区赤坂</li>
+              <li>運営者：Medipre</li>
               <li>連絡先：support@medipre.jp</li>
             </ul>
           </section>
