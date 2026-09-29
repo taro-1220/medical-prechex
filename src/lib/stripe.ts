@@ -21,17 +21,32 @@ import { computeChargeAmount } from "./charge-policy";
 let _client: Stripe | null = null;
 
 /**
- * VERCEL_ENVが"production"の場合はsk_live_を要求し、それ以外
- * （ローカル・プレビュー・VERCEL_ENV未設定）はsk_test_を要求する。
+ * VERCEL_ENVが"production"の場合はlive系を要求し、それ以外
+ * （ローカル・プレビュー・VERCEL_ENV未設定）はtest系を要求する共通ロジック。
  * キーの値自体はエラー文・ログのいずれにも含めない（プレフィックスのみ判定）。
+ * 秘密キー・公開可能キーの両方から共有される。
  */
-export function validateStripeSecretKeyForEnvironment(key: string, vercelEnv: string | undefined): void {
+function validateStripeKeyForEnvironment(
+  key: string,
+  vercelEnv: string | undefined,
+  envVarName: string,
+  prefixes: { live: string; test: string },
+): void {
   const isProduction = vercelEnv === "production";
-  const requiredPrefix = isProduction ? "sk_live_" : "sk_test_";
+  const requiredPrefix = isProduction ? prefixes.live : prefixes.test;
   if (!key.startsWith(requiredPrefix)) {
     const envLabel = isProduction ? "production" : `production以外（VERCEL_ENV=${vercelEnv ?? "未設定"}）`;
-    throw new Error(`STRIPE_SECRET_KEY does not match the required key type for this environment: ${envLabel} では ${requiredPrefix}... キーが必要です`);
+    throw new Error(`${envVarName} does not match the required key type for this environment: ${envLabel} では ${requiredPrefix}... キーが必要です`);
   }
+}
+
+export function validateStripeSecretKeyForEnvironment(key: string, vercelEnv: string | undefined): void {
+  validateStripeKeyForEnvironment(key, vercelEnv, "STRIPE_SECRET_KEY", { live: "sk_live_", test: "sk_test_" });
+}
+
+/** NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY版。ビルド/起動時チェック（instrumentation.ts）から呼ばれる。 */
+export function validateStripePublishableKeyForEnvironment(key: string, vercelEnv: string | undefined): void {
+  validateStripeKeyForEnvironment(key, vercelEnv, "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", { live: "pk_live_", test: "pk_test_" });
 }
 
 export function getStripeClient(): Stripe {

@@ -4,6 +4,7 @@ import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import type { CancelTier } from "@/lib/types";
 import { formatTierAmount } from "@/lib/charge-policy";
+import { getCardSetupErrorMessage } from "@/lib/card-setup-error";
 
 export function formatDeadline(iso: string): string {
   return new Date(iso).toLocaleString("ja-JP", {
@@ -52,7 +53,7 @@ function CardForm({ token, onRegistered }: { token: string; onRegistered: () => 
       const { error: stripeError, setupIntent } = await stripe.confirmCardSetup(clientSecret, {
         payment_method: { card },
       });
-      if (stripeError) throw new Error(stripeError.message ?? "カード登録に失敗しました");
+      if (stripeError) throw new Error(getCardSetupErrorMessage(stripeError));
       if (setupIntent?.status !== "succeeded") throw new Error("カード登録が完了しませんでした");
 
       const confirmRes = await fetch(`/api/appointments/${token}/setup-intent/confirm`, { method: "POST" });

@@ -2,7 +2,7 @@
 // getStripeClient()はモジュールスコープでStripeクライアントをキャッシュするため、
 // シナリオごとにvi.resetModules()してから動的importし直し、まっさらな状態で確認する。
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { validateStripeSecretKeyForEnvironment } from "./stripe";
+import { validateStripeSecretKeyForEnvironment, validateStripePublishableKeyForEnvironment } from "./stripe";
 
 describe("validateStripeSecretKeyForEnvironment: 環境ごとに要求するキーの種類が切り替わる", () => {
   it("本番（VERCEL_ENV=production）＋sk_live_ → 許可（例外を投げない）", () => {
@@ -36,6 +36,24 @@ describe("validateStripeSecretKeyForEnvironment: 環境ごとに要求するキ�
     } catch (e) {
       expect((e as Error).message).not.toContain("sk_test_should_not_leak");
     }
+  });
+});
+
+describe("validateStripePublishableKeyForEnvironment: 公開可能キーも秘密キーと同じ考え方で判定する", () => {
+  it("本番＋pk_live_ → 許可（例外を投げない）", () => {
+    expect(() => validateStripePublishableKeyForEnvironment("pk_live_xxx", "production")).not.toThrow();
+  });
+
+  it("本番＋pk_test_ → 拒否", () => {
+    expect(() => validateStripePublishableKeyForEnvironment("pk_test_xxx", "production")).toThrow(/production/);
+  });
+
+  it("本番以外＋pk_test_ → 許可（例外を投げない）", () => {
+    expect(() => validateStripePublishableKeyForEnvironment("pk_test_xxx", undefined)).not.toThrow();
+  });
+
+  it("本番以外＋pk_live_ → 拒否", () => {
+    expect(() => validateStripePublishableKeyForEnvironment("pk_live_xxx", undefined)).toThrow(/pk_test_/);
   });
 });
 
