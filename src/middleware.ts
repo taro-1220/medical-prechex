@@ -19,7 +19,7 @@ const COOKIE_NAME = "mp_gate";
 const BYPASS_PATHS = [
   "/site-gate", "/api/site-gate", "/api/cron",
   "/slots", "/api/slots",
-  "/confirm", "/api/appointments",
+  "/confirm", "/api/appointments", "/terms",
   "/patient/notifications/unsubscribe", "/api/patient/notifications/unsubscribe",
   "/signup", "/api/clinic/signup",
   "/clinic", "/api/clinic", "/login",

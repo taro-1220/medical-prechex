@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { Appointment } from "@/lib/types";
 import CardRegistration, { formatDeadline, TierTable } from "./CardRegistration";
 import { computeFreeCancellationDeadline } from "@/lib/charge-policy";
+import { TERMS_PAGE_PATH } from "@/lib/terms";
 
 const TREATMENT_CATEGORY_LABEL: Record<string, string> = { private: "自由診療", insurance: "保険診療" };
 
@@ -22,6 +23,7 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
   const [consented, setConsented] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [cancelPolicyConsented, setCancelPolicyConsented] = useState(false);
+  const [termsConsented, setTermsConsented] = useState(false);
 
   useEffect(() => {
     params.then(({ token: t }) => setToken(t));
@@ -49,7 +51,7 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
 
   const cancelPolicyApplied = appt?.cancelPolicyApplied ?? false;
   const needsCardRegistration = !!appt?.cardRegistrationRequired && !appt?.stripePaymentMethodId;
-  const canConfirm = consented && (!cancelPolicyApplied || cancelPolicyConsented) && !needsCardRegistration;
+  const canConfirm = consented && termsConsented && (!cancelPolicyApplied || cancelPolicyConsented) && !needsCardRegistration;
 
   const refetchAppointment = () => {
     if (!token) return;
@@ -95,11 +97,13 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
   // Phase J セクションD: 確定ボタンがdisabledの間、押下条件を明示する
   const disabledReason = !consented
     ? "同意にチェックすると確定できます"
-    : cancelPolicyApplied && !cancelPolicyConsented
-      ? "キャンセルについての同意にチェックすると確定できます"
-      : needsCardRegistration
-        ? "カードを登録すると確定できます"
-        : null;
+    : !termsConsented
+      ? "利用規約への同意にチェックすると確定できます"
+      : cancelPolicyApplied && !cancelPolicyConsented
+        ? "キャンセルについての同意にチェックすると確定できます"
+        : needsCardRegistration
+          ? "カードを登録すると確定できます"
+          : null;
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -180,6 +184,23 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
             className="mt-0.5 h-4 w-4 rounded accent-teal-600 shrink-0"
           />
           <span className="text-sm text-gray-700 leading-relaxed">予約内容を確認しました</span>
+        </label>
+
+        {/* Medipre利用規約への同意（キャンセルポリシーへの同意とは別枠） */}
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={termsConsented}
+            onChange={(e) => setTermsConsented(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded accent-teal-600 shrink-0"
+          />
+          <span className="text-sm text-gray-700 leading-relaxed">
+            Medipreの
+            <a href={TERMS_PAGE_PATH} target="_blank" rel="noopener noreferrer" className="text-teal-700 underline">
+              利用規約
+            </a>
+            に同意します
+          </span>
         </label>
 
         {/* CTA（Phase J セクションD: 最も強い見た目にする） */}

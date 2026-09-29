@@ -18,6 +18,7 @@ import type {
   ChargeEventActor,
 } from "./types";
 import { resolveCancelPolicyApplication } from "./cancel-policy";
+import { TERMS_VERSION } from "./terms";
 
 export function toAppt(row: Record<string, unknown>): Appointment {
   return {
@@ -371,6 +372,9 @@ export async function confirmWithConsent(token: string): Promise<boolean> {
   const settings = appt.clinicId ? await getClinicCancelPolicySettings(appt.clinicId) : null;
 
   // 2. consent_logs に先に insert（失敗時は appointments を更新しない）
+  // Medipre利用規約への同意は、キャンセルポリシー適用有無に関わらず、確定操作そのものに
+  // 常に伴うため（画面側チェックボックスは既存のcancelPolicyConsentedと同じ扱いのゲート）、
+  // 条件分岐せず毎回記録する。
   const { error: logError } = await getSupabase()
     .from("consent_logs")
     .insert({
@@ -382,6 +386,8 @@ export async function confirmWithConsent(token: string): Promise<boolean> {
       appointment_at:     appt.appointmentAt,
       treatment_category: appt.treatmentCategory,
       policy_scope:       settings?.scope ?? null,
+      terms_version:      TERMS_VERSION,
+      terms_agreed_at:    consentAt,
     });
   if (logError) throw new Error(`consent_log insert failed: ${logError.message}`);
 
