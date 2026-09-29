@@ -3,6 +3,15 @@
 // /login側の実際の遷移は `router.push(isSafeRedirectPath(next) ? next : "/clinic")` という
 // 単純な三項演算のみで構成されており、この関数の真偽値がそのまま遷移先を決定する。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+const { signOutMock } = vi.hoisted(() => ({
+  signOutMock: vi.fn().mockResolvedValue({ error: null }),
+}));
+
+vi.mock("./supabase-browser", () => ({
+  getSupabaseBrowser: () => ({ auth: { signOut: signOutMock } }),
+}));
+
 import {
   isSafeRedirectPath,
   getClinicApprovalRedirect,
@@ -15,6 +24,7 @@ import {
   getSupportContactLine,
   formatSupportContactLine,
   SUPPORT_CONTACT_TEXT,
+  signOut,
 } from "./clinic-auth";
 
 describe("isSafeRedirectPath: /loginのnextパラメータ検証（オープンリダイレクト対策）", () => {
@@ -188,5 +198,30 @@ describe("getSupportContactLine: 実際のSUPPORT_CONTACT_TEXTの値で組み立
   it("現在設定されているSUPPORT_CONTACT_TEXT(support@medipre.jp)から案内文を返す", () => {
     expect(SUPPORT_CONTACT_TEXT).toBe("support@medipre.jp");
     expect(getSupportContactLine()).toBe("お困りの場合：support@medipre.jp");
+  });
+});
+
+describe("signOut: ログアウト（確認ダイアログなし、即座に実行）", () => {
+  beforeEach(() => {
+    signOutMock.mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("supabase.auth.signOut()を呼び、完了後に/loginへ遷移する", async () => {
+    const location = { href: "" };
+    vi.stubGlobal("window", { location });
+
+    await signOut();
+
+    expect(signOutMock).toHaveBeenCalledTimes(1);
+    expect(location.href).toBe("/login");
+  });
+
+  it("windowが存在しない環境（SSR等）でも例外を投げない", async () => {
+    await expect(signOut()).resolves.not.toThrow();
+    expect(signOutMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { getAccessToken } from "@/lib/clinic-auth";
+import { getAccessToken, getCurrentUser, signOut } from "@/lib/clinic-auth";
+import { getClinicStatusLabel } from "@/lib/status-labels";
+import StaffHeaderBar from "@/components/StaffHeaderBar";
 
 type ClinicRow = {
   id: string;
@@ -58,6 +60,7 @@ export default function OpsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [forbidden, setForbidden] = useState(false);
+  const [forbiddenEmail, setForbiddenEmail] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [approvalActionId, setApprovalActionId] = useState<string | null>(null);
@@ -69,7 +72,13 @@ export default function OpsPage() {
       const res = await fetch("/api/ops/clinics", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status === 401 || res.status === 403) { setForbidden(true); setLoading(false); return; }
+      if (res.status === 401 || res.status === 403) {
+        const user = await getCurrentUser();
+        setForbiddenEmail(user?.email ?? null);
+        setForbidden(true);
+        setLoading(false);
+        return;
+      }
       if (!res.ok) { setError(true); setLoading(false); return; }
       const data = await res.json();
       setSummary(data.summary);
@@ -136,11 +145,24 @@ export default function OpsPage() {
 
   if (forbidden) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
         <div className="text-center">
           <p className="text-2xl font-black text-gray-900 mb-2">権限がありません</p>
-          <p className="text-sm text-gray-500 mb-6">OPS管理画面へのアクセス権限がありません</p>
-          <Link href="/clinic" className="text-teal-600 text-sm hover:underline">← クリニック画面へ</Link>
+          <p className="text-sm text-gray-500 mb-2">OPS管理画面へのアクセス権限がありません</p>
+          {forbiddenEmail && (
+            <p className="text-xs text-gray-400 mb-6">現在ログイン中：{forbiddenEmail}</p>
+          )}
+          <div className="flex flex-col items-center gap-3">
+            {forbiddenEmail && (
+              <button
+                onClick={() => signOut()}
+                className="px-4 py-2 bg-teal-600 rounded-lg text-white text-sm font-bold hover:bg-teal-700 transition"
+              >
+                ログアウトして、運営者アカウントでログインし直す
+              </button>
+            )}
+            <Link href="/clinic" className="text-teal-600 text-sm hover:underline">← クリニック画面へ</Link>
+          </div>
         </div>
       </div>
     );
@@ -165,7 +187,10 @@ export default function OpsPage() {
           <span className="text-xs font-bold text-teal-600 uppercase tracking-widest">OPS</span>
           <h1 className="text-xl font-black text-gray-900 mt-0.5">運営管理画面</h1>
         </div>
-        <Link href="/clinic" className="text-gray-400 text-sm hover:text-gray-700 transition">← クリニック画面</Link>
+        <div className="flex items-center gap-4">
+          <Link href="/clinic" className="text-gray-400 text-sm hover:text-gray-700 transition whitespace-nowrap">← クリニック画面</Link>
+          <StaffHeaderBar />
+        </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -324,7 +349,7 @@ export default function OpsPage() {
                   <td className="px-4 py-3 font-bold text-gray-900">{c.name}</td>
                   <td className="px-4 py-3 text-gray-400 font-mono text-xs whitespace-nowrap">{c.slug ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500">{c.status}</span>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500">{getClinicStatusLabel(c.status)}</span>
                   </td>
                   <td className="px-4 py-3">
                     {c.activatedAt

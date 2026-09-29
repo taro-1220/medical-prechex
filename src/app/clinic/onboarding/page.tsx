@@ -16,6 +16,7 @@ import { findRiskyPolicyWording, scopeAppliesToCategory, isInsuranceAcknowledgme
 import { areTierPercentsValid } from "@/lib/charge-policy";
 import StripePreCheckModal from "../StripePreCheckModal";
 import StripePendingBanner from "../StripePendingBanner";
+import StaffHeaderBar from "@/components/StaffHeaderBar";
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500";
 const labelCls = "block text-xs text-gray-500 mb-1";
@@ -264,16 +265,19 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
-      <header className="border-b border-gray-200 bg-white px-6 py-4">
-        <button onClick={() => router.push("/clinic")} className="text-gray-400 text-sm hover:text-gray-900 transition">← 管理画面へ</button>
-        <h1 className="text-xl font-black mt-1">{isSettingsMode ? "医院設定" : "初期設定"}</h1>
-        {!isSettingsMode && (
-          <p className="text-xs text-gray-400 mt-1">
-            {allDone
-              ? `必須項目 ${REQUIRED_TOTAL}/${REQUIRED_TOTAL} 完了`
-              : `必須項目 ${requiredCompletedCount}/${REQUIRED_TOTAL} 完了・あと${REQUIRED_TOTAL - requiredCompletedCount}項目で利用開始できます`}
-          </p>
-        )}
+      <header className="border-b border-gray-200 bg-white px-6 py-4 flex items-start justify-between gap-4">
+        <div>
+          <button onClick={() => router.push("/clinic")} className="text-gray-400 text-sm hover:text-gray-900 transition">← 管理画面へ</button>
+          <h1 className="text-xl font-black mt-1">{isSettingsMode ? "医院設定" : "初期設定"}</h1>
+          {!isSettingsMode && (
+            <p className="text-xs text-gray-400 mt-1">
+              {allDone
+                ? `必須項目 ${REQUIRED_TOTAL}/${REQUIRED_TOTAL} 完了`
+                : `必須項目 ${requiredCompletedCount}/${REQUIRED_TOTAL} 完了・あと${REQUIRED_TOTAL - requiredCompletedCount}項目で利用開始できます`}
+            </p>
+          )}
+        </div>
+        <StaffHeaderBar />
       </header>
 
       {clinicId && isStripePendingBannerVisible(profile?.stripeAccountStatus) && (

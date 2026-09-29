@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { getSupabaseBrowser } from "./supabase-browser";
 import type { Clinic, ClinicStatus, StripeAccountStatus } from "./types";
+import { getStripeAccountStatusLabel } from "./status-labels";
 
 const STRIPE_CONNECT_GENERIC_ERROR = "現在お支払い連携を開始できません。運営事務局までご連絡ください";
 
@@ -43,6 +44,17 @@ export async function getCurrentUser(): Promise<User | null> {
 export async function getAccessToken(): Promise<string | null> {
   const { data: { session } } = await getSupabaseBrowser().auth.getSession();
   return session?.access_token ?? null;
+}
+
+/**
+ * ログアウト。確認ダイアログは出さず、押されたら即座に実行する
+ * （誤って押しても再ログインすれば戻れるため）。セッションを確実に消してから/loginへ遷移する。
+ */
+export async function signOut(): Promise<void> {
+  await getSupabaseBrowser().auth.signOut();
+  if (typeof window !== "undefined") {
+    window.location.href = "/login";
+  }
 }
 
 export async function getUserClinics(): Promise<Clinic[]> {
@@ -110,9 +122,9 @@ export function getStripeStatusLabel(
   status: StripeAccountStatus | null | undefined,
   detailsSubmitted: boolean | null | undefined,
 ): string {
-  if (status === "active") return "✓ 有効";
+  if (status === "active") return `✓ ${getStripeAccountStatusLabel("active")}`;
   if (status === "pending") return detailsSubmitted ? "Stripeで確認中" : "未完了";
-  return "未接続";
+  return getStripeAccountStatusLabel(status);
 }
 
 /** セクションF-2: 再開バナーはpendingのときだけ表示する。 */

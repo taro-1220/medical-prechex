@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getAccessToken } from "@/lib/clinic-auth";
+import { getAppointmentStatusLabel, getClinicStatusLabel } from "@/lib/status-labels";
+import StaffHeaderBar from "@/components/StaffHeaderBar";
 
 type OpsAppointment = {
   id: string; patientName: string; appointmentAt: string; status: string;
@@ -32,10 +34,6 @@ type ClinicDetail = {
   appointments:       OpsAppointment[];
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  confirmation_pending: "確認待ち", confirmed: "確認済み", ticket_issued: "確認済み",
-  checked_in: "来院済み", completed: "完了", cancelled: "キャンセル", expired: "期限切れ",
-};
 
 const ROLE_LABEL: Record<string, string> = { owner: "オーナー", manager: "マネージャ", staff: "スタッフ" };
 
@@ -115,9 +113,12 @@ export default function OpsClinicDetailPage({ params }: { params: Promise<{ clin
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
-      <header className="border-b border-gray-200 bg-white px-6 py-4">
-        <Link href="/ops" className="text-gray-400 text-sm hover:text-gray-700 transition">← 医院一覧</Link>
-        <h1 className="text-xl font-black text-gray-900 mt-1">{clinic.name}</h1>
+      <header className="border-b border-gray-200 bg-white px-6 py-4 flex items-start justify-between gap-4">
+        <div>
+          <Link href="/ops" className="text-gray-400 text-sm hover:text-gray-700 transition">← 医院一覧</Link>
+          <h1 className="text-xl font-black text-gray-900 mt-1">{clinic.name}</h1>
+        </div>
+        <StaffHeaderBar />
       </header>
 
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
@@ -125,7 +126,7 @@ export default function OpsClinicDetailPage({ params }: { params: Promise<{ clin
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 space-y-3">
           <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4">基本情報</p>
           <InfoRow label="医院名"    value={clinic.name} />
-          <InfoRow label="ステータス" value={clinic.status} />
+          <InfoRow label="ステータス" value={getClinicStatusLabel(clinic.status)} />
           <InfoRow label="メール"    value={clinic.email ?? "—"} />
           <InfoRow label="電話番号"  value={clinic.phone ?? "—"} />
           <InfoRow label="住所"      value={clinic.address ?? "—"} />
@@ -236,7 +237,7 @@ export default function OpsClinicDetailPage({ params }: { params: Promise<{ clin
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${a.confirmedAt ? "bg-teal-100 text-teal-700" : "bg-amber-100 text-amber-700"}`}>
                       {a.confirmedAt ? "確認済" : "未確認"}
                     </span>
-                    <span className="text-xs text-gray-500">{STATUS_LABEL[a.status] ?? a.status}</span>
+                    <span className="text-xs text-gray-500">{getAppointmentStatusLabel(a.status)}</span>
                     <span className="text-sm font-bold text-gray-900">{fmt(a.appointmentAt)}</span>
                     <span className="text-sm text-gray-700 break-words">{a.patientName}</span>
                     {a.description && <span className="text-xs text-gray-400 break-words">{a.description}</span>}
