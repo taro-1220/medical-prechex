@@ -20,14 +20,25 @@ import { computeChargeAmount } from "./charge-policy";
 
 let _client: Stripe | null = null;
 
+/**
+ * VERCEL_ENVが"production"の場合はsk_live_を要求し、それ以外
+ * （ローカル・プレビュー・VERCEL_ENV未設定）はsk_test_を要求する。
+ * キーの値自体はエラー文・ログのいずれにも含めない（プレフィックスのみ判定）。
+ */
+export function validateStripeSecretKeyForEnvironment(key: string, vercelEnv: string | undefined): void {
+  const isProduction = vercelEnv === "production";
+  const requiredPrefix = isProduction ? "sk_live_" : "sk_test_";
+  if (!key.startsWith(requiredPrefix)) {
+    const envLabel = isProduction ? "production" : `production以外（VERCEL_ENV=${vercelEnv ?? "未設定"}）`;
+    throw new Error(`STRIPE_SECRET_KEY does not match the required key type for this environment: ${envLabel} では ${requiredPrefix}... キーが必要です`);
+  }
+}
+
 export function getStripeClient(): Stripe {
   if (_client) return _client;
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("STRIPE_SECRET_KEY is not set");
-  if (!key.startsWith("sk_test_")) {
-    // 絶対制約3: Stripeはテストモードのみ
-    throw new Error("STRIPE_SECRET_KEY is not a test key (sk_test_...). 本番キーはこのフェーズでは使用しない");
-  }
+  validateStripeSecretKeyForEnvironment(key, process.env.VERCEL_ENV);
   _client = new Stripe(key, { apiVersion: "2026-07-29.dahlia" });
   return _client;
 }
