@@ -172,7 +172,7 @@ export default function TermsPage() {
             <div className="space-y-2">
               <h3 className="text-sm font-bold text-gray-800">第18条（責任の制限）</h3>
               <p className="text-sm text-gray-700 leading-relaxed">
-                当方が、本サービスの提供に関して患者に対して責任を負う場合、その責任は、当方に故意または重大な過失があるときを除き、当方が本サービスの提供により患者から直接収受した金銭の額を上限とします。当方は、患者から利用料を受け取っていないため、通常、この上限は生じません。【弁護士確認：この構成の妥当性、および医院向け規約第16条（返金・異議申立ては医院の責任）との整合】
+                当方が、本サービスの提供に関して患者に対して責任を負う場合、その責任は、当方に故意または重大な過失があるときを除き、当方が本サービスの提供により患者から直接収受した金銭の額を上限とします。当方は、患者から利用料を受け取っていないため、通常、この上限は生じません。
               </p>
             </div>
           </section>
@@ -189,16 +189,16 @@ export default function TermsPage() {
             </div>
             <div className="space-y-2">
               <h3 className="text-sm font-bold text-gray-800">第21条（準拠法と管轄）</h3>
-              <p className="text-sm text-gray-700 leading-relaxed">本規約は、日本法に基づいて解釈されます。本規約に関して紛争が生じたときは、東京地方裁判所を、第一審の専属的合意管轄裁判所とします。【要確認】</p>
+              <p className="text-sm text-gray-700 leading-relaxed">本規約は、日本法に基づいて解釈されます。本規約に関して紛争が生じたときは、東京地方裁判所を、第一審の専属的合意管轄裁判所とします。</p>
             </div>
           </section>
 
           <section className="space-y-2 border-t border-gray-100 pt-4">
             <h2 className="text-base font-bold text-gray-900">附則</h2>
             <ul className="list-disc pl-5 space-y-1.5 text-sm text-gray-700 leading-relaxed">
-              <li>施行日：【要記入】</li>
+              <li>施行日：2026年9月29日</li>
               <li>運営者：Medicloud（個人事業主）</li>
-              <li>所在地：東京都港区赤坂【番地以降を記入】</li>
+              <li>所在地：東京都港区赤坂</li>
               <li>連絡先：support@medipre.jp</li>
             </ul>
           </section>
