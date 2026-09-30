@@ -3,7 +3,7 @@
 // （旧実装はgetCurrentClinic()のnullだけで判定していたため、後者を前者と誤判定し、
 //  クリニック未割当の認証済みユーザーを/loginへ送り返すループになっていた）。
 import { describe, it, expect } from "vitest";
-import { resolveClinicGuard } from "./clinic-guard";
+import { resolveClinicGuard, shouldRenderClinicContent } from "./clinic-guard";
 import type { Clinic } from "./types";
 
 const CLINIC: Clinic = {
@@ -33,5 +33,23 @@ describe("resolveClinicGuard", () => {
 
   it("トークンがありクリニックもあれば'ok'", () => {
     expect(resolveClinicGuard("token", CLINIC)).toBe("ok");
+  });
+});
+
+describe("shouldRenderClinicContent: 画面の中身を描画してよいかの判定", () => {
+  it("'ok'のときだけ描画してよい", () => {
+    expect(shouldRenderClinicContent("ok")).toBe(true);
+  });
+
+  it("判定前（'checking'）は描画しない", () => {
+    expect(shouldRenderClinicContent("checking")).toBe(false);
+  });
+
+  it("'login'（/loginへ遷移中）は描画しない", () => {
+    expect(shouldRenderClinicContent("login")).toBe(false);
+  });
+
+  it("'no-clinic'（/clinicへ遷移中）は描画しない", () => {
+    expect(shouldRenderClinicContent("no-clinic")).toBe(false);
   });
 });

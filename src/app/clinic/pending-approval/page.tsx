@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getAccessToken, getCurrentClinic, redirectToLogin, getSupportContactLine } from "@/lib/clinic-auth";
-import { resolveClinicGuard } from "@/lib/clinic-guard";
+import { getSupportContactLine } from "@/lib/clinic-auth";
+import { useClinicGuard } from "@/lib/useClinicGuard";
+import { shouldRenderClinicContent } from "@/lib/clinic-guard";
 import type { ClinicStatus } from "@/lib/types";
 import StaffHeaderBar from "@/components/StaffHeaderBar";
 
@@ -10,19 +11,18 @@ type ViewState = "loading" | "pending_approval" | "rejected";
 
 export default function ClinicPendingApprovalPage() {
   const router = useRouter();
+  const { state: guardState, clinic } = useClinicGuard(router);
   const [state, setState] = useState<ViewState>("loading");
 
   useEffect(() => {
-    (async () => {
-      const token = await getAccessToken();
-      const clinic = token ? await getCurrentClinic() : null;
-      const guard = resolveClinicGuard(token, clinic);
-      if (guard === "login") { redirectToLogin(router); return; }
-      if (guard === "no-clinic" || !clinic) { router.replace("/clinic"); return; }
-      if (clinic.status === "active") { router.replace("/clinic"); return; }
-      setState(clinic.status as Exclude<ClinicStatus, "active">);
-    })();
-  }, [router]);
+    if (guardState !== "ok" || !clinic) return;
+    if (clinic.status === "active") { router.replace("/clinic"); return; }
+    setState(clinic.status as Exclude<ClinicStatus, "active">);
+  }, [guardState, clinic, router]);
+
+  if (!shouldRenderClinicContent(guardState)) {
+    return <div className="min-h-screen bg-gray-50" />;
+  }
 
   if (state === "loading") {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400 text-sm">読み込み中...</div>;

@@ -3,15 +3,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   getAccessToken,
-  getCurrentClinic,
-  redirectToLogin,
   getClinicApprovalRedirect,
   requestStripeConnectUrl,
   shouldShowStripePreCheck,
   getStripeStatusLabel,
   isStripePendingBannerVisible,
 } from "@/lib/clinic-auth";
-import { resolveClinicGuard } from "@/lib/clinic-guard";
+import { useClinicGuard } from "@/lib/useClinicGuard";
+import { shouldRenderClinicContent } from "@/lib/clinic-guard";
 import type { ClinicProfile, OnboardingProgress, CancelPolicyScope, ClinicCancelPolicySettings, CancelTier } from "@/lib/types";
 import { findRiskyPolicyWording, scopeAppliesToCategory, isInsuranceAcknowledgmentSatisfied, isBasisNoteValid } from "@/lib/cancel-policy";
 import { areTierPercentsValid } from "@/lib/charge-policy";
@@ -32,6 +31,7 @@ const INSURANCE_ACK_TEXT =
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { state: guardState, clinic } = useClinicGuard(router);
   const [clinicId, setClinicId] = useState<string | null>(null);
   const [isSettingsMode, setIsSettingsMode] = useState(false);
   const [progress, setProgress] = useState<OnboardingProgress | null>(null);
@@ -109,13 +109,9 @@ export default function OnboardingPage() {
   }
 
   useEffect(() => {
+    if (guardState !== "ok" || !clinic) return;
     (async () => {
       setIsSettingsMode(new URLSearchParams(window.location.search).get("mode") === "settings");
-      const token = await getAccessToken();
-      const clinic = token ? await getCurrentClinic() : null;
-      const guard = resolveClinicGuard(token, clinic);
-      if (guard === "login") { redirectToLogin(router); return; }
-      if (guard === "no-clinic" || !clinic) { router.replace("/clinic"); return; }
       const approvalRedirect = getClinicApprovalRedirect(clinic.status);
       if (approvalRedirect) { router.replace(approvalRedirect); return; }
       setClinicId(clinic.id);
@@ -130,7 +126,7 @@ export default function OnboardingPage() {
         router.replace("/clinic/onboarding");
       }
     })();
-  }, [router]);
+  }, [guardState, clinic, router]);
 
   async function connectStripe() {
     if (!clinicId) return;
@@ -262,6 +258,10 @@ export default function OnboardingPage() {
   const allDone = !!progress?.profileCompleted && !!progress?.policyCompleted && !!progress?.notificationCompleted;
   const REQUIRED_TOTAL = 3;
   const requiredCompletedCount = [progress?.profileCompleted, progress?.policyCompleted, progress?.notificationCompleted].filter(Boolean).length;
+
+  if (!shouldRenderClinicContent(guardState)) {
+    return <div className="min-h-screen bg-gray-50" />;
+  }
 
   if (loading) {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-400 text-sm">読み込み中...</div>;

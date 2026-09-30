@@ -2,8 +2,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getAccessToken, getCurrentClinic, redirectToLogin } from "@/lib/clinic-auth";
-import { resolveClinicGuard } from "@/lib/clinic-guard";
+import { getAccessToken } from "@/lib/clinic-auth";
+import { useClinicGuard } from "@/lib/useClinicGuard";
+import { shouldRenderClinicContent } from "@/lib/clinic-guard";
 import { DEFAULT_TEMPLATES, PLACEHOLDER_KEYS, renderTemplate, findUnresolvedPlaceholders } from "@/lib/message-templates";
 import type { MessageChannel, TemplateWithMeta } from "@/lib/types";
 
@@ -24,6 +25,7 @@ type Draft = { subject: string | null; body: string };
 
 export default function ClinicTemplatesPage() {
   const router = useRouter();
+  const { state: guardState, clinic } = useClinicGuard(router);
   const [clinicId, setClinicId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -34,13 +36,10 @@ export default function ClinicTemplatesPage() {
   const [saveResult, setSaveResult] = useState<"success" | "error" | null>(null);
 
   useEffect(() => {
+    if (guardState !== "ok" || !clinic) return;
     (async () => {
-      const token = await getAccessToken();
-      const clinic = token ? await getCurrentClinic() : null;
-      const guard = resolveClinicGuard(token, clinic);
-      if (guard === "login") { redirectToLogin(router); return; }
-      if (guard === "no-clinic" || !clinic) { router.replace("/clinic"); return; }
       setClinicId(clinic.id);
+      const token = await getAccessToken();
       const res = await fetch(`/api/clinic/templates?clinic_id=${clinic.id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
@@ -51,7 +50,7 @@ export default function ClinicTemplatesPage() {
       setDrafts(Object.fromEntries(templates.map(t => [t.channel, { subject: t.subject, body: t.body }])) as Record<MessageChannel, Draft>);
       setLoading(false);
     })().catch(() => { setLoadError(true); setLoading(false); });
-  }, [router]);
+  }, [guardState, clinic, router]);
 
   const updateDraft = (channel: MessageChannel, patch: Partial<Draft>) => {
     setDrafts(prev => prev ? { ...prev, [channel]: { ...prev[channel], ...patch } } : prev);
@@ -81,6 +80,10 @@ export default function ClinicTemplatesPage() {
     }
     setSaving(false);
   };
+
+  if (!shouldRenderClinicContent(guardState)) {
+    return <div className="min-h-screen bg-gray-50" />;
+  }
 
   if (loadError) {
     return (
