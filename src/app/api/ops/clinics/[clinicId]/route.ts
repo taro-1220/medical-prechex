@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
+import { requireOpsAdmin } from "@/lib/ops-auth";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function isOpsAdmin(email: string): boolean {
-  const allowed = (process.env.OPS_ADMIN_EMAILS ?? "")
-    .split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-  return allowed.includes(email.toLowerCase());
-}
 
 const isConfirmed = (consentAt: unknown) => consentAt != null;
 
@@ -17,12 +12,8 @@ export async function GET(
 ) {
   const { clinicId } = await params;
 
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { data: { user }, error: authErr } = await getSupabase().auth.getUser(token);
-  if (authErr || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isOpsAdmin(user.email ?? "")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const auth = await requireOpsAdmin(req);
+  if (!auth.ok) return auth.response;
 
   // UUID形式でなければDBへ問い合わせず404（存在しない医院と同じ）
   if (!UUID_RE.test(clinicId)) return NextResponse.json({ error: "Not found" }, { status: 404 });

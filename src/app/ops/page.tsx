@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getAccessToken, getCurrentUser, signOut } from "@/lib/clinic-auth";
 import { getClinicStatusLabel } from "@/lib/status-labels";
 import StaffHeaderBar from "@/components/StaffHeaderBar";
+import DataTable, { type DataTableColumn, type DataTableFilterOption } from "@/components/ops/DataTable";
 
 type ClinicRow = {
   id: string;
@@ -40,17 +41,62 @@ type Summary = {
 type RecentAppointment = { clinicName: string; appointmentAt: string; status: string; confirmed: boolean; createdAt: string };
 type RecentClinic = { id: string; name: string; status: string; createdAt: string; activated: boolean };
 
-const STATUS_FILTERS = ["all", "active", "pending", "paused", "cancelled"] as const;
-type StatusFilter = typeof STATUS_FILTERS[number];
-
-const FILTER_LABEL: Record<StatusFilter, string> = {
-  all: "すべて", active: "利用中", pending: "初期設定中", paused: "停止中", cancelled: "解約",
-};
-
 function fmt(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
+
+// クリニック一覧のステータス絞り込み。activatedAtベースの2つ（利用中/初期設定中）と
+// clinics.statusベースの2つ（停止中/解約）が混在している既存の挙動をそのまま維持する
+// （paused/cancelledは現行のClinicStatus型には無い値のため、この絞り込みは常に空になる。
+//  今回の載せ替えでは挙動を変えないため、この点も含めて据え置く）。
+const CLINIC_FILTER_OPTIONS: DataTableFilterOption<ClinicRow>[] = [
+  { value: "all", label: "すべて", predicate: () => true },
+  { value: "active", label: "利用中", predicate: (c) => !!c.activatedAt },
+  { value: "pending", label: "初期設定中", predicate: (c) => !c.activatedAt },
+  { value: "paused", label: "停止中", predicate: (c) => c.status === "paused" },
+  { value: "cancelled", label: "解約", predicate: (c) => c.status === "cancelled" },
+];
+
+const CLINIC_COLUMNS: DataTableColumn<ClinicRow>[] = [
+  { key: "name", label: "医院名", render: (c) => <span className="font-bold text-gray-900">{c.name}</span> },
+  { key: "slug", label: "slug", render: (c) => <span className="text-gray-400 font-mono text-xs whitespace-nowrap">{c.slug ?? "—"}</span> },
+  {
+    key: "status", label: "ステータス",
+    render: (c) => <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500">{getClinicStatusLabel(c.status)}</span>,
+  },
+  {
+    key: "activated", label: "利用状態",
+    render: (c) => c.activatedAt
+      ? <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-700">利用中</span>
+      : <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">初期設定中</span>,
+  },
+  {
+    key: "patientCount", label: "患者数", sortable: true, sortValue: (c) => c.patientCount,
+    cellClassName: "text-gray-700 text-center", render: (c) => c.patientCount,
+  },
+  {
+    key: "appointmentCount", label: "予約数", sortable: true, sortValue: (c) => c.appointmentCount,
+    cellClassName: "text-gray-700 text-center", render: (c) => c.appointmentCount,
+  },
+  {
+    key: "confirmedCount", label: "確認済", cellClassName: "text-center",
+    render: (c) => <><span className="text-teal-700 font-bold">{c.confirmedCount}</span><span className="text-gray-300">/{c.appointmentCount}</span></>,
+  },
+  {
+    key: "lastAppointmentAt", label: "最終予約", sortable: true, sortValue: (c) => c.lastAppointmentAt ?? "",
+    cellClassName: "text-gray-500 whitespace-nowrap",
+    render: (c) => c.lastAppointmentAt ? fmt(c.lastAppointmentAt) : <span className="text-gray-300">—</span>,
+  },
+  {
+    key: "createdAt", label: "作成日", sortable: true, sortValue: (c) => c.createdAt,
+    cellClassName: "text-gray-400 whitespace-nowrap", render: (c) => fmt(c.createdAt),
+  },
+  {
+    key: "detail", label: "",
+    render: (c) => <Link href={`/ops/clinics/${c.id}`} className="text-xs text-teal-600 hover:underline whitespace-nowrap">詳細 →</Link>,
+  },
+];
 
 export default function OpsPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -61,8 +107,6 @@ export default function OpsPage() {
   const [error, setError] = useState(false);
   const [forbidden, setForbidden] = useState(false);
   const [forbiddenEmail, setForbiddenEmail] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [approvalActionId, setApprovalActionId] = useState<string | null>(null);
 
   const loadClinics = async () => {
@@ -121,19 +165,6 @@ export default function OpsPage() {
     await loadClinics();
     setApprovalActionId(null);
   };
-
-  const filtered = useMemo(() => clinics.filter(c => {
-    if (query) {
-      const q = query.toLowerCase();
-      if (!c.name.toLowerCase().includes(q) &&
-          !c.slug?.toLowerCase().includes(q)) return false;
-    }
-    if (statusFilter === "active")    return !!c.activatedAt;
-    if (statusFilter === "pending")   return !c.activatedAt;
-    if (statusFilter === "paused")    return c.status === "paused";
-    if (statusFilter === "cancelled") return c.status === "cancelled";
-    return true;
-  }), [clinics, query, statusFilter]);
 
   if (loading) {
     return (
@@ -311,73 +342,16 @@ export default function OpsPage() {
           </div>
         )}
 
-        {/* Search + Filter */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <input
-            type="text"
-            placeholder="医院名・slugで検索"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-teal-500"
-          />
-          <div className="flex gap-1 flex-wrap">
-            {STATUS_FILTERS.map(f => (
-              <button
-                key={f}
-                onClick={() => setStatusFilter(f)}
-                className={`px-3 py-2 rounded-lg text-xs font-bold transition ${statusFilter === f ? "bg-teal-600 text-white" : "bg-white border border-gray-200 text-gray-500 hover:bg-gray-50"}`}
-              >
-                {FILTER_LABEL[f]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-x-auto">
-          <table className="w-full text-sm min-w-[900px]">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {["医院名", "slug", "ステータス", "利用状態", "患者数", "予約数", "確認済", "最終予約", "作成日", ""].map((h, i) => (
-                  <th key={i} className="px-4 py-3 text-left text-xs font-bold text-gray-400 whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(c => (
-                <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50 transition">
-                  <td className="px-4 py-3 font-bold text-gray-900">{c.name}</td>
-                  <td className="px-4 py-3 text-gray-400 font-mono text-xs whitespace-nowrap">{c.slug ?? "—"}</td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500">{getClinicStatusLabel(c.status)}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    {c.activatedAt
-                      ? <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-700">利用中</span>
-                      : <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700">初期設定中</span>
-                    }
-                  </td>
-                  <td className="px-4 py-3 text-gray-700 text-center">{c.patientCount}</td>
-                  <td className="px-4 py-3 text-gray-700 text-center">{c.appointmentCount}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="text-teal-700 font-bold">{c.confirmedCount}</span>
-                    <span className="text-gray-300">/{c.appointmentCount}</span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{c.lastAppointmentAt ? fmt(c.lastAppointmentAt) : <span className="text-gray-300">—</span>}</td>
-                  <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{fmt(c.createdAt)}</td>
-                  <td className="px-4 py-3">
-                    <Link href={`/ops/clinics/${c.id}`} className="text-xs text-teal-600 hover:underline whitespace-nowrap">詳細 →</Link>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={10} className="px-4 py-12 text-center text-gray-400 text-sm">該当する医院がありません</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={CLINIC_COLUMNS}
+          rows={clinics}
+          rowKey={(c) => c.id}
+          searchPlaceholder="医院名・slugで検索"
+          searchPredicate={(c, q) => c.name.toLowerCase().includes(q) || (c.slug?.toLowerCase().includes(q) ?? false)}
+          filterOptions={CLINIC_FILTER_OPTIONS}
+          emptyMessage="該当する医院がありません"
+          minWidthClassName="min-w-[900px]"
+        />
       </div>
     </div>
   );
