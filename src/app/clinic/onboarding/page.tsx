@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   getAccessToken,
+  getCurrentUser,
   getCurrentClinic,
   redirectToLogin,
   getClinicApprovalRedirect,
@@ -110,8 +111,10 @@ export default function OnboardingPage() {
   useEffect(() => {
     (async () => {
       setIsSettingsMode(new URLSearchParams(window.location.search).get("mode") === "settings");
+      const user = await getCurrentUser();
+      if (!user) { redirectToLogin(router); return; }
       const clinic = await getCurrentClinic();
-      if (!clinic) { redirectToLogin(router); return; }
+      if (!clinic) { router.replace("/clinic"); return; }
       const approvalRedirect = getClinicApprovalRedirect(clinic.status);
       if (approvalRedirect) { router.replace(approvalRedirect); return; }
       setClinicId(clinic.id);
