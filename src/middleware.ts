@@ -24,6 +24,7 @@ const BYPASS_PATHS = [
   "/signup", "/api/clinic/signup",
   "/clinic", "/api/clinic", "/login",
   "/reports",
+  "/about",
 ];
 
 async function expectedCookieValue(password: string, secret: string) {

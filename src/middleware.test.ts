@@ -28,6 +28,20 @@ describe("middleware: /termsはsite-gateをバイパスする", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
+  it("/terms/clinic（医院向け利用規約）も /terms の前方一致で通す", async () => {
+    const req = new NextRequest("http://localhost/terms/clinic");
+    const res = await middleware(req);
+    expect(res.status).not.toBe(307);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("/about（サービス紹介）も未認証で通す", async () => {
+    const req = new NextRequest("http://localhost/about");
+    const res = await middleware(req);
+    expect(res.status).not.toBe(307);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
   it("比較: バイパス対象外のパスは未認証だとsite-gateへリダイレクトされる", async () => {
     const req = new NextRequest("http://localhost/some-protected-page");
     const res = await middleware(req);
