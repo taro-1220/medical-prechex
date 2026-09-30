@@ -92,10 +92,15 @@ export function isSafeRedirectPath(path: string | null | undefined): path is str
 /**
  * 未認証時に"/login"へ退避する共通ヘルパー。現在のパス＋クエリをnextとして付与し、
  * ログイン後に元の画面（例: Stripeオンボーディングからの戻り`?stripe=return`）へ戻れるようにする。
+ * 現在地がすでに/login（またはそのサブパス）なら何もしない。React Strict Modeの
+ * 二重effect実行などで複数の画面ガードがほぼ同時にこれを呼んだ場合でも、
+ * 先の呼び出しで/loginへ遷移済みなら後続の呼び出しはnextの入れ子を作らず素通りする。
  */
 export function redirectToLogin(router: { replace: (href: string) => void }): void {
   if (typeof window === "undefined") return;
-  const next = window.location.pathname + window.location.search;
+  const { pathname, search } = window.location;
+  if (pathname === "/login" || pathname.startsWith("/login/")) return;
+  const next = pathname + search;
   router.replace(`/login?next=${encodeURIComponent(next)}`);
 }
 

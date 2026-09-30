@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   getAccessToken,
-  getCurrentUser,
   getCurrentClinic,
   redirectToLogin,
   getClinicApprovalRedirect,
@@ -12,6 +11,7 @@ import {
   getStripeStatusLabel,
   isStripePendingBannerVisible,
 } from "@/lib/clinic-auth";
+import { resolveClinicGuard } from "@/lib/clinic-guard";
 import type { ClinicProfile, OnboardingProgress, CancelPolicyScope, ClinicCancelPolicySettings, CancelTier } from "@/lib/types";
 import { findRiskyPolicyWording, scopeAppliesToCategory, isInsuranceAcknowledgmentSatisfied, isBasisNoteValid } from "@/lib/cancel-policy";
 import { areTierPercentsValid } from "@/lib/charge-policy";
@@ -111,10 +111,11 @@ export default function OnboardingPage() {
   useEffect(() => {
     (async () => {
       setIsSettingsMode(new URLSearchParams(window.location.search).get("mode") === "settings");
-      const user = await getCurrentUser();
-      if (!user) { redirectToLogin(router); return; }
-      const clinic = await getCurrentClinic();
-      if (!clinic) { router.replace("/clinic"); return; }
+      const token = await getAccessToken();
+      const clinic = token ? await getCurrentClinic() : null;
+      const guard = resolveClinicGuard(token, clinic);
+      if (guard === "login") { redirectToLogin(router); return; }
+      if (guard === "no-clinic" || !clinic) { router.replace("/clinic"); return; }
       const approvalRedirect = getClinicApprovalRedirect(clinic.status);
       if (approvalRedirect) { router.replace(approvalRedirect); return; }
       setClinicId(clinic.id);

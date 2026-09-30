@@ -25,6 +25,7 @@ import {
   formatSupportContactLine,
   SUPPORT_CONTACT_TEXT,
   signOut,
+  redirectToLogin,
 } from "./clinic-auth";
 
 describe("isSafeRedirectPath: /loginのnextパラメータ検証（オープンリダイレクト対策）", () => {
@@ -223,5 +224,38 @@ describe("signOut: ログアウト（確認ダイアログなし、即座に実�
   it("windowが存在しない環境（SSR等）でも例外を投げない", async () => {
     await expect(signOut()).resolves.not.toThrow();
     expect(signOutMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("redirectToLogin: 未ログイン時の/loginへの退避（多重発火対策）", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("現在地とクエリをnextとして付与し/loginへ遷移する", () => {
+    vi.stubGlobal("window", { location: { pathname: "/clinic/onboarding", search: "?stripe=return" } });
+    const replace = vi.fn();
+    redirectToLogin({ replace });
+    expect(replace).toHaveBeenCalledWith("/login?next=%2Fclinic%2Fonboarding%3Fstripe%3Dreturn");
+  });
+
+  it("現在地がすでに/loginなら、多重発火（Strict Mode等）でもnextの入れ子を作らず遷移しない", () => {
+    vi.stubGlobal("window", { location: { pathname: "/login", search: "?next=%2Fclinic%2Fonboarding" } });
+    const replace = vi.fn();
+    redirectToLogin({ replace });
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("現在地が/login/以下のサブパスでも遷移しない", () => {
+    vi.stubGlobal("window", { location: { pathname: "/login/reset", search: "" } });
+    const replace = vi.fn();
+    redirectToLogin({ replace });
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("windowが存在しない環境（SSR等）では何もしない", () => {
+    const replace = vi.fn();
+    expect(() => redirectToLogin({ replace })).not.toThrow();
+    expect(replace).not.toHaveBeenCalled();
   });
 });

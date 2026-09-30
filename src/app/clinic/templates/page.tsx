@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getAccessToken, getCurrentClinic, redirectToLogin } from "@/lib/clinic-auth";
+import { resolveClinicGuard } from "@/lib/clinic-guard";
 import { DEFAULT_TEMPLATES, PLACEHOLDER_KEYS, renderTemplate, findUnresolvedPlaceholders } from "@/lib/message-templates";
 import type { MessageChannel, TemplateWithMeta } from "@/lib/types";
 
@@ -34,10 +35,12 @@ export default function ClinicTemplatesPage() {
 
   useEffect(() => {
     (async () => {
-      const clinic = await getCurrentClinic();
-      if (!clinic) { redirectToLogin(router); return; }
-      setClinicId(clinic.id);
       const token = await getAccessToken();
+      const clinic = token ? await getCurrentClinic() : null;
+      const guard = resolveClinicGuard(token, clinic);
+      if (guard === "login") { redirectToLogin(router); return; }
+      if (guard === "no-clinic" || !clinic) { router.replace("/clinic"); return; }
+      setClinicId(clinic.id);
       const res = await fetch(`/api/clinic/templates?clinic_id=${clinic.id}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });

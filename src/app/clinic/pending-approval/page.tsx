@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getCurrentUser, getCurrentClinic, redirectToLogin, getSupportContactLine } from "@/lib/clinic-auth";
+import { getAccessToken, getCurrentClinic, redirectToLogin, getSupportContactLine } from "@/lib/clinic-auth";
+import { resolveClinicGuard } from "@/lib/clinic-guard";
 import type { ClinicStatus } from "@/lib/types";
 import StaffHeaderBar from "@/components/StaffHeaderBar";
 
@@ -13,10 +14,11 @@ export default function ClinicPendingApprovalPage() {
 
   useEffect(() => {
     (async () => {
-      const user = await getCurrentUser();
-      if (!user) { redirectToLogin(router); return; }
-      const clinic = await getCurrentClinic();
-      if (!clinic) { redirectToLogin(router); return; }
+      const token = await getAccessToken();
+      const clinic = token ? await getCurrentClinic() : null;
+      const guard = resolveClinicGuard(token, clinic);
+      if (guard === "login") { redirectToLogin(router); return; }
+      if (guard === "no-clinic" || !clinic) { router.replace("/clinic"); return; }
       if (clinic.status === "active") { router.replace("/clinic"); return; }
       setState(clinic.status as Exclude<ClinicStatus, "active">);
     })();
