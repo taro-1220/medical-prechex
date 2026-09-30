@@ -47,4 +47,16 @@ describe("middleware: /termsはsite-gateをバイパスする", () => {
     const res = await middleware(req);
     expect(res.headers.get("location")).toContain("/site-gate");
   });
+
+  it("/api/ops/me は未認証（クッキー無し）でも401にならず通す（本人判定はルート自身が行う）", async () => {
+    const req = new NextRequest("http://localhost/api/ops/me");
+    const res = await middleware(req);
+    expect(res.status).not.toBe(401);
+  });
+
+  it("/api/ops/clinics はバイパス対象外のまま。未認証だと401（api配下はリダイレクトせずjson）", async () => {
+    const req = new NextRequest("http://localhost/api/ops/clinics");
+    const res = await middleware(req);
+    expect(res.status).toBe(401);
+  });
 });

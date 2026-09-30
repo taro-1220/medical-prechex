@@ -15,7 +15,12 @@ const COOKIE_NAME = "mp_gate";
 // site-gate層を外しても実質的な保護は失われない（/api/appointments等と同じ考え方）。
 // /login も合わせて対象外にしないと、セッション切れ等で再ログインが必要な場面で
 // site-gateの壁に阻まれるため追加する（/login自体は入力フォームでデータを返さない）。
-// /opsは意図的に対象外にしない（site-gate + OPS_ADMIN_EMAILSの二重保護を維持する）。
+// /opsと/api/opsのその他のパスは意図的に対象外にしない
+// （site-gate + OPS_ADMIN_EMAILSの二重保護を維持する）。
+// /api/ops/meだけは例外：ログイン中の本人が運営者かどうかを返すだけの読み取り専用
+// エンドポイントで、Supabase Bearer認証という独自の認証を持つため、/login後の
+// 遷移先判定（site-gate通過前でも呼べる必要がある）でsite-gateの壁に阻まれないよう
+// 個別にバイパスする。
 const BYPASS_PATHS = [
   "/site-gate", "/api/site-gate", "/api/cron",
   "/slots", "/api/slots",
@@ -25,6 +30,7 @@ const BYPASS_PATHS = [
   "/clinic", "/api/clinic", "/login",
   "/reports",
   "/about",
+  "/api/ops/me",
 ];
 
 async function expectedCookieValue(password: string, secret: string) {

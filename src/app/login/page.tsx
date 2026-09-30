@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowser } from "@/lib/supabase-browser";
-import { isSafeRedirectPath } from "@/lib/clinic-auth";
+import { isSafeRedirectPath, getAccessToken } from "@/lib/clinic-auth";
+import { resolvePostLoginPath, type OpsMeResult } from "@/lib/post-login-redirect";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,7 +19,18 @@ export default function LoginPage() {
     const { error } = await getSupabaseBrowser().auth.signInWithPassword({ email, password });
     if (error) { setError(error.message); setLoading(false); return; }
     const next = new URLSearchParams(window.location.search).get("next");
-    router.push(isSafeRedirectPath(next) ? next : "/clinic");
+
+    let opsMeResult: OpsMeResult = null;
+    if (!isSafeRedirectPath(next)) {
+      try {
+        const token = await getAccessToken();
+        const res = await fetch("/api/ops/me", { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) opsMeResult = await res.json();
+      } catch {
+        opsMeResult = null;
+      }
+    }
+    router.push(resolvePostLoginPath(next, opsMeResult));
   };
 
   return (

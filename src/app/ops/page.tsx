@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getAccessToken, getCurrentUser, signOut } from "@/lib/clinic-auth";
+import { getAccessToken, getCurrentUser, signOut, redirectToLogin } from "@/lib/clinic-auth";
 import { getClinicStatusLabel } from "@/lib/status-labels";
 import StaffHeaderBar from "@/components/StaffHeaderBar";
 import DataTable, { type DataTableColumn, type DataTableFilterOption } from "@/components/ops/DataTable";
@@ -99,6 +100,7 @@ const CLINIC_COLUMNS: DataTableColumn<ClinicRow>[] = [
 ];
 
 export default function OpsPage() {
+  const router = useRouter();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [clinics, setClinics] = useState<ClinicRow[]>([]);
   const [recentAppointments, setRecentAppointments] = useState<RecentAppointment[]>([]);
@@ -111,12 +113,13 @@ export default function OpsPage() {
 
   const loadClinics = async () => {
     const token = await getAccessToken();
-    if (!token) { setForbidden(true); setLoading(false); return; }
+    if (!token) { redirectToLogin(router); return; }
     try {
       const res = await fetch("/api/ops/clinics", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.status === 401 || res.status === 403) {
+      if (res.status === 401) { redirectToLogin(router); return; }
+      if (res.status === 403) {
         const user = await getCurrentUser();
         setForbiddenEmail(user?.email ?? null);
         setForbidden(true);
