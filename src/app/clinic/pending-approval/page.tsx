@@ -41,7 +41,7 @@ export default function ClinicPendingApprovalPage() {
               <p className="text-4xl mb-4">🕐</p>
               <p className="font-bold text-gray-900 mb-2">承認をお待ちください</p>
               <p className="text-sm text-gray-500 leading-relaxed">
-                お申し込みありがとうございます。Medipre運営事務局にて内容を確認しております。
+                お申し込みありがとうございます。medipre運営事務局にて内容を確認しております。
                 承認が完了すると、ご登録のメールアドレスへご連絡いたします。
               </p>
             </>
@@ -50,7 +50,7 @@ export default function ClinicPendingApprovalPage() {
               <p className="text-4xl mb-4">🙏</p>
               <p className="font-bold text-gray-900 mb-2">今回はご案内を見送らせていただきました</p>
               <p className="text-sm text-gray-500 leading-relaxed">
-                ご不明な点がございましたら、Medipre運営事務局までお問い合わせください。
+                ご不明な点がございましたら、medipre運営事務局までお問い合わせください。
               </p>
             </>
           )}

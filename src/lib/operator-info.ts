@@ -2,7 +2,7 @@
 // 数字はここだけを直す。サインアップ画面（src/app/signup/page.tsx）は既存のハードコードのまま、
 // 今回は連動させない。
 export const OPERATOR_INFO = {
-  serviceName: "Medipre",
+  serviceName: "medipre",
   representative: "金子太郎",
   contactEmail: "support@medipre.jp",
 } as const;

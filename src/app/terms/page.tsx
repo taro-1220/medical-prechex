@@ -12,14 +12,14 @@ export default function TermsPage() {
 
       <div className="max-w-2xl mx-auto px-6 py-8">
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 sm:p-8 space-y-6">
-          <h1 className="text-lg font-black text-gray-900">Medipre 利用規約（患者・サービス利用者向け）</h1>
+          <h1 className="text-lg font-black text-gray-900">medipre 利用規約（患者・サービス利用者向け）</h1>
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-gray-900">第1章 総則</h2>
             <div className="space-y-2">
               <h3 className="text-sm font-bold text-gray-800">第1条（適用）</h3>
               <ol className="list-decimal pl-5 space-y-1.5 text-sm text-gray-700 leading-relaxed">
-                <li>本規約は、Medipre（以下「当方」）が、医院からの委託を受けて提供する、予約確認、キャンセルポリシーへの同意、キャンセル料の自動請求、空き枠通知等のサービス（以下「本サービス」）を、患者が利用する際の条件を定めます。</li>
+                <li>本規約は、medipre（以下「当方」）が、医院からの委託を受けて提供する、予約確認、キャンセルポリシーへの同意、キャンセル料の自動請求、空き枠通知等のサービス（以下「本サービス」）を、患者が利用する際の条件を定めます。</li>
                 <li>患者は、本サービスの一部（キャンセルポリシーへの同意、カードの登録、通知の受信設定など）を利用することにより、本規約に同意したものとみなします。</li>
                 <li>本サービスに関する予約、診療、キャンセル料の請求そのものの当事者は、患者と医院です。当方は、その間のやり取りを、システムを通じて仲介する者です。</li>
               </ol>
@@ -197,7 +197,7 @@ export default function TermsPage() {
             <h2 className="text-base font-bold text-gray-900">附則</h2>
             <ul className="list-disc pl-5 space-y-1.5 text-sm text-gray-700 leading-relaxed">
               <li>施行日：2026年9月29日</li>
-              <li>運営者：Medipre</li>
+              <li>運営者：medipre</li>
               <li>連絡先：support@medipre.jp</li>
             </ul>
           </section>

@@ -195,7 +195,7 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
             className="mt-0.5 h-4 w-4 rounded accent-teal-600 shrink-0"
           />
           <span className="text-sm text-gray-700 leading-relaxed">
-            Medipreの
+            medipreの
             <a href={TERMS_PAGE_PATH} target="_blank" rel="noopener noreferrer" className="text-teal-700 underline">
               利用規約
             </a>

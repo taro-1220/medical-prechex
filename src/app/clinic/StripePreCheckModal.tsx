@@ -38,14 +38,14 @@ export default function StripePreCheckModal({
 
         <p className={sectionHeadingCls}>2. お金の流れ</p>
         <p className={sectionBodyCls}>
-          患者さんのカードから、医院の口座へ直接入ります。Medipreがお金をお預かりすることはありません。決済には、世界中で使われている決済サービス「Stripe」を使います。
+          患者さんのカードから、医院の口座へ直接入ります。medipreがお金をお預かりすることはありません。決済には、世界中で使われている決済サービス「Stripe」を使います。
         </p>
 
         <p className={sectionHeadingCls}>3. これからの流れ</p>
         <ol className="text-sm text-gray-700 leading-relaxed mb-4 space-y-1.5">
           <li>①Stripeの画面に移動します（アドレスはconnect.stripe.comで始まる正規の画面です）</li>
           <li>②院長ご本人の情報と口座を入力します（15〜20分）</li>
-          <li>③最後まで進むと、自動でMedipreに戻ります。</li>
+          <li>③最後まで進むと、自動でmedipreに戻ります。</li>
         </ol>
 
         <p className={sectionHeadingCls}>4. なぜ本人確認が必要？</p>
@@ -62,7 +62,7 @@ export default function StripePreCheckModal({
 
         <p className={sectionHeadingCls}>6. 手数料</p>
         <p className={sectionBodyCls}>
-          回収したキャンセル料から、Stripeの決済手数料（{formatPercent(STRIPE_FEE_RATE_DISPLAY)}%）とMedipreの手数料（{formatPercent(MEDIPRE_FEE_RATE_DISPLAY)}%）が差し引かれます。
+          回収したキャンセル料から、Stripeの決済手数料（{formatPercent(STRIPE_FEE_RATE_DISPLAY)}%）とmedipreの手数料（{formatPercent(MEDIPRE_FEE_RATE_DISPLAY)}%）が差し引かれます。
           <br />
           例：{exampleAmount.toLocaleString()}円を回収した場合、医院の受取額は{exampleReceived.toLocaleString()}円です。
         </p>
