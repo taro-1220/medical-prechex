@@ -3,7 +3,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { AppointmentStatus, PatientListItem } from "@/lib/types";
-import { getCurrentUser, getAccessToken, redirectToLogin } from "@/lib/clinic-auth";
+import { getAccessToken, redirectToLogin } from "@/lib/clinic-auth";
+import { useClinicGuard } from "@/lib/useClinicGuard";
+import { shouldRenderClinicContent } from "@/lib/clinic-guard";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmation_pending: "確認待ち",
@@ -34,6 +36,7 @@ function formatDate(iso: string | null) {
 
 export default function ClinicPatientsPage() {
   const router = useRouter();
+  const { state: guardState, clinic } = useClinicGuard(router);
   const [patients, setPatients] = useState<PatientListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -60,18 +63,20 @@ export default function ClinicPatientsPage() {
   }, [router]);
 
   useEffect(() => {
-    (async () => {
-      const user = await getCurrentUser();
-      if (!user) { redirectToLogin(router); return; }
-      load("");
-    })();
-  }, [router, load]);
+    if (guardState !== "ok" || !clinic) return;
+    load("");
+  }, [guardState, clinic, load]);
 
   // 検索入力のデバウンス
   useEffect(() => {
+    if (guardState !== "ok" || !clinic) return;
     const t = setTimeout(() => { load(query); }, 300);
     return () => clearTimeout(t);
-  }, [query, load]);
+  }, [guardState, clinic, query, load]);
+
+  if (!shouldRenderClinicContent(guardState)) {
+    return <div className="min-h-screen bg-gray-50" />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

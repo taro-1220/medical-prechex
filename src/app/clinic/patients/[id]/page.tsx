@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import type { AppointmentStatus, PatientDetail } from "@/lib/types";
-import { getCurrentUser, getAccessToken, redirectToLogin } from "@/lib/clinic-auth";
+import { getAccessToken, redirectToLogin } from "@/lib/clinic-auth";
+import { useClinicGuard } from "@/lib/useClinicGuard";
+import { shouldRenderClinicContent } from "@/lib/clinic-guard";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmation_pending: "確認待ち",
@@ -38,13 +40,13 @@ export default function ClinicPatientDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = String(params.id);
+  const { state: guardState, clinic } = useClinicGuard(router);
   const [state, setState] = useState<LoadState>("loading");
   const [detail, setDetail] = useState<PatientDetail | null>(null);
 
   useEffect(() => {
+    if (guardState !== "ok" || !clinic) return;
     (async () => {
-      const user = await getCurrentUser();
-      if (!user) { redirectToLogin(router); return; }
       try {
         const token = await getAccessToken();
         if (!token) { redirectToLogin(router); return; }
@@ -59,7 +61,7 @@ export default function ClinicPatientDetailPage() {
         setState("error");
       }
     })();
-  }, [id, router]);
+  }, [guardState, clinic, id, router]);
 
   const SentBadges = ({ line, sms, email }: { line?: string; sms?: string; email?: string }) => {
     const items = [line && "LINE", sms && "SMS", email && "メール"].filter(Boolean) as string[];
@@ -70,6 +72,10 @@ export default function ClinicPatientDetailPage() {
       </span>
     );
   };
+
+  if (!shouldRenderClinicContent(guardState)) {
+    return <div className="min-h-screen bg-gray-50" />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

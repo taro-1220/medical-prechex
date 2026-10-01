@@ -65,6 +65,7 @@ export default function ClinicPage() {
   const [activatedAt, setActivatedAt] = useState<string | null | undefined>(undefined);
   const [profile, setProfile] = useState<ClinicProfile | null>(null);
   const [dashboard, setDashboard] = useState<ChargeDashboardResponse | null>(null);
+  const [guardResolved, setGuardResolved] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem(GUIDE_KEY)) {
@@ -82,6 +83,7 @@ export default function ClinicPage() {
       const activeClinic = current ?? cs[0];
       const approvalRedirect = getClinicApprovalRedirect(activeClinic.status);
       if (approvalRedirect) { router.replace(approvalRedirect); return; }
+      setGuardResolved(true);
       setClinics(cs);
       setClinic(activeClinic);
       const cid = activeClinic.id;
@@ -163,6 +165,10 @@ export default function ClinicPage() {
     visited: appointments.filter(a => isVisited(a.status)).length,
     cancelled: appointments.filter(a => isCancelled(a.status)).length,
   };
+
+  if (!guardResolved) {
+    return <div className="min-h-screen bg-gray-50" />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">

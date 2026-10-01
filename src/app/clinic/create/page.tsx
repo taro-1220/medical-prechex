@@ -11,9 +11,13 @@ export default function CreateClinicPage() {
   const [address, setAddress] = useState("");
   const [error, setError]     = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    getCurrentUser().then(user => { if (!user) redirectToLogin(router); });
+    getCurrentUser().then(user => {
+      if (!user) { redirectToLogin(router); return; }
+      setAuthChecked(true);
+    });
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,6 +38,10 @@ export default function CreateClinicPage() {
     }
     router.push("/clinic");
   };
+
+  if (!authChecked) {
+    return <div className="min-h-screen bg-gray-50" />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
