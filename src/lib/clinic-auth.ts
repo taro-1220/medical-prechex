@@ -78,6 +78,46 @@ export async function getCurrentClinic(): Promise<Clinic | null> {
 }
 
 /**
+ * 「医院なし」（ok:true, name:null）と「取得失敗」（ok:false）を区別して返す。
+ * getCurrentClinic()は両者を同じnullに畳み込むため、StaffHeaderBarの表示判定
+ * （医院なしは「運営者」、取得失敗はラベル無し）に使う専用の取得関数として新設した。
+ */
+export type ClinicNameFetchResult = { ok: true; name: string | null } | { ok: false };
+
+export async function fetchCurrentClinicName(): Promise<ClinicNameFetchResult> {
+  const token = await getAccessToken();
+  if (!token) return { ok: false };
+  try {
+    const res = await fetch("/api/clinic/current", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return { ok: false };
+    const clinic = await res.json();
+    return { ok: true, name: clinic?.name ?? null };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export type StaffHeaderMode = "clinicName" | "email";
+
+/**
+ * StaffHeaderBarの表示ラベルを決める純粋関数。
+ * - "email"モード（/ops）：医院の取得結果に関わらずメールアドレスを表示する
+ * - "clinicName"モード（/clinic）：医院名（無ければ「運営者」）。取得失敗・未取得はnull
+ *   （呼び出し側はラベルを出さずログアウトボタンのみ表示する）
+ */
+export function resolveStaffHeaderLabel(
+  mode: StaffHeaderMode,
+  email: string | null,
+  clinicNameResult: ClinicNameFetchResult | null,
+): string | null {
+  if (mode === "email") return email;
+  if (!clinicNameResult || !clinicNameResult.ok) return null;
+  return clinicNameResult.name ?? "運営者";
+}
+
+/**
  * "/login"へのリダイレクト先として安全なパスか（オープンリダイレクト対策）。
  * "/"で始まり、"//"（プロトコル相対URL）にも"/\\"（バックスラッシュ経由の相対URL）にもならないこと。
  */

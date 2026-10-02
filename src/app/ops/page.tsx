@@ -223,7 +223,7 @@ export default function OpsPage() {
         </div>
         <div className="flex items-center gap-4">
           <Link href="/clinic" className="text-gray-400 text-sm hover:text-gray-700 transition whitespace-nowrap">← クリニック画面</Link>
-          <StaffHeaderBar />
+          <StaffHeaderBar mode="email" />
         </div>
       </header>
 

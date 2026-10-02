@@ -26,6 +26,7 @@ import {
   SUPPORT_CONTACT_TEXT,
   signOut,
   redirectToLogin,
+  resolveStaffHeaderLabel,
 } from "./clinic-auth";
 
 describe("isSafeRedirectPath: /loginのnextパラメータ検証（オープンリダイレクト対策）", () => {
@@ -257,5 +258,38 @@ describe("redirectToLogin: 未ログイン時の/loginへの退避（多重発�
     const replace = vi.fn();
     expect(() => redirectToLogin({ replace })).not.toThrow();
     expect(replace).not.toHaveBeenCalled();
+  });
+});
+
+describe("resolveStaffHeaderLabel: StaffHeaderBarの表示ラベル判定（医院名／運営者／取得失敗／opsモード）", () => {
+  it("clinicNameモードで医院ありなら医院名を表示する", () => {
+    expect(resolveStaffHeaderLabel("clinicName", "taro@example.com", { ok: true, name: "みどり歯科クリニック" }))
+      .toBe("みどり歯科クリニック");
+  });
+
+  it("clinicNameモードで医院なし（ok:true, name:null）なら「運営者」", () => {
+    expect(resolveStaffHeaderLabel("clinicName", "taro@example.com", { ok: true, name: null }))
+      .toBe("運営者");
+  });
+
+  it("clinicNameモードで取得失敗（ok:false）ならnull（ラベル無し、ログアウトのみ表示）", () => {
+    expect(resolveStaffHeaderLabel("clinicName", "taro@example.com", { ok: false }))
+      .toBeNull();
+  });
+
+  it("clinicNameモードで未取得（null、読み込み中）もnull（取得失敗と同じ扱い）", () => {
+    expect(resolveStaffHeaderLabel("clinicName", "taro@example.com", null)).toBeNull();
+  });
+
+  it("長い医院名はそのまま返す（省略表示はCSS側の責務で、関数は切り詰めない）", () => {
+    const longName = "医療法人社団とても長い名前の歯科・口腔外科・矯正歯科クリニックグループ本院";
+    expect(resolveStaffHeaderLabel("clinicName", "taro@example.com", { ok: true, name: longName }))
+      .toBe(longName);
+  });
+
+  it("emailモード（/ops）では、医院の取得結果に関わらずメールアドレスを表示する", () => {
+    expect(resolveStaffHeaderLabel("email", "admin@example.com", null)).toBe("admin@example.com");
+    expect(resolveStaffHeaderLabel("email", "admin@example.com", { ok: true, name: "無関係な医院名" }))
+      .toBe("admin@example.com");
   });
 });

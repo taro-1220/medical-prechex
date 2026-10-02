@@ -118,7 +118,7 @@ export default function OpsClinicDetailPage({ params }: { params: Promise<{ clin
           <Link href="/ops" className="text-gray-400 text-sm hover:text-gray-700 transition">← 医院一覧</Link>
           <h1 className="text-xl font-black text-gray-900 mt-1">{clinic.name}</h1>
         </div>
-        <StaffHeaderBar />
+        <StaffHeaderBar mode="email" />
       </header>
 
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
