@@ -40,7 +40,7 @@ export default function StaffHeaderBar({ mode = "clinicName" }: StaffHeaderBarPr
 
   const label = resolveStaffHeaderLabel(mode, email, clinicNameResult);
 
-  return (
+  const content = (
     <div className="flex items-center gap-2 min-w-0 shrink-0">
       {label && (
         <span
@@ -56,6 +56,18 @@ export default function StaffHeaderBar({ mode = "clinicName" }: StaffHeaderBarPr
       >
         ログアウト
       </button>
+    </div>
+  );
+
+  // "email"モード（/ops）は、呼び出し側の既存headerにそのまま埋め込む簡易フローのまま
+  // （/opsの見た目は変えない）。"clinicName"モード（/clinic共通layout）は、
+  // 通常フローの帯として自身を描画する（未ログイン時はこの関数自体がnullを返すため、
+  // 帯の高さ・枠線も含めて何も残らない）。
+  if (mode === "email") return content;
+
+  return (
+    <div className="border-b border-gray-100 bg-white px-4 py-2 flex items-center justify-end">
+      {content}
     </div>
   );
 }
