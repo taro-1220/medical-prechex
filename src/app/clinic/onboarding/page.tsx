@@ -16,7 +16,6 @@ import { findRiskyPolicyWording, scopeAppliesToCategory, isInsuranceAcknowledgme
 import { areTierPercentsValid } from "@/lib/charge-policy";
 import StripePreCheckModal from "../StripePreCheckModal";
 import StripePendingBanner from "../StripePendingBanner";
-import StaffHeaderBar from "@/components/StaffHeaderBar";
 
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500";
 const labelCls = "block text-xs text-gray-500 mb-1";
@@ -281,7 +280,6 @@ export default function OnboardingPage() {
             </p>
           )}
         </div>
-        <StaffHeaderBar />
       </header>
 
       {clinicId && isStripePendingBannerVisible(profile?.stripeAccountStatus) && (

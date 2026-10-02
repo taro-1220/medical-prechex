@@ -5,7 +5,6 @@ import { getSupportContactLine } from "@/lib/clinic-auth";
 import { useClinicGuard } from "@/lib/useClinicGuard";
 import { shouldRenderClinicContent } from "@/lib/clinic-guard";
 import type { ClinicStatus } from "@/lib/types";
-import StaffHeaderBar from "@/components/StaffHeaderBar";
 
 type ViewState = "loading" | "pending_approval" | "rejected";
 
@@ -34,7 +33,6 @@ export default function ClinicPendingApprovalPage() {
     <div className="min-h-screen bg-gray-50">
       <header className="border-b border-gray-200 bg-white px-6 py-4 flex items-center justify-between">
         <span className="text-lg font-black text-teal-700">medipre</span>
-        <StaffHeaderBar />
       </header>
       <div className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">

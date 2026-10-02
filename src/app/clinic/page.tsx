@@ -6,7 +6,6 @@ import type { Appointment, AppointmentStatus, Clinic, ClinicProfile, ChargeDashb
 import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin, getClinicApprovalRedirect, isStripePendingBannerVisibleOnDashboard } from "@/lib/clinic-auth";
 import OnboardingGuide, { GUIDE_KEY } from "./OnboardingGuide";
 import StripePendingBanner from "./StripePendingBanner";
-import StaffHeaderBar from "@/components/StaffHeaderBar";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmation_pending: "確認待ち",
@@ -219,7 +218,6 @@ export default function ClinicPage() {
           <Link href="/clinic/new" className="px-4 py-2 bg-teal-600 rounded-xl font-bold text-sm text-white hover:bg-teal-700 transition">
             ＋ 新規予約
           </Link>
-          <StaffHeaderBar />
         </div>
       </header>
       {showGuide && <OnboardingGuide onClose={() => setShowGuide(false)} />}
