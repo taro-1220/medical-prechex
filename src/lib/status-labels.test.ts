@@ -6,6 +6,10 @@ import {
   getAppointmentStatusLabel,
   getChargeStatusLabel,
   getStripeAccountStatusLabel,
+  getRoleLabel,
+  getChannelLabel,
+  getOnboardingProgressFieldLabel,
+  getClinicProfileFieldLabel,
 } from "./status-labels";
 
 describe("getClinicStatusLabel", () => {
@@ -69,5 +73,54 @@ describe("getStripeAccountStatusLabel", () => {
   it("null/undefinedは「未接続」を返す", () => {
     expect(getStripeAccountStatusLabel(null)).toBe("未接続");
     expect(getStripeAccountStatusLabel(undefined)).toBe("未接続");
+  });
+});
+
+describe("getRoleLabel", () => {
+  it("既知の値は日本語表示名になる", () => {
+    expect(getRoleLabel("owner")).toBe("オーナー");
+    expect(getRoleLabel("manager")).toBe("マネージャ");
+    expect(getRoleLabel("staff")).toBe("スタッフ");
+  });
+
+  it("未知の値は生の値をそのまま返す", () => {
+    expect(getRoleLabel("unknown_role")).toBe("unknown_role");
+  });
+});
+
+describe("getChannelLabel", () => {
+  it("既知の値は表示名になる", () => {
+    expect(getChannelLabel("line")).toBe("LINE");
+    expect(getChannelLabel("sms")).toBe("SMS");
+    expect(getChannelLabel("email")).toBe("メール");
+  });
+
+  it("未知の値は生の値をそのまま返す", () => {
+    expect(getChannelLabel("fax")).toBe("fax");
+  });
+});
+
+describe("getOnboardingProgressFieldLabel: 運営者向け医院詳細のonboarding_progress列名ラベル", () => {
+  it("既知の列は日本語ラベルになる", () => {
+    expect(getOnboardingProgressFieldLabel("profile_completed")).toBe("医院情報の入力");
+    expect(getOnboardingProgressFieldLabel("policy_completed")).toBe("キャンセルポリシーの設定");
+    expect(getOnboardingProgressFieldLabel("notification_completed")).toBe("通知設定");
+    expect(getOnboardingProgressFieldLabel("activated_at")).toBe("利用開始日時");
+  });
+
+  it("マップに無い列はnull（呼び出し側で「未定義の項目」表示に使う）", () => {
+    expect(getOnboardingProgressFieldLabel("some_new_column")).toBeNull();
+  });
+});
+
+describe("getClinicProfileFieldLabel: 運営者向け医院詳細のclinic_profile列名ラベル", () => {
+  it("既知の列は日本語ラベルになる", () => {
+    expect(getClinicProfileFieldLabel("clinic_display_name")).toBe("表示名");
+    expect(getClinicProfileFieldLabel("director_name")).toBe("院長名");
+    expect(getClinicProfileFieldLabel("stripe_account_status")).toBe("Stripe接続状況");
+  });
+
+  it("マップに無い列はnull（呼び出し側で「未定義の項目」表示に使う）", () => {
+    expect(getClinicProfileFieldLabel("some_new_column")).toBeNull();
   });
 });

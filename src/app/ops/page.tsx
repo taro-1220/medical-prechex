@@ -47,21 +47,19 @@ function fmt(iso: string | null) {
   return new Date(iso).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-// クリニック一覧のステータス絞り込み。activatedAtベースの2つ（利用中/初期設定中）と
-// clinics.statusベースの2つ（停止中/解約）が混在している既存の挙動をそのまま維持する
-// （paused/cancelledは現行のClinicStatus型には無い値のため、この絞り込みは常に空になる。
-//  今回の載せ替えでは挙動を変えないため、この点も含めて据え置く）。
+// クリニック一覧のステータス絞り込み。activatedAtベースの2つ（利用中/初期設定中）のみ。
+// 「停止中」「解約」はclinics.statusベースで用意されていたが、現行のClinicStatus型には
+// paused/cancelledが存在せず常に空の結果になる死んだ選択肢だったため、commit 3で除去した
+// （ClinicStatus型自体は変更していない）。
 const CLINIC_FILTER_OPTIONS: DataTableFilterOption<ClinicRow>[] = [
   { value: "all", label: "すべて", predicate: () => true },
   { value: "active", label: "利用中", predicate: (c) => !!c.activatedAt },
   { value: "pending", label: "初期設定中", predicate: (c) => !c.activatedAt },
-  { value: "paused", label: "停止中", predicate: (c) => c.status === "paused" },
-  { value: "cancelled", label: "解約", predicate: (c) => c.status === "cancelled" },
 ];
 
 const CLINIC_COLUMNS: DataTableColumn<ClinicRow>[] = [
   { key: "name", label: "医院名", render: (c) => <span className="font-bold text-gray-900">{c.name}</span> },
-  { key: "slug", label: "slug", render: (c) => <span className="text-gray-400 font-mono text-xs whitespace-nowrap">{c.slug ?? "—"}</span> },
+  { key: "slug", label: "識別子", render: (c) => <span className="text-gray-400 font-mono text-xs whitespace-nowrap">{c.slug ?? "—"}</span> },
   {
     key: "status", label: "ステータス",
     render: (c) => <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-500">{getClinicStatusLabel(c.status)}</span>,

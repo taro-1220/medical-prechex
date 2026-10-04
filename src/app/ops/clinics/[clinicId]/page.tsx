@@ -3,7 +3,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getAccessToken } from "@/lib/clinic-auth";
-import { getAppointmentStatusLabel, getClinicStatusLabel } from "@/lib/status-labels";
+import {
+  getAppointmentStatusLabel,
+  getClinicStatusLabel,
+  getRoleLabel,
+  getChannelLabel,
+  getOnboardingProgressFieldLabel,
+  getClinicProfileFieldLabel,
+} from "@/lib/status-labels";
 import StaffHeaderBar from "@/components/StaffHeaderBar";
 
 type OpsAppointment = {
@@ -35,10 +42,6 @@ type ClinicDetail = {
 };
 
 
-const ROLE_LABEL: Record<string, string> = { owner: "オーナー", manager: "マネージャ", staff: "スタッフ" };
-
-const CHANNEL_LABEL: Record<string, string> = { line: "LINE", sms: "SMS", email: "メール" };
-
 function fmt(iso: string | null) {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("ja-JP", { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -58,6 +61,24 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-4">
       <span className="text-sm text-gray-400 w-32 shrink-0">{label}</span>
+      <span className="text-sm font-bold text-gray-900 break-all">{value}</span>
+    </div>
+  );
+}
+
+/** ラベルマップに無い列も、生のキー名のまま出さず「（未定義の項目）」＋キー名の小さな併記にする */
+function FieldRow({ fieldKey, label, value }: { fieldKey: string; label: string | null; value: string }) {
+  return (
+    <div className="flex gap-4">
+      <span className="text-sm text-gray-400 w-32 shrink-0">
+        {label ?? (
+          <>
+            （未定義の項目）
+            <br />
+            <span className="text-[10px] text-gray-300">{fieldKey}</span>
+          </>
+        )}
+      </span>
       <span className="text-sm font-bold text-gray-900 break-all">{value}</span>
     </div>
   );
@@ -146,21 +167,21 @@ export default function OpsClinicDetailPage({ params }: { params: Promise<{ clin
           </div>
           {onboarding && (
             <div className="space-y-2 border-t border-gray-100 pt-4">
-              <p className="text-xs text-gray-400 font-bold mb-2">onboarding_progress</p>
+              <p className="text-xs text-gray-400 font-bold mb-2">初期設定の進捗</p>
               {Object.entries(onboarding)
                 .filter(([k]) => !["id", "clinic_id"].includes(k))
                 .map(([k, v]) => (
-                  <InfoRow key={k} label={k} value={String(v ?? "—")} />
+                  <FieldRow key={k} fieldKey={k} label={getOnboardingProgressFieldLabel(k)} value={String(v ?? "—")} />
                 ))}
             </div>
           )}
           {clinicProfile && (
             <div className="space-y-2 border-t border-gray-100 pt-4 mt-4">
-              <p className="text-xs text-gray-400 font-bold mb-2">clinic_profile</p>
+              <p className="text-xs text-gray-400 font-bold mb-2">医院プロフィール</p>
               {Object.entries(clinicProfile)
                 .filter(([k]) => !["id", "clinic_id"].includes(k))
                 .map(([k, v]) => (
-                  <InfoRow key={k} label={k} value={String(v ?? "—")} />
+                  <FieldRow key={k} fieldKey={k} label={getClinicProfileFieldLabel(k)} value={String(v ?? "—")} />
                 ))}
             </div>
           )}
@@ -194,7 +215,7 @@ export default function OpsClinicDetailPage({ params }: { params: Promise<{ clin
           <div className="flex gap-4 items-center">
             <span className="text-sm text-gray-400 w-32 shrink-0">テンプレート</span>
             {hasTemplates
-              ? <span className="text-sm font-bold text-gray-900">設定あり（{templateChannels.map(c => CHANNEL_LABEL[c] ?? c).join("・")}）</span>
+              ? <span className="text-sm font-bold text-gray-900">設定あり（{templateChannels.map(getChannelLabel).join("・")}）</span>
               : <span className="text-sm text-gray-400">未設定（既定テンプレートを使用）</span>
             }
           </div>
@@ -217,7 +238,7 @@ export default function OpsClinicDetailPage({ params }: { params: Promise<{ clin
               {users.map(u => (
                 <li key={u.user_id} className="flex items-center justify-between gap-3 text-sm border-b border-gray-50 pb-2 last:border-0">
                   <span className="font-mono text-xs text-gray-500 break-all">{u.user_id}</span>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 shrink-0">{ROLE_LABEL[u.role] ?? u.role}</span>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 shrink-0">{getRoleLabel(u.role)}</span>
                 </li>
               ))}
             </ul>
