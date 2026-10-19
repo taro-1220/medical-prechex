@@ -54,6 +54,21 @@ function attentionReasons(a: Appointment): string[] {
   return reasons;
 }
 
+/** /api/ops/meを呼び、isOpsAdminを返す。失敗時はnull（未確定）。 */
+async function fetchIsOpsAdmin(token: string | null): Promise<boolean | null> {
+  if (!token) return null;
+  try {
+    const res = await fetch("/api/ops/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return typeof data.isOpsAdmin === "boolean" ? data.isOpsAdmin : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function ClinicPage() {
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -77,7 +92,11 @@ export default function ClinicPage() {
       const user = await getCurrentUser();
       if (!user) { redirectToLogin(router); return; }
       const cs = await getUserClinics();
-      if (cs.length === 0) { router.replace("/clinic/create"); return; }
+      if (cs.length === 0) {
+        const isOpsAdmin = await fetchIsOpsAdmin(await getAccessToken());
+        router.replace(isOpsAdmin === true ? "/ops" : "/clinic/create");
+        return;
+      }
       const current = await getCurrentClinic();
       const activeClinic = current ?? cs[0];
       const approvalRedirect = getClinicApprovalRedirect(activeClinic.status);

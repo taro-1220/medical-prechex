@@ -1,7 +1,23 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getCurrentUser, getAccessToken, redirectToLogin } from "@/lib/clinic-auth";
+import { getCurrentUser, getAccessToken, getCurrentClinic, redirectToLogin } from "@/lib/clinic-auth";
+import { resolveClinicGuard } from "@/lib/clinic-guard";
+
+/** /api/ops/meを呼び、isOpsAdminを返す。失敗時はnull（未確定）。 */
+async function fetchIsOpsAdmin(token: string | null): Promise<boolean | null> {
+  if (!token) return null;
+  try {
+    const res = await fetch("/api/ops/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return typeof data.isOpsAdmin === "boolean" ? data.isOpsAdmin : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function CreateClinicPage() {
   const router = useRouter();
@@ -14,10 +30,18 @@ export default function CreateClinicPage() {
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    getCurrentUser().then(user => {
+    (async () => {
+      const user = await getCurrentUser();
       if (!user) { redirectToLogin(router); return; }
+      const token = await getAccessToken();
+      const clinic = token ? await getCurrentClinic() : null;
+      const guard = resolveClinicGuard(token, clinic);
+      if (guard === "no-clinic") {
+        const isOpsAdmin = await fetchIsOpsAdmin(token);
+        if (isOpsAdmin === true) { router.replace("/ops"); return; }
+      }
       setAuthChecked(true);
-    });
+    })();
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
