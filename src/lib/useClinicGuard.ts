@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { getAccessToken, getCurrentClinic, redirectToLogin } from "./clinic-auth";
-import { resolveClinicGuard, type ClinicGuardViewState } from "./clinic-guard";
+import {
+  resolveClinicGuard,
+  resolveNoClinicDestination,
+  type ClinicGuardViewState,
+} from "./clinic-guard";
 import type { Clinic } from "./types";
 
 type Router = { replace: (href: string) => void };
@@ -34,7 +38,9 @@ export function useClinicGuard(router: Router): UseClinicGuardResult {
         return;
       }
       if (guard === "no-clinic" || !currentClinic) {
-        router.replace("/clinic");
+        const isOpsAdmin = await fetchIsOpsAdmin(token);
+        if (cancelled) return;
+        router.replace(resolveNoClinicDestination(isOpsAdmin));
         setState("no-clinic");
         return;
       }
@@ -47,4 +53,19 @@ export function useClinicGuard(router: Router): UseClinicGuardResult {
   }, [router]);
 
   return { state, clinic };
+}
+
+/** /api/ops/meを呼び、isOpsAdminを返す。失敗時はnull（未確定）。 */
+async function fetchIsOpsAdmin(token: string | null): Promise<boolean | null> {
+  if (!token) return null;
+  try {
+    const res = await fetch("/api/ops/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return typeof data.isOpsAdmin === "boolean" ? data.isOpsAdmin : null;
+  } catch {
+    return null;
+  }
 }

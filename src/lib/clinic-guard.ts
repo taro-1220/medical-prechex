@@ -18,6 +18,17 @@ export function resolveClinicGuard(
   return "ok";
 }
 
+/**
+ * "no-clinic"（認証済みだがクリニック未割当）のユーザーの遷移先。
+ * /api/ops/meのisOpsAdminがtrueなら運営者として/opsへ、それ以外
+ * （false、または呼び出し失敗でisOpsAdminが未確定のnull）は従来どおり/clinicへ。
+ */
+export function resolveNoClinicDestination(
+  isOpsAdmin: boolean | null,
+): "/ops" | "/clinic" {
+  return isOpsAdmin === true ? "/ops" : "/clinic";
+}
+
 /** resolveClinicGuardの結果に加え、判定がまだ終わっていない状態("checking")を持つ。 */
 export type ClinicGuardViewState = ClinicGuardResult | "checking";
 

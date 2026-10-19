@@ -3,7 +3,11 @@
 // （旧実装はgetCurrentClinic()のnullだけで判定していたため、後者を前者と誤判定し、
 //  クリニック未割当の認証済みユーザーを/loginへ送り返すループになっていた）。
 import { describe, it, expect } from "vitest";
-import { resolveClinicGuard, shouldRenderClinicContent } from "./clinic-guard";
+import {
+  resolveClinicGuard,
+  resolveNoClinicDestination,
+  shouldRenderClinicContent,
+} from "./clinic-guard";
 import type { Clinic } from "./types";
 
 const CLINIC: Clinic = {
@@ -33,6 +37,20 @@ describe("resolveClinicGuard", () => {
 
   it("トークンがありクリニックもあれば'ok'", () => {
     expect(resolveClinicGuard("token", CLINIC)).toBe("ok");
+  });
+});
+
+describe("resolveNoClinicDestination: 'no-clinic'ユーザーの遷移先", () => {
+  it("isOpsAdminがtrueなら'/ops'", () => {
+    expect(resolveNoClinicDestination(true)).toBe("/ops");
+  });
+
+  it("isOpsAdminがfalseなら従来どおり'/clinic'", () => {
+    expect(resolveNoClinicDestination(false)).toBe("/clinic");
+  });
+
+  it("isOpsAdminがnull（呼び出し失敗など未確定）なら従来どおり'/clinic'", () => {
+    expect(resolveNoClinicDestination(null)).toBe("/clinic");
   });
 });
 
