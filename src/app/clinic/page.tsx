@@ -158,19 +158,19 @@ export default function ClinicPage() {
   const needsAttention = sorted.filter((a) => attentionReasons(a).length > 0);
 
   const markCompleted = async (token: string) => {
-    await fetch(`/api/appointments/${token}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "completed" }),
+    const accessToken = await getAccessToken();
+    await fetch(`/api/appointments/${token}/complete`, {
+      method: "POST",
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
     });
     load();
   };
 
   const markCheckedIn = async (token: string) => {
-    await fetch(`/api/appointments/${token}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "checked_in" }),
+    const accessToken = await getAccessToken();
+    await fetch(`/api/appointments/${token}/checkin`, {
+      method: "POST",
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
     });
     load();
   };

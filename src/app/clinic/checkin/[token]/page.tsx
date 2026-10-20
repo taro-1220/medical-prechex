@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
+import { getAccessToken } from "@/lib/clinic-auth";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString("ja-JP", {
@@ -51,7 +52,11 @@ export default function ClinicCheckinPage({ params }: { params: Promise<{ token:
     if (!token) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/appointments/${token}/checkin`, { method: "POST" });
+      const accessToken = await getAccessToken();
+      const res = await fetch(`/api/appointments/${token}/checkin`, {
+        method: "POST",
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+      });
       if (res.ok) {
         setPageState("done");
       } else {

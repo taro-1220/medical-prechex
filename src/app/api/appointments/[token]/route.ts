@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAppointmentForDisplay, updateStatus } from "@/lib/store";
+import { getAppointmentForDisplay } from "@/lib/store";
 import { isTicketExpired } from "@/lib/ticket";
 
 export async function GET(
@@ -22,18 +22,5 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ token: string }> }
-) {
-  try {
-    const { token } = await params;
-    const { status } = await req.json();
-    const extra = status === "checked_in" ? { checkedInAt: new Date().toISOString() } : undefined;
-    const ok = await updateStatus(token, status, extra);
-    if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    return NextResponse.json({ ok: true });
-  } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
-  }
-}
+// 汎用PATCHは廃止（トークンのみで任意のstatusへ変更できてしまう脆弱性があったため）。
+// スタッフによる状態変更は認証付きの専用エンドポイント（./checkin, ./complete）で行う。
