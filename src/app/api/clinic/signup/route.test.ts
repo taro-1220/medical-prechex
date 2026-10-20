@@ -23,12 +23,12 @@ function makeRequest(body: unknown) {
 type TableConfig = { error?: { message: string } };
 
 function stubTables(tables: Record<string, TableConfig>) {
-  const calls: { table: string; action: string }[] = [];
+  const calls: { table: string; action: string; payload?: Record<string, unknown> }[] = [];
   fromMock.mockImplementation((table: string) => {
     const cfg = tables[table] ?? {};
     return {
-      insert() {
-        calls.push({ table, action: "insert" });
+      insert(payload?: Record<string, unknown>) {
+        calls.push({ table, action: "insert", payload });
         const error = cfg.error ?? null;
         return {
           select() {
@@ -60,6 +60,7 @@ const validBody = {
   directorName: "テスト太郎",
   email: "test@example.com",
   password: "password123",
+  agreedToTerms: true,
 };
 
 describe("POST /api/clinic/signup", () => {
@@ -99,6 +100,47 @@ describe("POST /api/clinic/signup", () => {
     expect(json.error).toBe("profile insert failed");
     expect(calls).toContainEqual({ table: "clinics", action: "delete" });
     expect(calls.filter((c) => c.table === "clinic_users")).toHaveLength(0);
+  });
+
+  it("agreedToTermsが無い場合、400で作成されない", async () => {
+    const calls = stubTables({});
+    const { agreedToTerms, ...bodyWithoutAgreement } = validBody;
+    void agreedToTerms;
+
+    const res = await POST(makeRequest(bodyWithoutAgreement));
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toBe("医院向け利用規約への同意が必要です");
+    expect(signUpMock).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("agreedToTermsがfalseの場合、400で作成されない", async () => {
+    const calls = stubTables({});
+
+    const res = await POST(makeRequest({ ...validBody, agreedToTerms: false }));
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toBe("医院向け利用規約への同意が必要です");
+    expect(signUpMock).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
+  });
+
+  it("agreedToTermsがtrueの場合、terms_versionとterms_agreed_atが保存される", async () => {
+    signUpMock.mockResolvedValue({
+      data: { user: { id: "user-1", identities: [{ id: "identity-1" }] } },
+      error: null,
+    });
+    const calls = stubTables({});
+
+    const res = await POST(makeRequest(validBody));
+
+    expect(res.status).toBe(201);
+    const clinicsInsert = calls.find((c) => c.table === "clinics" && c.action === "insert");
+    expect(clinicsInsert?.payload?.terms_version).toBe("2026-09-29");
+    expect(typeof clinicsInsert?.payload?.terms_agreed_at).toBe("string");
   });
 
   it("正常系: すべて成功した場合201を返し、削除は発生しない", async () => {

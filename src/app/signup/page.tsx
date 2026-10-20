@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSupportContactLine } from "@/lib/clinic-auth";
+import { CLINIC_TERMS_PAGE_PATH } from "@/lib/terms";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function SignupPage() {
   const [error, setError]               = useState<string | null>(null);
   const [isEmailAlreadyRegistered, setIsEmailAlreadyRegistered] = useState(false);
   const [loading, setLoading]           = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +23,7 @@ export default function SignupPage() {
     const res = await fetch("/api/clinic/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clinicName, directorName, email, password }),
+      body: JSON.stringify({ clinicName, directorName, email, password, agreedToTerms }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
@@ -91,8 +93,24 @@ export default function SignupPage() {
             {error && isEmailAlreadyRegistered && contactLine && (
               <p className="text-xs text-gray-400">{contactLine}</p>
             )}
+            <label className="flex items-start gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox" checked={agreedToTerms}
+                onChange={e => setAgreedToTerms(e.target.checked)}
+                className="mt-0.5"
+              />
+              <span>
+                <a
+                  href={CLINIC_TERMS_PAGE_PATH} target="_blank" rel="noopener noreferrer"
+                  className="text-teal-600 hover:underline"
+                >
+                  医院向け利用規約
+                </a>
+                に同意します
+              </span>
+            </label>
             <button
-              type="submit" disabled={loading}
+              type="submit" disabled={loading || !agreedToTerms}
               className="w-full py-2.5 bg-teal-600 rounded-xl font-bold text-sm text-white hover:bg-teal-700 transition disabled:opacity-50"
             >
               {loading ? "登録中..." : "登録する"}

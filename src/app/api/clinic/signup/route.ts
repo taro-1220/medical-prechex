@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
+import { CLINIC_TERMS_VERSION } from "@/lib/terms";
 
 // Phase P1: 医院セルフサインアップ（承認制）。未認証・公開エンドポイント。
 // メール確認はSupabase標準フロー（mailer_autoconfirm=false）に任せる。
@@ -11,9 +12,13 @@ export async function POST(req: NextRequest) {
   const directorName = typeof body?.directorName === "string" ? body.directorName.trim() : "";
   const email = typeof body?.email === "string" ? body.email.trim() : "";
   const password = typeof body?.password === "string" ? body.password : "";
+  const agreedToTerms = body?.agreedToTerms === true;
 
   if (!clinicName || !email || !password) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  }
+  if (!agreedToTerms) {
+    return NextResponse.json({ error: "医院向け利用規約への同意が必要です" }, { status: 400 });
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -38,7 +43,10 @@ export async function POST(req: NextRequest) {
 
   const { data: clinic, error: clinicErr } = await sb
     .from("clinics")
-    .insert({ name: clinicName, phone: "", email, address: "", status: "pending_approval" })
+    .insert({
+      name: clinicName, phone: "", email, address: "", status: "pending_approval",
+      terms_version: CLINIC_TERMS_VERSION, terms_agreed_at: new Date().toISOString(),
+    })
     .select("id")
     .single();
   if (clinicErr) return NextResponse.json({ error: clinicErr.message }, { status: 500 });
