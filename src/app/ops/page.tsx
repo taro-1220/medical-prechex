@@ -220,7 +220,6 @@ export default function OpsPage() {
           <h1 className="text-xl font-black text-gray-900 mt-0.5">運営管理画面</h1>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/clinic" className="text-gray-400 text-sm hover:text-gray-700 transition whitespace-nowrap">← クリニック画面</Link>
           <StaffHeaderBar mode="email" />
         </div>
       </header>
