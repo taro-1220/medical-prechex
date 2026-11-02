@@ -80,6 +80,7 @@ export default function ClinicPage() {
   const [profile, setProfile] = useState<ClinicProfile | null>(null);
   const [dashboard, setDashboard] = useState<ChargeDashboardResponse | null>(null);
   const [guardResolved, setGuardResolved] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<Record<string, "success" | "error">>({});
 
   useEffect(() => {
     if (typeof window !== "undefined" && !localStorage.getItem(GUIDE_KEY)) {
@@ -173,6 +174,23 @@ export default function ClinicPage() {
       headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
     });
     load();
+  };
+
+  const copyConfirmUrl = async (a: Appointment) => {
+    if (!a.token) return;
+    try {
+      await navigator.clipboard.writeText(`${location.origin}/confirm/${a.token}`);
+      setCopyStatus((prev) => ({ ...prev, [a.id]: "success" }));
+    } catch {
+      setCopyStatus((prev) => ({ ...prev, [a.id]: "error" }));
+    }
+    setTimeout(() => {
+      setCopyStatus((prev) => {
+        const next = { ...prev };
+        delete next[a.id];
+        return next;
+      });
+    }, 2000);
   };
 
   const today = new Date().toDateString();
@@ -409,12 +427,21 @@ export default function ClinicPage() {
                   <p className="text-xs text-gray-400 mt-1">{a.clinicName}</p>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
-                  <button
-                    onClick={() => navigator.clipboard.writeText(`${location.origin}/confirm/${a.token}`)}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs hover:bg-gray-50 transition"
-                  >
-                    URL コピー
-                  </button>
+                  <div className="flex flex-col items-end gap-0.5">
+                    <button
+                      onClick={() => copyConfirmUrl(a)}
+                      disabled={!a.token}
+                      title={a.token ? undefined : "確認URLが未発行のためコピーできません"}
+                      className={`px-3 py-1.5 rounded-lg border text-xs transition ${
+                        a.token ? "border-gray-200 text-gray-600 hover:bg-gray-50" : "border-gray-100 text-gray-300 cursor-not-allowed"
+                      }`}
+                    >
+                      URL コピー
+                    </button>
+                    {copyStatus[a.id] === "success" && <span className="text-xs text-teal-600">コピーしました</span>}
+                    {copyStatus[a.id] === "error" && <span className="text-xs text-red-600">コピーに失敗しました</span>}
+                    {!a.token && <span className="text-xs text-gray-400">確認URL未発行</span>}
+                  </div>
                   {a.cancelPolicyApplied && (
                     <Link
                       href={`/clinic/appointments/${a.id}`}
