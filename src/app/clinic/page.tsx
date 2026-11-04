@@ -219,11 +219,12 @@ export default function ClinicPage() {
                 const c = clinics.find(x => x.id === e.target.value);
                 if (!c) return;
                 const token = await getAccessToken();
-                await fetch("/api/clinic/select", {
+                const selRes = await fetch("/api/clinic/select", {
                   method: "POST",
                   headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
                   body: JSON.stringify({ clinicId: c.id }),
                 });
+                if (!selRes.ok) return;
                 setClinic(c);
               }}
               className="mt-1 text-sm border border-gray-200 rounded-lg px-2 py-1 text-gray-700"
