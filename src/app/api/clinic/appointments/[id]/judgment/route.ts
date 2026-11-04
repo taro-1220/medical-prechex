@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase";
+import { authenticateRequest, authorizeClinicAccess } from "@/lib/clinic-access";
 import { getAppointmentById, getClinicCancelPolicySettings } from "@/lib/store";
 import { resolveCancelTier, computeChargeAmount, evaluateChargeEligibility } from "@/lib/charge-policy";
 import { isWithinGraceHours } from "@/lib/cancel-policy";
@@ -11,23 +11,17 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { data: { user }, error: authErr } = await getSupabase().auth.getUser(token);
-  if (authErr || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await authenticateRequest(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const { id } = await params;
     const appt = await getAppointmentById(id);
     if (!appt || !appt.clinicId) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const { data: cu } = await getSupabase()
-      .from("clinic_users")
-      .select("clinic_id")
-      .eq("user_id", user.id)
-      .eq("clinic_id", appt.clinicId)
-      .maybeSingle();
-    if (!cu) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // 既存予約の処理（返金・請求を含む）のため承認状態は問わない
+    const access = await authorizeClinicAccess(user, appt.clinicId, "view");
+    if (!access.ok) return access.response;
 
     if (!appt.cancelPolicyApplied) {
       return NextResponse.json({

@@ -14,20 +14,26 @@ export async function POST(req: NextRequest) {
 
   const { data: clinic, error: cErr } = await getSupabase()
     .from("clinics")
-    .insert({ name: name.trim(), phone: phone ?? "", email: email ?? "", address: address ?? "" })
+    // 承認制(Phase P1): 常に pending_approval で作成する。active 化は /api/ops/clinics/[id]/approve のみ。
+    // DB default に依存しない（default が 'active' の環境でも承認制を迂回させない）。
+    .insert({ name: name.trim(), phone: phone ?? "", email: email ?? "", address: address ?? "", status: "pending_approval" })
     .select("id, name, slug, phone, email, address, status, created_at, updated_at")
     .single();
   if (cErr) return NextResponse.json({ error: cErr.message }, { status: 500 });
 
-  // 既存 clinic_users の selected を外してから新規を selected=true で追加
-  await getSupabase()
+  // 既に所属医院がある場合は操作対象(selected)を切り替えない。新規は承認待ちなので、
+  // 選択状態にすると /clinic が承認待ち画面へ退避し、既存の医院に戻れなくなる。
+  // 所属が無い場合のみ新規医院を selected=true にする。
+  const { data: existing, error: exErr } = await getSupabase()
     .from("clinic_users")
-    .update({ selected: false })
+    .select("clinic_id")
     .eq("user_id", user.id);
+  if (exErr) return NextResponse.json({ error: exErr.message }, { status: 500 });
+  const hasExistingClinic = (existing ?? []).length > 0;
 
   const { error: cuErr } = await getSupabase()
     .from("clinic_users")
-    .insert({ clinic_id: clinic.id, user_id: user.id, role: "owner", selected: true });
+    .insert({ clinic_id: clinic.id, user_id: user.id, role: "owner", selected: !hasExistingClinic });
   if (cuErr) return NextResponse.json({ error: cuErr.message }, { status: 500 });
 
   const res: Clinic = {

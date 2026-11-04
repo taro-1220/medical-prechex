@@ -1,32 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
+import { requireClinicAccess } from "@/lib/clinic-access";
 import { DEFAULT_TEMPLATES } from "@/lib/message-templates";
 import type { MessageChannel, TemplateWithMeta } from "@/lib/types";
 
 const CHANNELS: MessageChannel[] = ["sms", "line", "email"];
 
-async function authenticate(req: NextRequest) {
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!token) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
-  const { data: { user }, error } = await getSupabase().auth.getUser(token);
-  if (error || !user) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) } as const;
-  return { user } as const;
-}
-
 export async function GET(req: NextRequest) {
-  const auth = await authenticate(req);
-  if ("error" in auth) return auth.error;
-
   const clinicId = req.nextUrl.searchParams.get("clinic_id");
   if (!clinicId) return NextResponse.json({ error: "clinic_id required" }, { status: 400 });
 
-  const { data: cu } = await getSupabase()
-    .from("clinic_users")
-    .select("clinic_id")
-    .eq("user_id", auth.user.id)
-    .eq("clinic_id", clinicId)
-    .maybeSingle();
-  if (!cu) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const access = await requireClinicAccess(req, clinicId, "view", { requireActive: true });
+  if (!access.ok) return access.response;
 
   const { data: rows, error: rowsErr } = await getSupabase()
     .from("message_templates")
@@ -64,24 +49,13 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const auth = await authenticate(req);
-  if ("error" in auth) return auth.error;
-
   const { clinicId, channel, subject, body } = await req.json();
   if (!clinicId) return NextResponse.json({ error: "clinicId required" }, { status: 400 });
   if (!CHANNELS.includes(channel)) return NextResponse.json({ error: "invalid channel" }, { status: 400 });
   if (typeof body !== "string" || !body.trim()) return NextResponse.json({ error: "body required" }, { status: 400 });
 
-  const { data: cu } = await getSupabase()
-    .from("clinic_users")
-    .select("role")
-    .eq("user_id", auth.user.id)
-    .eq("clinic_id", clinicId)
-    .maybeSingle();
-  if (!cu) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  if (!["owner", "manager"].includes(cu.role as string)) {
-    return NextResponse.json({ error: "Forbidden: owner/manager only" }, { status: 403 });
-  }
+  const access = await requireClinicAccess(req, clinicId, "settings", { requireActive: true });
+  if (!access.ok) return access.response;
 
   const { error } = await getSupabase()
     .from("message_templates")

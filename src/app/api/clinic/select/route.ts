@@ -20,6 +20,23 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
   if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  // 承認待ち・却下の医院は操作対象にできない（/clinic が承認待ち画面に退避し戻れなくなるため）。
+  // 所属が 1 医院のみの場合は従来どおり（pending-approval 画面の表示対象になる）。
+  const { data: mine } = await getSupabase()
+    .from("clinic_users")
+    .select("clinic_id")
+    .eq("user_id", user.id);
+  const ids = (mine ?? []).map(r => r.clinic_id as string);
+  const { data: clinicRows } = await getSupabase()
+    .from("clinics")
+    .select("id, status")
+    .in("id", ids);
+  const statusById = new Map((clinicRows ?? []).map(r => [r.id as string, r.status as string]));
+  const hasActive = ids.some(id => statusById.get(id) === "active");
+  if (hasActive && statusById.get(clinicId) !== "active") {
+    return NextResponse.json({ error: "Forbidden: clinic not approved" }, { status: 403 });
+  }
+
   // 全 clinic_users を selected=false
   await getSupabase()
     .from("clinic_users")

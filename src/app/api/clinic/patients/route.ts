@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase";
+import { authenticateRequest, getActiveClinicIdsForUser } from "@/lib/clinic-access";
 import { getClinicPatients } from "@/lib/store";
 
 export async function GET(req: NextRequest) {
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await authenticateRequest(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: { user }, error: authErr } = await getSupabase().auth.getUser(token);
-  if (authErr || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { data: cu, error: cuErr } = await getSupabase()
-    .from("clinic_users")
-    .select("clinic_id")
-    .eq("user_id", user.id);
-  if (cuErr) return NextResponse.json({ error: cuErr.message }, { status: 500 });
-  const clinicIds = (cu ?? []).map(r => r.clinic_id as string);
+  const scope = await getActiveClinicIdsForUser(user.id);
+  if (!scope.ok) return scope.response;
+  if (scope.blocked) return NextResponse.json({ error: "Forbidden: clinic not approved" }, { status: 403 });
+  const clinicIds = scope.clinicIds;
 
   const q = req.nextUrl.searchParams.get("q") ?? "";
   try {

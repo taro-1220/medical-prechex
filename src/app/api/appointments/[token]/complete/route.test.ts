@@ -30,25 +30,26 @@ function params() {
   return { params: Promise.resolve({ token: "tok1" }) };
 }
 
-function stubClinicMember(matches: boolean) {
-  fromMock.mockImplementation(() => ({
-    select: () => ({
-      eq: () => ({
-        eq: () => ({
-          maybeSingle: async () =>
-            matches
-              ? { data: { clinic_id: "clinic-1" }, error: null }
-              : { data: null, error: null },
-        }),
-      }),
-    }),
-  }));
+let clinicStatus = "active";
+function stubClinicMember(matches: boolean, role: string = "staff") {
+  fromMock.mockImplementation((table: string) => {
+    const chain: Record<string, unknown> = {
+      select: () => chain,
+      eq: () => chain,
+      maybeSingle: async () => {
+        if (table === "clinics") return { data: { status: clinicStatus }, error: null };
+        return matches ? { data: { clinic_id: "clinic-1", role }, error: null } : { data: null, error: null };
+      },
+    };
+    return chain;
+  });
 }
 
 describe("POST /api/appointments/[token]/complete", () => {
   beforeEach(() => {
     getUserMock.mockReset();
     fromMock.mockReset();
+    clinicStatus = "active";
     getAppointmentMock.mockReset();
     updateStatusMock.mockReset();
   });
@@ -93,4 +94,34 @@ describe("POST /api/appointments/[token]/complete", () => {
     const res = await POST(makeRequest("Bearer t"), params());
     expect(res.status).toBe(404);
   });
+
+  it("未知のロール値は全権限なしで403（fail-closed）", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    getAppointmentMock.mockResolvedValue({ id: "a1", token: "tok1", status: "checked_in", clinicId: "clinic-1" });
+    stubClinicMember(true, "viewer");
+    const res = await POST(makeRequest("Bearer ok"), params());
+    expect(res.status).toBe(403);
+    expect(updateStatusMock).not.toHaveBeenCalled();
+  });
+
+  it("staff でも実行できる（受付・完了は staff に許可）", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    getAppointmentMock.mockResolvedValue({ id: "a1", token: "tok1", status: "checked_in", clinicId: "clinic-1" });
+    updateStatusMock.mockResolvedValue(true);
+    stubClinicMember(true, "staff");
+    const res = await POST(makeRequest("Bearer ok"), params());
+    expect(res.status).toBe(200);
+  });
+
+  for (const st of ["pending_approval", "rejected"]) {
+    it(`${st} の医院は staff でも通常業務として403（状態を更新しない）`, async () => {
+      clinicStatus = st;
+      getUserMock.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+      getAppointmentMock.mockResolvedValue({ id: "a1", token: "tok1", status: "checked_in", clinicId: "clinic-1" });
+      stubClinicMember(true, "staff");
+      const res = await POST(makeRequest("Bearer ok"), params());
+      expect(res.status).toBe(403);
+      expect(updateStatusMock).not.toHaveBeenCalled();
+    });
+  }
 });

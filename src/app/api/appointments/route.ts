@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
+import { authenticateRequest, authorizeClinicAccess, getActiveClinicIdsForUser } from "@/lib/clinic-access";
 import { createAppointment, getAllAppointments } from "@/lib/store";
 
 function safeError(e: unknown) {
@@ -8,18 +9,14 @@ function safeError(e: unknown) {
 }
 
 export async function GET(req: NextRequest) {
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await authenticateRequest(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: { user }, error: authErr } = await getSupabase().auth.getUser(token);
-  if (authErr || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { data: cu, error: cuErr } = await getSupabase()
-    .from("clinic_users")
-    .select("clinic_id")
-    .eq("user_id", user.id);
-  if (cuErr) return NextResponse.json({ error: cuErr.message }, { status: 500 });
-  const clinicIds = (cu ?? []).map(r => r.clinic_id as string);
+  // 患者情報を返すため、view 権限があり承認済み(active)の所属医院のみを対象にする
+  const scope = await getActiveClinicIdsForUser(user.id);
+  if (!scope.ok) return scope.response;
+  if (scope.blocked) return NextResponse.json({ error: "Forbidden: clinic not approved" }, { status: 403 });
+  const clinicIds = scope.clinicIds;
 
   try {
     return NextResponse.json(await getAllAppointments(clinicIds));
@@ -80,6 +77,10 @@ export async function POST(req: NextRequest) {
     const selected = memberships.find(r => r.selected)?.clinic_id as string | undefined;
     clinicId = selected ?? clinicIds[0];
   }
+
+  // 予約作成は owner/manager のみ。承認制(Phase P1): 未承認(pending_approval)・却下(rejected)の医院は不可
+  const access = await authorizeClinicAccess(user, clinicId, "reservation", { requireActive: true });
+  if (!access.ok) return access.response;
 
   // patientId 指定時は、その患者が認可済み clinic に属することを検証（他院患者の再利用を防ぐ）
   if (body?.patientId) {

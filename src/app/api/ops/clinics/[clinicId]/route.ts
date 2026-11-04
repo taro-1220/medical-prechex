@@ -20,7 +20,7 @@ export async function GET(
 
   const sb = getSupabase();
 
-  const [clinicRes, apptRes, patientRes, onboardingRes, profileRes, usersRes, templatesRes] = await Promise.all([
+  const [clinicRes, apptRes, patientRes, onboardingRes, profileRes, usersRes, templatesRes, eventsRes] = await Promise.all([
     sb.from("clinics").select("*").eq("id", clinicId).maybeSingle(),
     sb.from("appointments")
       .select("id, patient_name, appointment_at, status, description, cancellation_policy, consent_at, line_sent_at, sms_sent_at, email_sent_at, created_at")
@@ -31,6 +31,11 @@ export async function GET(
     sb.from("clinic_profile").select("*").eq("clinic_id", clinicId).maybeSingle(),
     sb.from("clinic_users").select("user_id, role").eq("clinic_id", clinicId),
     sb.from("message_templates").select("channel").eq("clinic_id", clinicId),
+    // 承認・却下・再承認の履歴（migration 021）。既存の医院には過去の履歴がない（空配列=履歴なし/不明）
+    sb.from("clinic_status_events")
+      .select("id, action, from_status, to_status, actor_email, reason, created_at")
+      .eq("clinic_id", clinicId)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (clinicRes.error || apptRes.error) return NextResponse.json({ error: "internal_error" }, { status: 500 });
@@ -73,6 +78,16 @@ export async function GET(
       createdAt: c.created_at,
       updatedAt: c.updated_at,
     },
+    // 取得に失敗した場合は null（空配列=履歴なしと区別する）
+    statusEvents: eventsRes.error ? null : (eventsRes.data ?? []).map(e => ({
+      id:         e.id as string,
+      action:     e.action as string,
+      fromStatus: e.from_status as string,
+      toStatus:   e.to_status as string,
+      actorEmail: e.actor_email as string,
+      reason:     (e.reason as string | null) ?? null,
+      createdAt:  e.created_at as string,
+    })),
     onboarding:         onboardingRes.data ?? null,
     clinicProfile:      profile,
     cancellationPolicy: (profile?.cancellation_policy as string | undefined) ?? null,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase";
+import { requireClinicAccess } from "@/lib/clinic-access";
 import { getClinicCancelPolicySettings, upsertClinicCancelPolicy } from "@/lib/store";
 import {
   isBasisNoteValid,
@@ -10,25 +10,11 @@ import {
 import { areTierPercentsValid } from "@/lib/charge-policy";
 import type { CancelPolicyScope, CancelTier } from "@/lib/types";
 
-async function requireClinicMember(req: NextRequest, clinicId: string) {
-  const token = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!token) return null;
-  const { data: { user }, error: authErr } = await getSupabase().auth.getUser(token);
-  if (authErr || !user) return null;
-  const { data: cu } = await getSupabase()
-    .from("clinic_users")
-    .select("clinic_id")
-    .eq("user_id", user.id)
-    .eq("clinic_id", clinicId)
-    .maybeSingle();
-  return cu ? user : null;
-}
-
 export async function GET(req: NextRequest) {
   const clinicId = req.nextUrl.searchParams.get("clinic_id");
   if (!clinicId) return NextResponse.json({ error: "clinic_id required" }, { status: 400 });
-  const user = await requireClinicMember(req, clinicId);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const access = await requireClinicAccess(req, clinicId, "view", { requireActive: true });
+  if (!access.ok) return access.response;
 
   try {
     const settings = await getClinicCancelPolicySettings(clinicId);
@@ -50,8 +36,9 @@ export async function PUT(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const clinicId = body?.clinicId as string | undefined;
   if (!clinicId) return NextResponse.json({ error: "clinicId required" }, { status: 400 });
-  const user = await requireClinicMember(req, clinicId);
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // キャンセル料ポリシーは同意・請求の根拠になるため owner/manager のみ変更可。未承認の医院は不可
+  const access = await requireClinicAccess(req, clinicId, "settings", { requireActive: true });
+  if (!access.ok) return access.response;
 
   const enabled = Boolean(body?.enabled);
   const scope = (body?.scope ?? null) as CancelPolicyScope | null;

@@ -147,22 +147,27 @@ export default function OpsPage() {
   const handleApprove = async (clinicId: string) => {
     setApprovalActionId(clinicId);
     const token = await getAccessToken();
-    await fetch(`/api/ops/clinics/${clinicId}/approve`, {
+    const res = await fetch(`/api/ops/clinics/${clinicId}/approve`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (!res.ok) alert(res.status === 409 ? "この医院はすでに処理済みです（画面を更新します）" : "承認に失敗しました");
     await loadClinics();
     setApprovalActionId(null);
   };
 
   const handleReject = async (clinicId: string) => {
-    if (!confirm("この医院を却下しますか？")) return;
+    // 却下理由は必須（監査記録に残る）。キャンセルまたは空欄なら何もしない
+    const reason = window.prompt("却下の理由を入力してください（必須。監査記録に残ります）");
+    if (!reason || !reason.trim()) return;
     setApprovalActionId(clinicId);
     const token = await getAccessToken();
-    await fetch(`/api/ops/clinics/${clinicId}/reject`, {
+    const res = await fetch(`/api/ops/clinics/${clinicId}/reject`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: reason.trim() }),
     });
+    if (!res.ok) alert(res.status === 409 ? "この医院はすでに処理済みです（画面を更新します）" : "却下に失敗しました");
     await loadClinics();
     setApprovalActionId(null);
   };

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
+import { authenticateRequest, authorizeClinicAccess } from "@/lib/clinic-access";
 
 const CHANNEL_COLUMNS = {
   line: "line_sent_at",
@@ -15,10 +16,8 @@ export async function POST(
 ) {
   const { token } = await params;
 
-  const authToken = req.headers.get("Authorization")?.replace("Bearer ", "");
-  if (!authToken) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { data: { user }, error: authErr } = await getSupabase().auth.getUser(authToken);
-  if (authErr || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const user = await authenticateRequest(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
   const channel = body?.channel as Channel | undefined;
@@ -36,13 +35,9 @@ export async function POST(
 
   // service role での無条件更新はしない: 予約の clinic に所属するユーザーのみ許可
   if (!appt.clinic_id) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const { data: cu } = await getSupabase()
-    .from("clinic_users")
-    .select("clinic_id")
-    .eq("user_id", user.id)
-    .eq("clinic_id", appt.clinic_id)
-    .maybeSingle();
-  if (!cu) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // 通知送信の記録は予約業務(reservation)。承認済み(active)の医院のみ
+  const access = await authorizeClinicAccess(user, appt.clinic_id, "reservation", { requireActive: true });
+  if (!access.ok) return access.response;
 
   const sentAt = new Date().toISOString();
   const { error: updErr } = await getSupabase()
