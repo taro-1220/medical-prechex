@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Appointment, Clinic, ClinicProfile, ChargeDashboardResponse } from "@/lib/types";
 import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin, getClinicApprovalRedirect, isStripePendingBannerVisibleOnDashboard } from "@/lib/clinic-auth";
-import { isTodayJst, matchesStatus } from "@/lib/clinic-appointments-view";
+import { isTodayJst } from "@/lib/clinic-appointments-view";
 import OnboardingGuide, { GUIDE_KEY } from "./OnboardingGuide";
 import StripePendingBanner from "./StripePendingBanner";
 import { AppointmentRow, attentionReasons, formatDate } from "./AppointmentRow";
+import { StatsCards } from "./StatsCards";
 
 /** 母数が小さい率は誤解を招きやすいため件数を併記する（Phase J セクションC） */
 function formatRate(rate: number, numerator: number, denominator: number): string {
@@ -120,13 +121,6 @@ export default function ClinicPage() {
 
   const nowIso = new Date().toISOString();
   const todaysAppointments = sorted.filter((a) => isTodayJst(a.appointmentAt, nowIso));
-  const summary = {
-    today: todaysAppointments.length,
-    pending: appointments.filter(a => matchesStatus(a.status, "pending")).length,
-    confirmed: appointments.filter(a => matchesStatus(a.status, "confirmed")).length,
-    visited: appointments.filter(a => matchesStatus(a.status, "visited")).length,
-    cancelled: appointments.filter(a => matchesStatus(a.status, "canceled")).length,
-  };
 
   if (!guardResolved) {
     return <div className="min-h-screen bg-gray-50" />;
@@ -199,23 +193,8 @@ export default function ClinicPage() {
 
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
-          {[
-            { label: "本日の予約", value: summary.today, href: "/clinic/appointments?range=today" },
-            { label: "確認待ち", value: summary.pending, color: "text-yellow-600", href: "/clinic/appointments?range=all&status=pending" },
-            { label: "確認済", value: summary.confirmed, color: "text-teal-600", href: "/clinic/appointments?range=all&status=confirmed" },
-            { label: "来院済", value: summary.visited, color: "text-emerald-600", href: "/clinic/appointments?range=all&status=visited" },
-            { label: "キャンセル", value: summary.cancelled, color: "text-gray-400", href: "/clinic/appointments?range=all&status=canceled" },
-          ].map((s) => (
-            <Link
-              key={s.label}
-              href={s.href}
-              className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4 text-center hover:-translate-y-0.5 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-teal-500"
-            >
-              <p className="text-sm text-gray-500 mb-1">{s.label}</p>
-              <p className={`text-3xl font-black ${s.color ?? "text-gray-900"}`}>{s.value}</p>
-            </Link>
-          ))}
+        <div className="mb-10">
+          <StatsCards appointments={appointments} active={null} />
         </div>
 
         {/* MVP+2 C-5 / Phase J セクションC: キャンセル料管理ダッシュボード（表示文言のみ変更。キャンセル料回収→キャンセル料管理） */}

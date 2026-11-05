@@ -13,13 +13,13 @@ import {
   filterAppointments,
   sortByRange,
   groupByDateJst,
-  matchesStatus,
   matchesRange,
   buildMonthWeeks,
   countsByDateAndStatus,
   toJstDateKey,
 } from "@/lib/clinic-appointments-view";
 import { AppointmentRow } from "../AppointmentRow";
+import { StatsCards, activeFromQuery } from "../StatsCards";
 
 const RANGES: PeriodRange[] = ["today", "upcoming", "past", "all"];
 const RANGE_LABEL: Record<PeriodRange, string> = { today: "今日", upcoming: "これから", past: "過去", all: "すべて" };
@@ -112,12 +112,7 @@ function AppointmentsPageInner() {
     return c;
   }, [appointments, nowIso]);
 
-  const statusCounts = useMemo(() => {
-    const base = filterAppointments(appointments, { nowIso, range });
-    const c = { all: base.length, pending: 0, confirmed: 0, visited: 0, canceled: 0 } as Record<"all" | StatusFilter, number>;
-    for (const f of STATUS_FILTERS) c[f] = base.filter((a) => matchesStatus(a.status, f)).length;
-    return c;
-  }, [appointments, nowIso, range]);
+  const active = activeFromQuery(searchParams.get("range"), searchParams.get("status"));
 
   const listItems = useMemo(
     () => sortByRange(filterAppointments(appointments, { nowIso, range, status }), range),
@@ -164,6 +159,10 @@ function AppointmentsPageInner() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+        <div className="mb-6">
+          <StatsCards appointments={appointments} active={active} showScopeNote />
+        </div>
+
         {view === "list" ? (
           <>
             <div className="flex gap-2 overflow-x-auto pb-1 mb-3" role="tablist" aria-label="期間">
@@ -181,27 +180,16 @@ function AppointmentsPageInner() {
                 </button>
               ))}
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 mb-6" role="group" aria-label="状態">
-              <button
-                onClick={() => updateParams({ status: null })}
-                className={`shrink-0 min-h-[44px] px-3 rounded-full text-xs font-bold border transition ${
-                  !status ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                }`}
-              >
-                すべて（{statusCounts.all}）
-              </button>
-              {STATUS_FILTERS.map((f) => (
+            {status && (
+              <div className="mb-6">
                 <button
-                  key={f}
-                  onClick={() => updateParams({ status: status === f ? null : f })}
-                  className={`shrink-0 min-h-[44px] px-3 rounded-full text-xs font-bold border transition ${
-                    status === f ? "bg-gray-900 text-white border-gray-900" : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                  }`}
+                  onClick={() => updateParams({ status: null })}
+                  className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-full text-xs font-bold border border-gray-900 bg-gray-900 text-white"
                 >
-                  {STATUS_LABEL[f]}（{statusCounts[f]}）
+                  {STATUS_LABEL[status]}で絞り込み中 <span aria-hidden>×</span> 解除
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
 
             {loading ? (
               <p className="text-gray-400 text-sm">読み込み中...</p>
