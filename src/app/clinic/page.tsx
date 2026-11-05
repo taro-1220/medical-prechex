@@ -375,7 +375,11 @@ export default function ClinicPage() {
         ) : (
           <div className="space-y-3">
             {sorted.map((a) => (
-              <div key={a.id} className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 flex items-start justify-between gap-4">
+              <div
+                key={a.id}
+                onClick={() => router.push(`/clinic/appointments/${a.id}/detail`)}
+                className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 flex items-start justify-between gap-4 cursor-pointer hover:bg-gray-50 transition"
+              >
                 <div className="flex-1 min-w-0">
                   {/* Phase J セクションC: バッジは「状態」「要対応」の2軸のみ。他の内部状態はテキストで示す */}
                   <div className="flex items-center gap-3 mb-2">
@@ -427,7 +431,7 @@ export default function ClinicPage() {
                   <p className="text-sm text-gray-500 mt-0.5">{a.description}</p>
                   <p className="text-xs text-gray-400 mt-1">{a.clinicName}</p>
                 </div>
-                <div className="flex flex-col items-end gap-2 shrink-0">
+                <div className="flex flex-col items-end gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                   <div className="flex flex-col items-end gap-0.5">
                     <button
                       onClick={() => copyConfirmUrl(a)}
