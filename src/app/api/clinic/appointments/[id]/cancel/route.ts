@@ -38,6 +38,7 @@ export async function POST(
         clinicStripeAccountId: stripeAccountId,
         tiers: policy?.tiers ?? null,
         graceHours: policy?.graceHours ?? 24,
+        insuranceNotificationConfirmedAt: settings.insuranceNotificationConfirmedAt,
         isNoShow: false,
         eventAt: now,
         actor: "staff",

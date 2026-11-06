@@ -20,6 +20,8 @@ export interface ChargeAttemptContext {
   /** キャンセル記録・無断判定が発生した時刻 */
   eventAt: string;
   actor: ChargeEventActor;
+  /** 医院の選定療養届出確認日時（未確認はnull）。getClinicCancelPolicySettings().insuranceNotificationConfirmedAt を渡す */
+  insuranceNotificationConfirmedAt?: string | null;
 }
 
 export interface ChargeAttemptResult {
@@ -59,6 +61,10 @@ export async function attemptCancelCharge(ctx: ChargeAttemptContext): Promise<Ch
   const existingCharge = await findSuccessfulChargeEvent(appt.id);
   const alreadyCharged = !!existingCharge;
 
+  // 2026-06-01施行の選定療養ルール: 保険診療は、医院の届出確認(3項目)が済むまで課金対象外
+  const insuranceNotificationRequired =
+    appt.treatmentCategory === "insurance" && !ctx.insuranceNotificationConfirmedAt;
+
   // 報告・判定パネル用（フラグの状態も含めた「今まさに成立するか」）
   const eligibility = evaluateChargeEligibility({
     cancelPolicyApplied: appt.cancelPolicyApplied,
@@ -67,6 +73,7 @@ export async function attemptCancelCharge(ctx: ChargeAttemptContext): Promise<Ch
     hasPaymentMethod: !!appt.stripePaymentMethodId,
     chargeExecutionEnabled,
     alreadyCharged,
+    insuranceNotificationRequired,
   });
   // ドライラン分岐に進めるかどうかの判定（フラグ以外の実条件のみ。フラグOFFはドライランする
   // 理由であって「実行しない」理由ではないため、ここには含めない）
@@ -77,6 +84,7 @@ export async function attemptCancelCharge(ctx: ChargeAttemptContext): Promise<Ch
     hasPaymentMethod: !!appt.stripePaymentMethodId,
     chargeExecutionEnabled: true,
     alreadyCharged,
+    insuranceNotificationRequired,
   });
   const amount = appt.baseAmount != null ? computeChargeAmount(appt.baseAmount, tierMatch.percent) : 0;
   const noShowPrefix = ctx.isNoShow ? NO_SHOW_DETAIL_PREFIX + " " : "";

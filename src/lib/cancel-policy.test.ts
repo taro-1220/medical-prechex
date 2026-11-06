@@ -6,6 +6,7 @@ import {
   findRiskyPolicyWording,
   isBasisNoteValid,
   isInsuranceAcknowledgmentSatisfied,
+  isInsuranceNotificationConfirmationSatisfied,
   isGeneralPolicyStepComplete,
 } from "./cancel-policy";
 
@@ -104,6 +105,20 @@ describe("isInsuranceAcknowledgmentSatisfied", () => {
   it("scope='both' は同意必須", () => {
     expect(isInsuranceAcknowledgmentSatisfied("both", false)).toBe(false);
     expect(isInsuranceAcknowledgmentSatisfied("both", true)).toBe(true);
+  });
+});
+
+describe("isInsuranceNotificationConfirmationSatisfied", () => {
+  it("scope='private' は確認不要", () => {
+    expect(isInsuranceNotificationConfirmationSatisfied("private", false)).toBe(true);
+  });
+  it("scope='insurance' は3項目確認が必須", () => {
+    expect(isInsuranceNotificationConfirmationSatisfied("insurance", false)).toBe(false);
+    expect(isInsuranceNotificationConfirmationSatisfied("insurance", true)).toBe(true);
+  });
+  it("scope='both' は3項目確認が必須", () => {
+    expect(isInsuranceNotificationConfirmationSatisfied("both", false)).toBe(false);
+    expect(isInsuranceNotificationConfirmationSatisfied("both", true)).toBe(true);
   });
 });
 

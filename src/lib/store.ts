@@ -444,6 +444,20 @@ function toCancelPolicy(row: Record<string, unknown>): CancelPolicy {
   };
 }
 
+/**
+ * migration 023未適用（列が無い=42703。SELECT自体が失敗する場合も含め）は、安全側で
+ * null（未確認）として扱う。保険診療のキャンセル料は、確認されるまで対象外になる。
+ */
+async function getInsuranceNotificationConfirmedAt(clinicId: string): Promise<string | null> {
+  const { data, error } = await getSupabase()
+    .from("clinic_profile")
+    .select("cancel_policy_insurance_notification_confirmed_at")
+    .eq("clinic_id", clinicId)
+    .maybeSingle();
+  if (error) return null;
+  return (data?.cancel_policy_insurance_notification_confirmed_at as string | null | undefined) ?? null;
+}
+
 export async function getClinicCancelPolicySettings(clinicId: string): Promise<ClinicCancelPolicySettings> {
   const sb = getSupabase();
   const { data: profile, error: profErr } = await sb
@@ -452,6 +466,8 @@ export async function getClinicCancelPolicySettings(clinicId: string): Promise<C
     .eq("clinic_id", clinicId)
     .maybeSingle();
   if (profErr) throw new Error(profErr.message);
+
+  const insuranceNotificationConfirmedAt = await getInsuranceNotificationConfirmedAt(clinicId);
 
   const { data: policies, error: polErr } = await sb
     .from("clinic_cancel_policies")
@@ -465,6 +481,7 @@ export async function getClinicCancelPolicySettings(clinicId: string): Promise<C
     enabled:               (profile?.cancel_policy_enabled as boolean | undefined) ?? false,
     scope:                 (profile?.cancel_policy_scope as CancelPolicyScope | null | undefined) ?? null,
     insuranceAcknowledged: (profile?.cancel_policy_insurance_acknowledged as boolean | undefined) ?? false,
+    insuranceNotificationConfirmedAt,
     policies: {
       private:   byCategory.get("private") ?? null,
       insurance: byCategory.get("insurance") ?? null,
@@ -476,10 +493,28 @@ export interface UpsertCancelPolicyInput {
   enabled: boolean;
   scope: CancelPolicyScope | null;
   insuranceAcknowledged: boolean;
+  /** 届出済み/予約料設定済み/院内掲示とWeb掲載済みの3項目を、医院が確認したか */
+  insuranceNotificationConfirmed: boolean;
   policies: {
     private?: { policyText: string; basisNote: string; showBasisToPatient: boolean; graceHours: number; tiers: CancelTier[] | null };
     insurance?: { policyText: string; basisNote: string; showBasisToPatient: boolean; graceHours: number; tiers: CancelTier[] | null };
   };
+}
+
+/**
+ * confirmed=falseなら確認を取り消す（null）。confirmed=trueで未確認だった場合のみ現在時刻を記録する
+ * （既に確認済みなら元の確認日時を保持する）。migration 023未適用（列が無い）場合は何もしない
+ * （エラーを投げない。保険診療は「未確認」のまま安全側で動く）。
+ */
+async function saveInsuranceNotificationConfirmation(clinicId: string, confirmed: boolean): Promise<void> {
+  const sb = getSupabase();
+  if (!confirmed) {
+    await sb.from("clinic_profile").update({ cancel_policy_insurance_notification_confirmed_at: null }).eq("clinic_id", clinicId);
+    return;
+  }
+  const existing = await getInsuranceNotificationConfirmedAt(clinicId);
+  if (existing) return;
+  await sb.from("clinic_profile").update({ cancel_policy_insurance_notification_confirmed_at: new Date().toISOString() }).eq("clinic_id", clinicId);
 }
 
 export async function upsertClinicCancelPolicy(clinicId: string, input: UpsertCancelPolicyInput): Promise<void> {
@@ -494,6 +529,8 @@ export async function upsertClinicCancelPolicy(clinicId: string, input: UpsertCa
       cancel_policy_insurance_acknowledged: input.insuranceAcknowledged,
     }, { onConflict: "clinic_id" });
   if (profErr) throw new Error(profErr.message);
+
+  await saveInsuranceNotificationConfirmation(clinicId, input.insuranceNotificationConfirmed);
 
   for (const category of ["private", "insurance"] as const) {
     const p = input.policies[category];

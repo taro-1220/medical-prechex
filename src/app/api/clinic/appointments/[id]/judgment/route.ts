@@ -50,6 +50,8 @@ export async function GET(
     });
     const amount = appt.baseAmount != null ? computeChargeAmount(appt.baseAmount, tierMatch.percent) : null;
     const existingCharge = await findSuccessfulChargeEvent(appt.id);
+    const insuranceNotificationRequired =
+      appt.treatmentCategory === "insurance" && !settings.insuranceNotificationConfirmedAt;
     const eligibility = evaluateChargeEligibility({
       cancelPolicyApplied: appt.cancelPolicyApplied,
       cancelPolicyAgreedAt: appt.cancelPolicyAgreedAt ?? null,
@@ -57,6 +59,7 @@ export async function GET(
       hasPaymentMethod: !!appt.stripePaymentMethodId,
       chargeExecutionEnabled: isChargeExecutionEnabled(),
       alreadyCharged: !!existingCharge,
+      insuranceNotificationRequired,
     });
 
     return NextResponse.json({

@@ -4,6 +4,7 @@ import { getClinicCancelPolicySettings, upsertClinicCancelPolicy } from "@/lib/s
 import {
   isBasisNoteValid,
   isInsuranceAcknowledgmentSatisfied,
+  isInsuranceNotificationConfirmationSatisfied,
   findRiskyPolicyWording,
   scopeAppliesToCategory,
 } from "@/lib/cancel-policy";
@@ -43,12 +44,16 @@ export async function PUT(req: NextRequest) {
   const enabled = Boolean(body?.enabled);
   const scope = (body?.scope ?? null) as CancelPolicyScope | null;
   const insuranceAcknowledged = Boolean(body?.insuranceAcknowledged);
+  const insuranceNotificationConfirmed = Boolean(body?.insuranceNotificationConfirmed);
   const policies = (body?.policies ?? {}) as { private?: PolicyInput; insurance?: PolicyInput };
 
   if (enabled) {
     if (!scope) return NextResponse.json({ error: "scope required when enabled" }, { status: 400 });
     if (!isInsuranceAcknowledgmentSatisfied(scope, insuranceAcknowledged)) {
       return NextResponse.json({ error: "insurance_acknowledgment_required" }, { status: 400 });
+    }
+    if (!isInsuranceNotificationConfirmationSatisfied(scope, insuranceNotificationConfirmed)) {
+      return NextResponse.json({ error: "insurance_notification_confirmation_required" }, { status: 400 });
     }
     const categories: Array<"private" | "insurance"> = ["private", "insurance"].filter(c =>
       scopeAppliesToCategory(scope, c as "private" | "insurance")
@@ -74,6 +79,7 @@ export async function PUT(req: NextRequest) {
       enabled,
       scope: enabled ? scope : null,
       insuranceAcknowledged,
+      insuranceNotificationConfirmed,
       policies: {
         private: policies.private ? {
           policyText: policies.private.policyText ?? "",

@@ -129,21 +129,29 @@ export interface ChargeEligibilityInput {
   chargeExecutionEnabled: boolean;
   /** Phase J: この予約に既に成功課金（charge_events: event_type='charge' かつ dry_run=false）が存在するか */
   alreadyCharged: boolean;
+  /**
+   * 2026-06-01施行の選定療養ルール(保医発0327第7号): 保険診療に課金する場合、医院が
+   * 「届出済み/予約料設定済み/院内掲示とWeb掲載済み」の3項目を確認済みであることが必要。
+   * 呼び出し側が treatmentCategory==='insurance' && 未確認 のときだけ true を渡す
+   * （自由診療・保険以外は常にfalse）。
+   */
+  insuranceNotificationRequired?: boolean;
 }
 
 export interface ChargeEligibilityResult {
   eligible: boolean;
   /** 満たされていない条件（UIでの理由表示用） */
-  blockedBy: Array<"not_consented" | "within_grace_hours" | "no_payment_method" | "flag_disabled" | "already_charged">;
+  blockedBy: Array<"not_consented" | "within_grace_hours" | "no_payment_method" | "flag_disabled" | "already_charged" | "insurance_notification_required">;
 }
 
-/** 課金の成立条件: 同意済み ∧ grace_hours外 ∧ カード登録済み ∧ 未課金 ∧ フラグtrue のAND判定 */
+/** 課金の成立条件: 同意済み ∧ grace_hours外 ∧ カード登録済み ∧ 未課金 ∧ 保険届出確認済み（該当時） ∧ フラグtrue のAND判定 */
 export function evaluateChargeEligibility(input: ChargeEligibilityInput): ChargeEligibilityResult {
   const blockedBy: ChargeEligibilityResult["blockedBy"] = [];
   if (!input.cancelPolicyApplied || !input.cancelPolicyAgreedAt) blockedBy.push("not_consented");
   if (input.withinGraceHours) blockedBy.push("within_grace_hours");
   if (!input.hasPaymentMethod) blockedBy.push("no_payment_method");
   if (input.alreadyCharged) blockedBy.push("already_charged");
+  if (input.insuranceNotificationRequired) blockedBy.push("insurance_notification_required");
   if (!input.chargeExecutionEnabled) blockedBy.push("flag_disabled");
   return { eligible: blockedBy.length === 0, blockedBy };
 }

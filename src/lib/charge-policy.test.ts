@@ -304,6 +304,17 @@ describe("evaluateChargeEligibility: 成立条件5項のAND", () => {
     expect(r.blockedBy).toEqual(["flag_disabled"]);
   });
 
+  it("保険診療の届出未確認（insuranceNotificationRequired=true）ならinsurance_notification_required", () => {
+    const r = evaluateChargeEligibility({ ...BASE, insuranceNotificationRequired: true });
+    expect(r.eligible).toBe(false);
+    expect(r.blockedBy).toEqual(["insurance_notification_required"]);
+  });
+
+  it("insuranceNotificationRequired省略（自由診療等）は従来どおりeligible", () => {
+    expect(evaluateChargeEligibility(BASE)).toEqual({ eligible: true, blockedBy: [] });
+    expect(evaluateChargeEligibility({ ...BASE, insuranceNotificationRequired: false })).toEqual({ eligible: true, blockedBy: [] });
+  });
+
   it("複数条件が同時に不成立なら全て列挙する（already_chargedはflag_disabledより先）", () => {
     const r = evaluateChargeEligibility({
       cancelPolicyApplied: false, cancelPolicyAgreedAt: null,

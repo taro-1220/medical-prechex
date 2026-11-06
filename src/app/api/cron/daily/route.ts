@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
       clinicStripeAccountId: stripeAccountId,
       tiers: policy?.tiers ?? null,
       graceHours: policy?.graceHours ?? 24,
+      insuranceNotificationConfirmedAt: settings.insuranceNotificationConfirmedAt,
       isNoShow: true,
       eventAt: now,
       actor: "system",

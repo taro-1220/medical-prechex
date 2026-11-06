@@ -12,7 +12,7 @@ import {
 import { useClinicGuard } from "@/lib/useClinicGuard";
 import { shouldRenderClinicContent } from "@/lib/clinic-guard";
 import type { ClinicProfile, OnboardingProgress, CancelPolicyScope, ClinicCancelPolicySettings, CancelTier } from "@/lib/types";
-import { findRiskyPolicyWording, scopeAppliesToCategory, isInsuranceAcknowledgmentSatisfied, isBasisNoteValid } from "@/lib/cancel-policy";
+import { findRiskyPolicyWording, scopeAppliesToCategory, isInsuranceAcknowledgmentSatisfied, isInsuranceNotificationConfirmationSatisfied, isBasisNoteValid } from "@/lib/cancel-policy";
 import { areTierPercentsValid } from "@/lib/charge-policy";
 import StripePreCheckModal from "../StripePreCheckModal";
 import StripePendingBanner from "../StripePendingBanner";
@@ -49,6 +49,8 @@ export default function OnboardingPage() {
   const [cpEnabled, setCpEnabled] = useState(false);
   const [cpScope, setCpScope] = useState<CancelPolicyScope | null>(null);
   const [cpInsuranceAck, setCpInsuranceAck] = useState(false);
+  const [cpInsuranceNotifConfirmedAt, setCpInsuranceNotifConfirmedAt] = useState<string | null>(null);
+  const [cpInsuranceNotifChecks, setCpInsuranceNotifChecks] = useState({ notified: false, feeSet: false, posted: false });
   const [cpPrivate, setCpPrivate] = useState<CategoryForm>(EMPTY_CATEGORY_FORM);
   const [cpInsurance, setCpInsurance] = useState<CategoryForm>(EMPTY_CATEGORY_FORM);
   const [cpWarnings, setCpWarnings] = useState<Record<string, string[]>>({});
@@ -102,6 +104,10 @@ export default function OnboardingPage() {
       setCpEnabled(settings.enabled);
       setCpScope(settings.scope);
       setCpInsuranceAck(settings.insuranceAcknowledged);
+      setCpInsuranceNotifConfirmedAt(settings.insuranceNotificationConfirmedAt);
+      if (settings.insuranceNotificationConfirmedAt) {
+        setCpInsuranceNotifChecks({ notified: true, feeSet: true, posted: true });
+      }
       if (settings.policies.private) setCpPrivate(settings.policies.private);
       if (settings.policies.insurance) setCpInsurance(settings.policies.insurance);
     }
@@ -163,6 +169,7 @@ export default function OnboardingPage() {
         enabled: cpEnabled,
         scope: cpScope,
         insuranceAcknowledged: cpInsuranceAck,
+        insuranceNotificationConfirmed: cpInsuranceNotifChecks.notified && cpInsuranceNotifChecks.feeSet && cpInsuranceNotifChecks.posted,
         policies: { private: cpPrivate, insurance: cpInsurance },
       }),
     });
@@ -196,6 +203,10 @@ export default function OnboardingPage() {
     !cpEnabled ||
     (cpScope != null &&
       isInsuranceAcknowledgmentSatisfied(cpScope, cpInsuranceAck) &&
+      isInsuranceNotificationConfirmationSatisfied(
+        cpScope,
+        cpInsuranceNotifChecks.notified && cpInsuranceNotifChecks.feeSet && cpInsuranceNotifChecks.posted,
+      ) &&
       (!cpAppliesTo("private") || (cpPrivate.policyText.trim().length > 0 && isBasisNoteValid(cpPrivate.basisNote) && cpTiersOk(cpPrivate))) &&
       (!cpAppliesTo("insurance") || (cpInsurance.policyText.trim().length > 0 && isBasisNoteValid(cpInsurance.basisNote) && cpTiersOk(cpInsurance))));
 
@@ -437,10 +448,37 @@ export default function OnboardingPage() {
                   </div>
 
                   {cpScope && (cpScope === "insurance" || cpScope === "both") && (
-                    <label className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 leading-relaxed">
-                      <input type="checkbox" checked={cpInsuranceAck} onChange={e => setCpInsuranceAck(e.target.checked)} className="mt-0.5 h-4 w-4 accent-amber-600 shrink-0" />
-                      {INSURANCE_ACK_TEXT}
-                    </label>
+                    <>
+                      <label className="flex items-start gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 leading-relaxed">
+                        <input type="checkbox" checked={cpInsuranceAck} onChange={e => setCpInsuranceAck(e.target.checked)} className="mt-0.5 h-4 w-4 accent-amber-600 shrink-0" />
+                        {INSURANCE_ACK_TEXT}
+                      </label>
+
+                      <div className="border border-amber-200 bg-amber-50 rounded-lg px-3 py-2.5 space-y-2">
+                        <p className="text-xs text-amber-800 leading-relaxed">
+                          2026年6月1日施行の取扱いにより、保険診療のキャンセル料は、選定療養「予約に基づく診察」として
+                          地方厚生局へ届出し、予約料を設定している医療機関のみ徴収できます。以下の3項目を確認してください。
+                        </p>
+                        {([
+                          ["notified", "選定療養「予約に基づく診察」を地方厚生局へ届出済みである"],
+                          ["feeSet", "予約料を設定済みである"],
+                          ["posted", "院内掲示とWebサイト掲載を行っている（または行う予定である）"],
+                        ] as const).map(([key, label]) => (
+                          <label key={key} className="flex items-start gap-2 text-xs text-amber-800 leading-relaxed">
+                            <input
+                              type="checkbox"
+                              checked={cpInsuranceNotifChecks[key]}
+                              onChange={e => setCpInsuranceNotifChecks({ ...cpInsuranceNotifChecks, [key]: e.target.checked })}
+                              className="mt-0.5 h-4 w-4 accent-amber-600 shrink-0"
+                            />
+                            {label}
+                          </label>
+                        ))}
+                        {cpInsuranceNotifConfirmedAt && (
+                          <p className="text-xs text-teal-700">確認済み（{new Date(cpInsuranceNotifConfirmedAt).toLocaleString("ja-JP")}）</p>
+                        )}
+                      </div>
+                    </>
                   )}
 
                   {(["private", "insurance"] as const).filter(cpAppliesTo).map((category) => {
@@ -490,6 +528,9 @@ export default function OnboardingPage() {
 
                         <div>
                           <label className={labelCls}>段階テーブル（キャンセル発生時の請求率。金額の初期値はありません）</label>
+                          <p className="text-xs text-gray-400 mb-2">
+                            金額は、事業者に生ずべき平均的な損害の範囲で設定してください（消費者契約法9条）。
+                          </p>
                           <div className="space-y-2">
                             {(form.tiers ?? []).map((tier, i) => (
                               <div key={i} className="flex items-center gap-2">

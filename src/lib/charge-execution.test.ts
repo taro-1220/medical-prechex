@@ -254,3 +254,38 @@ describe("attemptCancelCharge: application_fee_amountのcharge_events記録", ()
     }));
   });
 });
+
+describe("attemptCancelCharge: 保険診療の選定療養届出確認（2026-06-01施行）", () => {
+  it("保険診療×確認なし(insuranceNotificationConfirmedAtなし)は課金実行の直前で拒否される", async () => {
+    findSuccessfulChargeEventMock.mockResolvedValueOnce(null);
+    const result = await attemptCancelCharge(makeCtx({
+      appointment: { ...BASE_APPT, treatmentCategory: "insurance" },
+      insuranceNotificationConfirmedAt: null,
+    }));
+    expect(result.executed).toBe(false);
+    expect(result.eligible).toBe(false);
+    expect(result.blockedBy).toContain("insurance_notification_required");
+    expect(executeOffSessionChargeMock).not.toHaveBeenCalled();
+  });
+
+  it("保険診療×確認あり(insuranceNotificationConfirmedAtあり)は他条件を満たせば課金対象", async () => {
+    findSuccessfulChargeEventMock.mockResolvedValueOnce(null);
+    const result = await attemptCancelCharge(makeCtx({
+      appointment: { ...BASE_APPT, treatmentCategory: "insurance" },
+      insuranceNotificationConfirmedAt: "2026-06-01T00:00:00.000Z",
+    }));
+    expect(result.executed).toBe(true);
+    expect(result.eligible).toBe(true);
+    expect(result.blockedBy).not.toContain("insurance_notification_required");
+  });
+
+  it("自由診療(private)は確認日時の有無に関わらず従来どおり（影響されない）", async () => {
+    findSuccessfulChargeEventMock.mockResolvedValueOnce(null);
+    const result = await attemptCancelCharge(makeCtx({
+      appointment: { ...BASE_APPT, treatmentCategory: "private" },
+      insuranceNotificationConfirmedAt: null,
+    }));
+    expect(result.blockedBy).not.toContain("insurance_notification_required");
+    expect(result.executed).toBe(true);
+  });
+});

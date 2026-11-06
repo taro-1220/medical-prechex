@@ -59,6 +59,15 @@ export function isInsuranceAcknowledgmentSatisfied(scope: CancelPolicyScope, ack
 }
 
 /**
+ * 2026-06-01施行の選定療養ルール: scope が insurance を含む場合のみ、
+ * 「届出済み/予約料設定済み/院内掲示とWeb掲載済み」の3項目確認が必須。
+ */
+export function isInsuranceNotificationConfirmationSatisfied(scope: CancelPolicyScope, confirmed: boolean): boolean {
+  if (scope === "insurance" || scope === "both") return confirmed;
+  return true;
+}
+
+/**
  * 既存オンボーディングの「キャンセルポリシー」ステップ（clinic_profile.cancellation_policy）の完了判定。
  * 従来は保存＝無条件完了だった欠陥を修正: 本文が空なら未完了。ただしキャンセル料ポリシー機能
  * （cancel_policy_enabled）を使わない医院に本文記入を強制しないため、無効時は空でも完了扱いにする。

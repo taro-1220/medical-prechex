@@ -61,6 +61,8 @@ export interface ClinicCancelPolicySettings {
   enabled: boolean;
   scope: CancelPolicyScope | null;
   insuranceAcknowledged: boolean;
+  /** 2026-06-01施行の選定療養ルール: 届出済み/予約料設定済み/院内掲示とWeb掲載済みの3項目確認日時。未確認はnull */
+  insuranceNotificationConfirmedAt: string | null;
   policies: {
     private: CancelPolicy | null;
     insurance: CancelPolicy | null;
