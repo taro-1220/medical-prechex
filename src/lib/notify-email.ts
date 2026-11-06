@@ -131,6 +131,13 @@ function formatReminderTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tokyo" });
 }
 
+/** 全ての自動送信メールの末尾に付ける案内（心当たりが無い場合の連絡先・お知らせ不要の申し出先） */
+function buildContactFooter(clinicName: string, clinicPhone: string): string {
+  const contact = clinicPhone ? `${clinicName}（${clinicPhone}）` : clinicName;
+  return `このメールに心当たりがない場合は、お手数ですが破棄のうえ、${contact}までご連絡ください。
+お知らせが不要な場合は、${clinicName}にお申し出ください。`;
+}
+
 export function buildAppointmentReminderEmail(input: AppointmentReminderEmailInput): EmailPayload {
   const when = formatReminderDateTime(input.appointmentAt);
   const time = formatReminderTime(input.appointmentAt);
@@ -140,14 +147,17 @@ export function buildAppointmentReminderEmail(input: AppointmentReminderEmailInp
   return {
     to: input.to,
     subject: `【${input.clinicName}】明日${time}のご予約のご案内`,
-    text: `${input.clinicName}よりお知らせです。
+    text: `ご予約者様
+
+${input.clinicName}よりお知らせです。
 
 明日 ${when} にご予約をお承りしております。${confirmLine}
 
 お問い合わせ: ${input.clinicPhone || input.clinicName}
 
 ――――――
-このメールは予約に関する自動送信です。`,
+このメールは予約に関する自動送信です。
+${buildContactFooter(input.clinicName, input.clinicPhone)}`,
   };
 }
 
@@ -173,7 +183,9 @@ export function buildConfirmationRequestEmail(input: ConfirmationRequestEmailInp
   return {
     to: input.to,
     subject: `【${input.clinicName}】ご予約の確認とお手続きのお願い`,
-    text: `${input.clinicName}よりお知らせです。
+    text: `ご予約者様
+
+${input.clinicName}よりお知らせです。
 
 ${when} にご予約を承りました。
 
@@ -183,7 +195,8 @@ ${input.confirmUrl}
 お問い合わせ: ${input.clinicPhone || input.clinicName}
 
 ――――――
-このメールは予約に関する自動送信です。`,
+このメールは予約に関する自動送信です。
+${buildContactFooter(input.clinicName, input.clinicPhone)}`,
   };
 }
 
@@ -203,14 +216,17 @@ export function buildEmailRegisteredNotice(input: EmailRegisteredNoticeInput): E
   return {
     to: input.to,
     subject: `【${input.clinicName}】ご予約のお知らせ先を登録しました`,
-    text: `${input.clinicName}よりお知らせです。
+    text: `ご予約者様
+
+${input.clinicName}よりお知らせです。
 
 ${when} のご予約について、前日のお知らせ先としてこのメールアドレスを登録しました。
 
 お問い合わせ: ${input.clinicPhone || input.clinicName}
 
 ――――――
-このメールは予約に関する自動送信です。`,
+このメールは予約に関する自動送信です。
+${buildContactFooter(input.clinicName, input.clinicPhone)}`,
   };
 }
 

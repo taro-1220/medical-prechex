@@ -40,6 +40,7 @@ export function toAppt(row: Record<string, unknown>): Appointment {
     emailSentAt:          row.email_sent_at as string | undefined,
     patientRegisteredEmail:   row.patient_registered_email as string | undefined,
     patientRegisteredEmailAt: row.patient_registered_email_at as string | undefined,
+    emailLastFailedAt:        row.email_last_failed_at as string | undefined,
     clinicId:             row.clinic_id as string | undefined,
     patientId:            row.patient_id as string | undefined,
     createdAt:            row.created_at as string,

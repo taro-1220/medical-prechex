@@ -256,6 +256,9 @@ export default function ClinicAppointmentDetailPage() {
                   })()}
                 </dd>
                 {emailSendError && <dd className="text-xs text-red-600 mt-1">{emailSendError}</dd>}
+                {!appt.emailSentAt && appt.emailLastFailedAt && (
+                  <dd className="text-xs text-red-600 mt-1">メール送信に失敗しました（{formatDate(appt.emailLastFailedAt)}）</dd>
+                )}
               </div>
             </dl>
 

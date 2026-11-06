@@ -108,6 +108,9 @@ export default function OpsPage() {
   const [forbidden, setForbidden] = useState(false);
   const [forbiddenEmail, setForbiddenEmail] = useState<string | null>(null);
   const [approvalActionId, setApprovalActionId] = useState<string | null>(null);
+  const [notificationSummary, setNotificationSummary] = useState<
+    { available: true; sent: number; failed: number; skipped: number; capped: number; lastRunAt: string | null } | { available: false } | null
+  >(null);
 
   const loadClinics = async () => {
     const token = await getAccessToken();
@@ -138,6 +141,15 @@ export default function OpsPage() {
   };
 
   useEffect(() => { loadClinics(); }, []);
+
+  useEffect(() => {
+    (async () => {
+      const token = await getAccessToken();
+      if (!token) return;
+      const res = await fetch("/api/ops/notifications/summary", { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setNotificationSummary(await res.json());
+    })();
+  }, []);
 
   const pendingApprovalClinics = useMemo(
     () => clinics.filter(c => c.status === "pending_approval"),
@@ -262,6 +274,31 @@ export default function OpsPage() {
                   <p className={`text-2xl font-black ${s.color ?? "text-gray-900"}`}>{s.value}</p>
                 </div>
               ))}
+            </div>
+
+            {/* 自動送信（直近24時間） */}
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 mb-8">
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">自動送信（直近24時間）</p>
+              {notificationSummary === null ? (
+                <p className="text-sm text-gray-400">読み込み中...</p>
+              ) : !notificationSummary.available ? (
+                <p className="text-sm text-gray-400">記録の準備中</p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  {[
+                    { label: "送信数", value: notificationSummary.sent, color: "text-teal-600" },
+                    { label: "失敗数", value: notificationSummary.failed, color: notificationSummary.failed > 0 ? "text-red-600" : "text-gray-900" },
+                    { label: "上限で停止", value: notificationSummary.capped, color: notificationSummary.capped > 0 ? "text-amber-600" : "text-gray-900" },
+                    { label: "スキップ", value: notificationSummary.skipped },
+                    { label: "最終実行", value: notificationSummary.lastRunAt ? new Date(notificationSummary.lastRunAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "—" },
+                  ].map(s => (
+                    <div key={s.label} className="text-center">
+                      <p className="text-xs text-gray-500 mb-1">{s.label}</p>
+                      <p className={`text-xl font-black ${s.color ?? "text-gray-900"}`}>{s.value}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 直近の予約・直近の医院登録 */}

@@ -2,13 +2,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import type { Appointment } from "@/lib/types";
 
-const { fromMock, getAllAppointmentsMock, isEmailSendEnabledMock, sendAppointmentReminderEmailMock, reminderAlreadySentIdsMock, recordReminderSentMock } = vi.hoisted(() => ({
+const { fromMock, getAllAppointmentsMock, getAppointmentByIdMock, isEmailSendEnabledMock, sendAppointmentReminderEmailMock, reminderAlreadySentIdsMock, recordReminderSentMock, recordNotificationRunMock, setEmailLastFailedAtMock } = vi.hoisted(() => ({
   fromMock: vi.fn(),
   getAllAppointmentsMock: vi.fn(),
+  getAppointmentByIdMock: vi.fn(),
   isEmailSendEnabledMock: vi.fn(),
   sendAppointmentReminderEmailMock: vi.fn(),
   reminderAlreadySentIdsMock: vi.fn(),
   recordReminderSentMock: vi.fn(),
+  recordNotificationRunMock: vi.fn(),
+  setEmailLastFailedAtMock: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -16,6 +19,7 @@ vi.mock("@/lib/supabase", () => ({
 }));
 vi.mock("@/lib/store", () => ({
   getAllAppointments: getAllAppointmentsMock,
+  getAppointmentById: getAppointmentByIdMock,
 }));
 vi.mock("@/lib/notify-email", () => ({
   isEmailSendEnabled: isEmailSendEnabledMock,
@@ -24,6 +28,10 @@ vi.mock("@/lib/notify-email", () => ({
 vi.mock("@/lib/reminder-store", () => ({
   reminderAlreadySentIds: reminderAlreadySentIdsMock,
   recordReminderSent: recordReminderSentMock,
+}));
+vi.mock("@/lib/notification-run-store", () => ({
+  recordNotificationRun: recordNotificationRunMock,
+  setEmailLastFailedAt: setEmailLastFailedAtMock,
 }));
 
 import { GET } from "./route";
@@ -72,14 +80,19 @@ describe("GET /api/cron/appointment-reminders", () => {
   beforeEach(() => {
     fromMock.mockReset();
     getAllAppointmentsMock.mockReset();
+    getAppointmentByIdMock.mockReset();
     isEmailSendEnabledMock.mockReset();
     sendAppointmentReminderEmailMock.mockReset();
     reminderAlreadySentIdsMock.mockReset();
     recordReminderSentMock.mockReset();
+    recordNotificationRunMock.mockReset();
+    setEmailLastFailedAtMock.mockReset();
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW));
     delete process.env.CRON_SECRET;
     delete process.env.ENABLE_REMINDER_SEND;
+    // 既定: 再取得した予約は対象抽出時のまま変わっていない
+    getAppointmentByIdMock.mockImplementation(async (id: string) => makeAppt({ id, appointmentAt: TOMORROW }));
   });
 
   it("CRON_SECRET未設定なら401", async () => {
@@ -115,7 +128,7 @@ describe("GET /api/cron/appointment-reminders", () => {
 
     const res = await GET(makeRequest("http://localhost/api/cron/appointment-reminders", "Bearer correct"));
     const body = await res.json();
-    expect(body).toEqual({ sent: 0, skipped: 1, failed: 0 });
+    expect(body).toEqual({ sent: 0, skipped: 1, failed: 0, capped: 0 });
     expect(sendAppointmentReminderEmailMock).not.toHaveBeenCalled();
   });
 
@@ -130,7 +143,7 @@ describe("GET /api/cron/appointment-reminders", () => {
 
     const res = await GET(makeRequest("http://localhost/api/cron/appointment-reminders", "Bearer correct"));
     const body = await res.json();
-    expect(body).toEqual({ sent: 1, skipped: 0, failed: 0 });
+    expect(body).toEqual({ sent: 1, skipped: 0, failed: 0, capped: 0 });
     expect(sendAppointmentReminderEmailMock).toHaveBeenCalledTimes(1);
     expect(recordReminderSentMock).toHaveBeenCalledWith("1");
   });
@@ -151,7 +164,7 @@ describe("GET /api/cron/appointment-reminders", () => {
 
     const res = await GET(makeRequest("http://localhost/api/cron/appointment-reminders", "Bearer correct"));
     const body = await res.json();
-    expect(body).toEqual({ sent: 1, skipped: 0, failed: 1 });
+    expect(body).toEqual({ sent: 1, skipped: 0, failed: 1, capped: 0 });
   });
 
   it("送信済みの予約は対象から除外される（二重送信しない）", async () => {
@@ -164,7 +177,68 @@ describe("GET /api/cron/appointment-reminders", () => {
 
     const res = await GET(makeRequest("http://localhost/api/cron/appointment-reminders", "Bearer correct"));
     const body = await res.json();
-    expect(body).toEqual({ sent: 0, skipped: 0, failed: 0 });
+    expect(body).toEqual({ sent: 0, skipped: 0, failed: 0, capped: 0 });
     expect(sendAppointmentReminderEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("送信直前の再取得でキャンセル済みに変わっていればスキップする", async () => {
+    process.env.CRON_SECRET = "correct";
+    process.env.ENABLE_REMINDER_SEND = "true";
+    stubClinics();
+    getAllAppointmentsMock.mockResolvedValue([makeAppt({ id: "1", appointmentAt: TOMORROW })]);
+    reminderAlreadySentIdsMock.mockResolvedValue(new Set());
+    isEmailSendEnabledMock.mockReturnValue(true);
+    getAppointmentByIdMock.mockResolvedValue(makeAppt({ id: "1", appointmentAt: TOMORROW, status: "cancelled" }));
+
+    const res = await GET(makeRequest("http://localhost/api/cron/appointment-reminders", "Bearer correct"));
+    const body = await res.json();
+    expect(body).toEqual({ sent: 0, skipped: 1, failed: 0, capped: 0 });
+    expect(sendAppointmentReminderEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("送信直前の再取得で日時が変わっていればスキップする", async () => {
+    process.env.CRON_SECRET = "correct";
+    process.env.ENABLE_REMINDER_SEND = "true";
+    stubClinics();
+    getAllAppointmentsMock.mockResolvedValue([makeAppt({ id: "1", appointmentAt: TOMORROW })]);
+    reminderAlreadySentIdsMock.mockResolvedValue(new Set());
+    isEmailSendEnabledMock.mockReturnValue(true);
+    getAppointmentByIdMock.mockResolvedValue(makeAppt({ id: "1", appointmentAt: "2026-03-07T01:00:00.000Z" }));
+
+    const res = await GET(makeRequest("http://localhost/api/cron/appointment-reminders", "Bearer correct"));
+    const body = await res.json();
+    expect(body).toEqual({ sent: 0, skipped: 1, failed: 0, capped: 0 });
+    expect(sendAppointmentReminderEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("1クリニックの上限（100件）を超えた分は送らず、他クリニックは継続する", async () => {
+    process.env.CRON_SECRET = "correct";
+    process.env.ENABLE_REMINDER_SEND = "true";
+    fromMock.mockImplementation((table: string) => {
+      if (table === "clinics") {
+        return {
+          select: () => Promise.resolve({
+            data: [
+              { id: "clinic-1", name: "医院A", phone: "" },
+              { id: "clinic-2", name: "医院B", phone: "" },
+            ],
+            error: null,
+          }),
+        };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+    const clinicAAppts = Array.from({ length: 101 }, (_, i) => makeAppt({ id: `a${i}`, appointmentAt: TOMORROW, clinicId: "clinic-1" }));
+    const clinicBAppt = makeAppt({ id: "b0", appointmentAt: TOMORROW, clinicId: "clinic-2" });
+    getAllAppointmentsMock.mockResolvedValue([...clinicAAppts, clinicBAppt]);
+    reminderAlreadySentIdsMock.mockResolvedValue(new Set());
+    isEmailSendEnabledMock.mockReturnValue(true);
+    getAppointmentByIdMock.mockImplementation(async (id: string) => makeAppt({ id, appointmentAt: TOMORROW }));
+    sendAppointmentReminderEmailMock.mockResolvedValue({ ok: true });
+
+    const res = await GET(makeRequest("http://localhost/api/cron/appointment-reminders", "Bearer correct"));
+    const body = await res.json();
+    expect(body.sent).toBe(101); // クリニックA 100件 + クリニックB 1件
+    expect(body.capped).toBe(1); // クリニックAの101件目
   });
 });

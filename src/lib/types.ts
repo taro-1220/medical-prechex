@@ -191,6 +191,8 @@ export interface Appointment {
   /** 患者がconfirm画面で自ら登録したメール（予約単位。patients.emailは上書きしない。migration 024） */
   patientRegisteredEmail?: string;
   patientRegisteredEmailAt?: string;
+  /** 直近のメール送信失敗時刻（成功時はnullに戻る。migration 026） */
+  emailLastFailedAt?: string;
   clinicId?: string;
   patientId?: string;
   createdAt: string;

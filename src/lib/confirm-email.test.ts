@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Appointment } from "./types";
 
-const { fromMock, sendConfirmationRequestEmailMock, isEmailSendEnabledMock } = vi.hoisted(() => ({
+const { fromMock, sendConfirmationRequestEmailMock, isEmailSendEnabledMock, getAppointmentByIdMock, setEmailLastFailedAtMock } = vi.hoisted(() => ({
   fromMock: vi.fn(),
   sendConfirmationRequestEmailMock: vi.fn(),
   isEmailSendEnabledMock: vi.fn(),
+  getAppointmentByIdMock: vi.fn(),
+  setEmailLastFailedAtMock: vi.fn(),
 }));
 
 vi.mock("./supabase", () => ({ getSupabase: () => ({ from: fromMock }) }));
@@ -12,6 +14,8 @@ vi.mock("./notify-email", () => ({
   sendConfirmationRequestEmail: sendConfirmationRequestEmailMock,
   isEmailSendEnabled: isEmailSendEnabledMock,
 }));
+vi.mock("./store", () => ({ getAppointmentById: getAppointmentByIdMock }));
+vi.mock("./notification-run-store", () => ({ setEmailLastFailedAt: setEmailLastFailedAtMock }));
 
 import { sendConfirmationEmailAndRecord } from "./confirm-email";
 
@@ -64,9 +68,13 @@ describe("sendConfirmationEmailAndRecord", () => {
     fromMock.mockReset();
     sendConfirmationRequestEmailMock.mockReset();
     isEmailSendEnabledMock.mockReset();
+    getAppointmentByIdMock.mockReset();
+    setEmailLastFailedAtMock.mockReset();
     updateCalls.length = 0;
     delete process.env.ENABLE_REMINDER_SEND;
     stub();
+    // 既定: 再取得した予約は渡された予約と同一（最新のまま）
+    getAppointmentByIdMock.mockImplementation(async (id: string) => makeAppt({ id }));
   });
 
   it("メールが無ければ送らない(no_email)", async () => {
@@ -99,12 +107,31 @@ describe("sendConfirmationEmailAndRecord", () => {
     expect(updateCalls[0]).toMatchObject({ email_sent_at: expect.any(String) });
   });
 
-  it("送信失敗でも例外を投げず、記録も更新しない(send_failed)", async () => {
+  it("送信失敗でも例外を投げず、記録も更新しない(send_failed)。失敗時刻を記録する", async () => {
     process.env.ENABLE_REMINDER_SEND = "true";
     isEmailSendEnabledMock.mockReturnValue(true);
     sendConfirmationRequestEmailMock.mockResolvedValue({ ok: false, error: "resend_error_500" });
     const res = await sendConfirmationEmailAndRecord(makeAppt());
     expect(res).toEqual({ ok: false, reason: "send_failed" });
     expect(updateCalls.length).toBe(0);
+    expect(setEmailLastFailedAtMock).toHaveBeenCalledWith("appt-1", expect.any(String));
+  });
+
+  it("送信直前の再取得でキャンセル済みに変わっていれば送らない(invalid_status)", async () => {
+    process.env.ENABLE_REMINDER_SEND = "true";
+    isEmailSendEnabledMock.mockReturnValue(true);
+    getAppointmentByIdMock.mockResolvedValue(makeAppt({ status: "cancelled" }));
+    const res = await sendConfirmationEmailAndRecord(makeAppt({ status: "confirmation_pending" }));
+    expect(res).toEqual({ ok: false, reason: "invalid_status" });
+    expect(sendConfirmationRequestEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("送信直前の再取得で予約日時が変わっていれば送らない(stale)", async () => {
+    process.env.ENABLE_REMINDER_SEND = "true";
+    isEmailSendEnabledMock.mockReturnValue(true);
+    getAppointmentByIdMock.mockResolvedValue(makeAppt({ appointmentAt: "2026-03-06T01:00:00.000Z" }));
+    const res = await sendConfirmationEmailAndRecord(makeAppt());
+    expect(res).toEqual({ ok: false, reason: "stale" });
+    expect(sendConfirmationRequestEmailMock).not.toHaveBeenCalled();
   });
 });

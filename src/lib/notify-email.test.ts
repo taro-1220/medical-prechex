@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { buildAvailableSlotEmail, isEmailSendEnabled, sendAvailableSlotEmail, buildClinicApprovedEmail, sendClinicApprovedEmail } from "./notify-email";
+import {
+  buildAvailableSlotEmail, isEmailSendEnabled, sendAvailableSlotEmail, buildClinicApprovedEmail, sendClinicApprovedEmail,
+  buildAppointmentReminderEmail, buildConfirmationRequestEmail, buildEmailRegisteredNotice,
+} from "./notify-email";
 
 const BASE_INPUT = {
   to: "patient-b@example.com",
@@ -107,5 +110,35 @@ describe("buildClinicApprovedEmail / sendClinicApprovedEmail: Phase P1 承認完
       "https://api.resend.com/emails",
       expect.objectContaining({ method: "POST" }),
     );
+  });
+});
+
+describe("患者向け自動送信3種（前日リマインド・確認URL・メール登録完了）の末尾案内・宛名", () => {
+  const PATIENT_NAME = "山田太郎";
+  const CASES = [
+    { name: "reminder", build: () => buildAppointmentReminderEmail({ to: "p@example.com", clinicName: "検収クリニック", clinicPhone: "03-1111-2222", appointmentAt: "2026-08-29T06:30:00Z", confirmUrl: null }) },
+    { name: "confirmation-request", build: () => buildConfirmationRequestEmail({ to: "p@example.com", clinicName: "検収クリニック", clinicPhone: "03-1111-2222", appointmentAt: "2026-08-29T06:30:00Z", confirmUrl: "http://localhost:3000/confirm/tok1" }) },
+    { name: "email-registered-notice", build: () => buildEmailRegisteredNotice({ to: "p@example.com", clinicName: "検収クリニック", clinicPhone: "03-1111-2222", appointmentAt: "2026-08-29T06:30:00Z" }) },
+  ];
+
+  for (const { name, build } of CASES) {
+    it(`${name}: 宛名は「ご予約者様」で、患者氏名は本文に含まれない`, () => {
+      const payload = build();
+      expect(payload.text).toContain("ご予約者様");
+      expect(payload.text).not.toContain(PATIENT_NAME);
+    });
+
+    it(`${name}: 末尾に心当たりが無い場合の連絡先と、お知らせ不要の申し出先がある`, () => {
+      const payload = build();
+      expect(payload.text).toContain("心当たりがない場合は");
+      expect(payload.text).toContain("検収クリニック（03-1111-2222）");
+      expect(payload.text).toContain("お知らせが不要な場合は、検収クリニックにお申し出ください。");
+    });
+  }
+
+  it("電話番号が無いクリニックは、末尾の連絡先表記から電話部分を省く", () => {
+    const payload = buildAppointmentReminderEmail({ to: "p@example.com", clinicName: "検収クリニック", clinicPhone: "", appointmentAt: "2026-08-29T06:30:00Z", confirmUrl: null });
+    expect(payload.text).toContain("心当たりがない場合は、お手数ですが破棄のうえ、検収クリニックまでご連絡ください。");
+    expect(payload.text).not.toContain("検収クリニック（）");
   });
 });
