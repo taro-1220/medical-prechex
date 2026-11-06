@@ -106,3 +106,51 @@ medipre運営事務局`,
 export async function sendClinicApprovedEmail(input: ClinicApprovedEmailInput): Promise<SendEmailResult> {
   return sendEmailViaResend(buildClinicApprovedEmail(input));
 }
+
+// ---------------------------------------------------------------------------
+// 前日リマインド（cron: /api/cron/appointment-reminders）
+// 絶対制約: 診療内容・診療区分・金額は本文に含めない。確認URLは確認待ちの予約のみ渡す
+// ---------------------------------------------------------------------------
+
+export interface AppointmentReminderEmailInput {
+  to: string;
+  clinicName: string;
+  clinicPhone: string;
+  appointmentAt: string; // ISO
+  confirmUrl: string | null;
+}
+
+function formatReminderDateTime(iso: string): string {
+  return new Date(iso).toLocaleString("ja-JP", {
+    month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
+    timeZone: "Asia/Tokyo",
+  });
+}
+
+function formatReminderTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tokyo" });
+}
+
+export function buildAppointmentReminderEmail(input: AppointmentReminderEmailInput): EmailPayload {
+  const when = formatReminderDateTime(input.appointmentAt);
+  const time = formatReminderTime(input.appointmentAt);
+  const confirmLine = input.confirmUrl
+    ? `\n\nまだご予約内容の確認・同意が完了していません。お手数ですが以下よりご確認ください。\n${input.confirmUrl}`
+    : "";
+  return {
+    to: input.to,
+    subject: `【${input.clinicName}】明日${time}のご予約のご案内`,
+    text: `${input.clinicName}よりお知らせです。
+
+明日 ${when} にご予約をお承りしております。${confirmLine}
+
+お問い合わせ: ${input.clinicPhone || input.clinicName}
+
+――――――
+このメールは予約に関する自動送信です。`,
+  };
+}
+
+export async function sendAppointmentReminderEmail(input: AppointmentReminderEmailInput): Promise<SendEmailResult> {
+  return sendEmailViaResend(buildAppointmentReminderEmail(input));
+}
