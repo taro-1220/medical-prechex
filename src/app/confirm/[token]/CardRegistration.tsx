@@ -5,6 +5,7 @@ import { Elements, CardElement, useStripe, useElements } from "@stripe/react-str
 import type { CancelTier } from "@/lib/types";
 import { formatTierAmount } from "@/lib/charge-policy";
 import { getCardSetupErrorMessage } from "@/lib/card-setup-error";
+import { DAY_COUNTING_NOTE } from "@/lib/cancel-policy";
 
 export function formatDeadline(iso: string): string {
   return new Date(iso).toLocaleString("ja-JP", {
@@ -135,6 +136,7 @@ export default function CardRegistration({
       {tiers && tiers.length > 0 && (
         <div className="bg-gray-50 rounded-xl px-4 py-2">
           <TierTable tiers={tiers} baseAmount={baseAmount} />
+          <p className="text-xs text-gray-400 mt-2">{DAY_COUNTING_NOTE}</p>
         </div>
       )}
       <p className="text-xs text-gray-400">{clinicName}（{category}）</p>

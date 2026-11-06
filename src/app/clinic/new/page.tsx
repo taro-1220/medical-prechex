@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { MessageChannel, Patient, TemplateWithMeta, TreatmentCategory, ClinicCancelPolicySettings } from "@/lib/types";
 import { getAccessToken, getCurrentClinic } from "@/lib/clinic-auth";
 import { DEFAULT_TEMPLATES, renderTemplate, findUnresolvedPlaceholders } from "@/lib/message-templates";
-import { resolveCancelPolicyApplication } from "@/lib/cancel-policy";
+import { resolveCancelPolicyApplication, shouldWarnMissingBaseAmount } from "@/lib/cancel-policy";
 import { checkPolicyTierConsistency } from "@/lib/charge-policy";
 
 const TREATMENT_CATEGORY_LABEL: Record<TreatmentCategory, string> = { private: "自由診療", insurance: "保険診療", other: "その他" };
@@ -695,6 +695,9 @@ export default function ClinicNewPage() {
                 />
                 <p className="text-xs text-gray-400 mt-1">キャンセル発生時、段階テーブルの%をこの額に掛けて請求します</p>
               </div>
+            )}
+            {shouldWarnMissingBaseAmount(cancelPolicyApplied, cardRegistrationRequired, baseAmount) && (
+              <p className="text-xs text-amber-600 mt-1">基準額が未入力のため、キャンセル料は発生しません</p>
             )}
           </div>
 

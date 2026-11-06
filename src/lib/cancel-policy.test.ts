@@ -8,6 +8,8 @@ import {
   isInsuranceAcknowledgmentSatisfied,
   isInsuranceNotificationConfirmationSatisfied,
   isGeneralPolicyStepComplete,
+  shouldWarnMissingBaseAmount,
+  DAY_COUNTING_NOTE,
 } from "./cancel-policy";
 
 describe("scopeAppliesToCategory", () => {
@@ -134,5 +136,30 @@ describe("isGeneralPolicyStepComplete", () => {
   it("本文が空で cancel_policy_enabled=true なら未完了", () => {
     expect(isGeneralPolicyStepComplete("", true)).toBe(false);
     expect(isGeneralPolicyStepComplete("   ", true)).toBe(false);
+  });
+});
+
+describe("shouldWarnMissingBaseAmount", () => {
+  it("ポリシー非適用なら注意しない", () => {
+    expect(shouldWarnMissingBaseAmount(false, false, "")).toBe(false);
+    expect(shouldWarnMissingBaseAmount(false, true, "")).toBe(false);
+  });
+  it("ポリシー適用かつカード登録を求めない場合は注意する（base_amountが保存されないため）", () => {
+    expect(shouldWarnMissingBaseAmount(true, false, "")).toBe(true);
+  });
+  it("ポリシー適用かつカード登録ありで基準額が空なら注意する", () => {
+    expect(shouldWarnMissingBaseAmount(true, true, "")).toBe(true);
+    expect(shouldWarnMissingBaseAmount(true, true, "   ")).toBe(true);
+  });
+  it("ポリシー適用かつ基準額が入力済みなら注意しない", () => {
+    expect(shouldWarnMissingBaseAmount(true, true, "10000")).toBe(false);
+  });
+});
+
+describe("DAY_COUNTING_NOTE", () => {
+  it("日数の数え方（日本時間・0:00基準・前日の扱い）を説明する文言である", () => {
+    expect(DAY_COUNTING_NOTE).toContain("日本時間");
+    expect(DAY_COUNTING_NOTE).toContain("0:00");
+    expect(DAY_COUNTING_NOTE).toContain("前日");
   });
 });

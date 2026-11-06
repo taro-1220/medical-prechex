@@ -42,6 +42,10 @@ export function isWithinGraceHours(createdAt: string, now: string, graceHours: n
 // 実際の損害を超える可能性がある表現。保存はブロックせず警告のみに使う
 const RISKY_POLICY_WORDS: readonly string[] = ["全額", "100%", "100％", "違約金", "罰金"];
 
+/** 患者向け同意画面（段階テーブルの下）に表示する、日数の数え方の説明文 */
+export const DAY_COUNTING_NOTE =
+  "日数は、予約日の0:00を基準に、日本時間の日付で数えます。例：予約日の前日0:00以降は「前日」の扱いです。";
+
 /** policy_text に含まれる要警告語をすべて返す（無ければ空配列） */
 export function findRiskyPolicyWording(text: string): string[] {
   return RISKY_POLICY_WORDS.filter((w) => text.includes(w));
@@ -65,6 +69,21 @@ export function isInsuranceAcknowledgmentSatisfied(scope: CancelPolicyScope, ack
 export function isInsuranceNotificationConfirmationSatisfied(scope: CancelPolicyScope, confirmed: boolean): boolean {
   if (scope === "insurance" || scope === "both") return confirmed;
   return true;
+}
+
+/**
+ * 基準額未入力の注意表示判定。カード登録を求めない予約は base_amount が保存されず、
+ * ポリシーが適用されていても請求額が0円になる（charge-policy.tsのamount算出は変更しない。
+ * UI側の注意表示のみを目的とする）。
+ */
+export function shouldWarnMissingBaseAmount(
+  cancelPolicyApplied: boolean,
+  cardRegistrationRequired: boolean,
+  baseAmountInput: string,
+): boolean {
+  if (!cancelPolicyApplied) return false;
+  if (!cardRegistrationRequired) return true;
+  return baseAmountInput.trim().length === 0;
 }
 
 /**
