@@ -38,6 +38,8 @@ export function toAppt(row: Record<string, unknown>): Appointment {
     lineSentAt:           row.line_sent_at as string | undefined,
     smsSentAt:            row.sms_sent_at as string | undefined,
     emailSentAt:          row.email_sent_at as string | undefined,
+    patientRegisteredEmail:   row.patient_registered_email as string | undefined,
+    patientRegisteredEmailAt: row.patient_registered_email_at as string | undefined,
     clinicId:             row.clinic_id as string | undefined,
     patientId:            row.patient_id as string | undefined,
     createdAt:            row.created_at as string,

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Appointment } from "@/lib/types";
 import CardRegistration, { formatDeadline, TierTable } from "./CardRegistration";
+import EmailRegistration from "./EmailRegistration";
 import { computeFreeCancellationDeadline } from "@/lib/charge-policy";
 import { TERMS_PAGE_PATH } from "@/lib/terms";
 
@@ -174,6 +175,8 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
             onRegistered={refetchAppointment}
           />
         )}
+
+        <EmailRegistration token={token!} currentEmail={appt.patientRegisteredEmail} />
 
         {/* 同意 */}
         <label className="flex items-start gap-3 cursor-pointer">

@@ -154,3 +154,66 @@ export function buildAppointmentReminderEmail(input: AppointmentReminderEmailInp
 export async function sendAppointmentReminderEmail(input: AppointmentReminderEmailInput): Promise<SendEmailResult> {
   return sendEmailViaResend(buildAppointmentReminderEmail(input));
 }
+
+// ---------------------------------------------------------------------------
+// 予約作成時の確認URL自動送信・患者自身によるメール登録の受付完了通知
+// 絶対制約: 診療内容・診療区分・金額は本文に含めない
+// ---------------------------------------------------------------------------
+
+export interface ConfirmationRequestEmailInput {
+  to: string;
+  clinicName: string;
+  clinicPhone: string;
+  appointmentAt: string;
+  confirmUrl: string;
+}
+
+export function buildConfirmationRequestEmail(input: ConfirmationRequestEmailInput): EmailPayload {
+  const when = formatReminderDateTime(input.appointmentAt);
+  return {
+    to: input.to,
+    subject: `【${input.clinicName}】ご予約の確認とお手続きのお願い`,
+    text: `${input.clinicName}よりお知らせです。
+
+${when} にご予約を承りました。
+
+ご予約内容の確認・お手続きを、以下よりお願いいたします。
+${input.confirmUrl}
+
+お問い合わせ: ${input.clinicPhone || input.clinicName}
+
+――――――
+このメールは予約に関する自動送信です。`,
+  };
+}
+
+export async function sendConfirmationRequestEmail(input: ConfirmationRequestEmailInput): Promise<SendEmailResult> {
+  return sendEmailViaResend(buildConfirmationRequestEmail(input));
+}
+
+export interface EmailRegisteredNoticeInput {
+  to: string;
+  clinicName: string;
+  clinicPhone: string;
+  appointmentAt: string;
+}
+
+export function buildEmailRegisteredNotice(input: EmailRegisteredNoticeInput): EmailPayload {
+  const when = formatReminderDateTime(input.appointmentAt);
+  return {
+    to: input.to,
+    subject: `【${input.clinicName}】ご予約のお知らせ先を登録しました`,
+    text: `${input.clinicName}よりお知らせです。
+
+${when} のご予約について、前日のお知らせ先としてこのメールアドレスを登録しました。
+
+お問い合わせ: ${input.clinicPhone || input.clinicName}
+
+――――――
+このメールは予約に関する自動送信です。`,
+  };
+}
+
+export async function sendEmailRegisteredNotice(input: EmailRegisteredNoticeInput): Promise<SendEmailResult> {
+  return sendEmailViaResend(buildEmailRegisteredNotice(input));
+}

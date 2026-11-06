@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Appointment } from "./types";
-import { selectReminderTargets, tomorrowJstDateKey } from "./reminder-targets";
+import { selectReminderTargets, tomorrowJstDateKey, reminderEmailOf } from "./reminder-targets";
 
 function makeAppt(overrides: Partial<Appointment> & { appointmentAt: string }): Appointment {
   return {
@@ -44,6 +44,17 @@ describe("tomorrowJstDateKey: JST境界", () => {
   });
 });
 
+describe("reminderEmailOf: 患者自身の登録メールを優先する", () => {
+  it("患者登録メールがあればそれを使う", () => {
+    const a = makeAppt({ appointmentAt: "2026-03-05T00:00:00.000Z", email: "staff@example.com", patientRegisteredEmail: "patient@example.com" });
+    expect(reminderEmailOf(a)).toBe("patient@example.com");
+  });
+  it("無ければ予約作成時のメールを使う", () => {
+    const a = makeAppt({ appointmentAt: "2026-03-05T00:00:00.000Z", email: "staff@example.com" });
+    expect(reminderEmailOf(a)).toBe("staff@example.com");
+  });
+});
+
 describe("selectReminderTargets", () => {
   const nowIso = "2026-03-04T15:00:00.000Z"; // JST 2026-03-05、翌日=2026-03-06
   const tomorrow = "2026-03-06T01:00:00.000Z"; // JST 2026-03-06
@@ -75,6 +86,11 @@ describe("selectReminderTargets", () => {
   it("メールアドレスが無い予約は対象外", () => {
     const items = [makeAppt({ id: "1", appointmentAt: tomorrow, email: "" })];
     expect(selectReminderTargets(items, nowIso, new Set())).toEqual([]);
+  });
+
+  it("予約作成時のメールが無くても、患者が自ら登録したメールがあれば対象", () => {
+    const items = [makeAppt({ id: "1", appointmentAt: tomorrow, email: "", patientRegisteredEmail: "patient@example.com" })];
+    expect(selectReminderTargets(items, nowIso, new Set()).map((a) => a.id)).toEqual(["1"]);
   });
 
   it("送信記録がある予約は対象外", () => {

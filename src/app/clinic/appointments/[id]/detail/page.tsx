@@ -51,6 +51,8 @@ export default function ClinicAppointmentDetailPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"success" | "error" | null>(null);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSendError, setEmailSendError] = useState<string | null>(null);
 
   const load = async () => {
     try {
@@ -84,6 +86,33 @@ export default function ClinicAppointmentDetailPage() {
       setCopyStatus("error");
     }
     setTimeout(() => setCopyStatus(null), 2000);
+  };
+
+  const sendConfirmEmail = async () => {
+    if (emailSending) return;
+    setEmailSending(true);
+    setEmailSendError(null);
+    try {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/appointments/${id}/send-confirm-email`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      const body = await res.json().catch(() => ({}));
+      if (body.ok) {
+        await load();
+      } else if (body.reason === "disabled") {
+        setEmailSendError("メール送信は現在無効です");
+      } else if (body.reason === "no_email") {
+        setEmailSendError("連絡先が登録されていません");
+      } else {
+        setEmailSendError("送信に失敗しました。再送できます");
+      }
+    } catch {
+      setEmailSendError("送信に失敗しました。再送できます");
+    } finally {
+      setEmailSending(false);
+    }
   };
 
   const runAction = async (action: "checkin" | "complete") => {
@@ -203,6 +232,30 @@ export default function ClinicAppointmentDetailPage() {
                     })()}
                   </span>
                 </dd>
+                <dd className="flex items-center gap-2 flex-wrap mt-1.5">
+                  {(() => {
+                    const email = appt.patientRegisteredEmail || appt.email;
+                    if (!email) return <span className="text-xs text-gray-400">連絡先なし</span>;
+                    return (
+                      <>
+                        <button
+                          onClick={sendConfirmEmail}
+                          disabled={emailSending}
+                          className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs hover:bg-gray-50 transition disabled:opacity-50"
+                        >
+                          {emailSending ? "送信中..." : "メールで送る"}
+                        </button>
+                        <span className="text-xs text-gray-400">
+                          {appt.emailSentAt ? `メール送信済み ${formatDate(appt.emailSentAt)}` : "メール未送信"}
+                        </span>
+                        {appt.patientRegisteredEmail && (
+                          <span className="text-xs text-teal-600">患者さんが登録</span>
+                        )}
+                      </>
+                    );
+                  })()}
+                </dd>
+                {emailSendError && <dd className="text-xs text-red-600 mt-1">{emailSendError}</dd>}
               </div>
             </dl>
 

@@ -188,6 +188,9 @@ export interface Appointment {
   lineSentAt?: string;
   smsSentAt?: string;
   emailSentAt?: string;
+  /** 患者がconfirm画面で自ら登録したメール（予約単位。patients.emailは上書きしない。migration 024） */
+  patientRegisteredEmail?: string;
+  patientRegisteredEmailAt?: string;
   clinicId?: string;
   patientId?: string;
   createdAt: string;

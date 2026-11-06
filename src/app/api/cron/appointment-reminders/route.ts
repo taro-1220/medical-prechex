@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getAllAppointments } from "@/lib/store";
-import { selectReminderTargets } from "@/lib/reminder-targets";
+import { selectReminderTargets, reminderEmailOf } from "@/lib/reminder-targets";
 import { isEmailSendEnabled, sendAppointmentReminderEmail } from "@/lib/notify-email";
 import { reminderAlreadySentIds, recordReminderSent } from "@/lib/reminder-store";
 
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
     const clinic = clinicById.get(appt.clinicId);
     const confirmUrl = appt.status === "confirmation_pending" ? `${appUrl}/confirm/${appt.token}` : null;
     const result = await sendAppointmentReminderEmail({
-      to: appt.email,
+      to: reminderEmailOf(appt),
       clinicName: clinic?.name ?? appt.clinicName,
       clinicPhone: clinic?.phone ?? "",
       appointmentAt: appt.appointmentAt,

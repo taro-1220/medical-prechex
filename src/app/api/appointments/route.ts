@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { authenticateRequest, authorizeClinicAccess, getActiveClinicIdsForUser } from "@/lib/clinic-access";
 import { createAppointment, getAllAppointments } from "@/lib/store";
+import { isValidEmailFormat } from "@/lib/contact-info";
+import { sendConfirmationEmailAndRecord } from "@/lib/confirm-email";
 
 function safeError(e: unknown) {
   const err = e instanceof Error ? e : new Error(String(e));
@@ -49,6 +51,10 @@ export async function POST(req: NextRequest) {
   const appointmentAt = typeof body?.appointmentAt === "string" ? body.appointmentAt.trim() : "";
   if (!patientName || !appointmentAt) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  }
+  const email = typeof body?.email === "string" ? body.email.trim() : "";
+  if (email && !isValidEmailFormat(email)) {
+    return NextResponse.json({ error: "invalid_email" }, { status: 400 });
   }
 
   const treatmentCategory = ["insurance", "private", "other"].includes(body?.treatmentCategory)
@@ -99,7 +105,11 @@ export async function POST(req: NextRequest) {
       { ...body, patientName, appointmentAt, treatmentCategory, cancelPolicyManualOverride, cardRegistrationRequired, baseAmount },
       clinicId,
     );
-    return NextResponse.json(appt, { status: 201 });
+
+    const emailResult = await sendConfirmationEmailAndRecord(appt).catch(() => ({ ok: false, reason: "send_failed" }) as const);
+    const responseAppt = emailResult.ok ? { ...appt, emailSentAt: emailResult.sentAt } : appt;
+
+    return NextResponse.json({ ...responseAppt, emailSendStatus: emailResult.ok ? "sent" : emailResult.reason }, { status: 201 });
   } catch (e) {
     return NextResponse.json({ error: "internal_error", ...safeError(e) }, { status: 500 });
   }

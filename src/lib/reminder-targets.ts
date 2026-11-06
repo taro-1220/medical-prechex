@@ -4,6 +4,11 @@ import type { Appointment, AppointmentStatus } from "./types";
 
 const TARGET_STATUSES: readonly AppointmentStatus[] = ["confirmation_pending", "confirmed", "ticket_issued"];
 
+/** 患者が自ら登録したメール（確認画面）を優先し、無ければ予約作成時のメールを使う */
+export function reminderEmailOf(appointment: Appointment): string {
+  return appointment.patientRegisteredEmail || appointment.email;
+}
+
 /** "YYYY-MM-DD" の翌日の暦日キーを返す（月末・年末またぎも安全。実時刻ではなく日付計算専用） */
 export function tomorrowJstDateKey(nowIso: string): string {
   const [y, m, d] = toJstDateKey(nowIso).split("-").map(Number);
@@ -24,7 +29,7 @@ export function selectReminderTargets(
   const targetKey = tomorrowJstDateKey(nowIso);
   return appointments.filter((a) => {
     if (!TARGET_STATUSES.includes(a.status)) return false;
-    if (!a.email) return false;
+    if (!reminderEmailOf(a)) return false;
     if (alreadySentAppointmentIds.has(a.id)) return false;
     return toJstDateKey(a.appointmentAt) === targetKey;
   });

@@ -101,3 +101,36 @@ describe("POST /api/appointments: 認証・所属・承認", () => {
     expect((await POST(req(valid))).status).toBe(201);
   });
 });
+
+describe("POST /api/appointments: 連絡先（任意）と確認URLメールの自動送信", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getUserMock.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    createAppointmentMock.mockResolvedValue({ id: "a1" });
+    delete process.env.ENABLE_REMINDER_SEND;
+    delete process.env.RESEND_API_KEY;
+  });
+
+  it("電話・メールどちらも空でも201で作成できる", async () => {
+    stub([{ clinic_id: "c1", selected: true }], "active");
+    const res = await POST(req({ ...valid, phone: "", email: "" }));
+    expect(res.status).toBe(201);
+    expect(createAppointmentMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("不正な形式のメールは400で、作成しない", async () => {
+    stub([{ clinic_id: "c1", selected: true }], "active");
+    const res = await POST(req({ ...valid, email: "not-an-email" }));
+    expect(res.status).toBe(400);
+    expect(createAppointmentMock).not.toHaveBeenCalled();
+  });
+
+  it("メールがあっても送信基盤が無効なら、作成は成功しemailSendStatusはdisabled", async () => {
+    stub([{ clinic_id: "c1", selected: true }], "active");
+    createAppointmentMock.mockResolvedValue({ id: "a1", email: "patient@example.com", status: "confirmation_pending", token: "tok1", clinicName: "テスト医院", appointmentAt: valid.appointmentAt });
+    const res = await POST(req({ ...valid, email: "patient@example.com" }));
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.emailSendStatus).toBe("disabled");
+  });
+});

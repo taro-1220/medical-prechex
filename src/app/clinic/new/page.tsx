@@ -6,6 +6,8 @@ import { getAccessToken, getCurrentClinic } from "@/lib/clinic-auth";
 import { DEFAULT_TEMPLATES, renderTemplate, findUnresolvedPlaceholders } from "@/lib/message-templates";
 import { resolveCancelPolicyApplication, shouldWarnMissingBaseAmount } from "@/lib/cancel-policy";
 import { checkPolicyTierConsistency } from "@/lib/charge-policy";
+import { isValidEmailFormat } from "@/lib/contact-info";
+import ConfirmUrlQr from "../ConfirmUrlQr";
 
 const TREATMENT_CATEGORY_LABEL: Record<TreatmentCategory, string> = { private: "自由診療", insurance: "保険診療", other: "その他" };
 
@@ -48,7 +50,10 @@ export default function ClinicNewPage() {
 
   // 送信申告（「送信しました」押下の記録）。送信成否の自動取得はしない
   const [apptToken, setApptToken] = useState<string | null>(null);
+  const [apptId, setApptId] = useState<string | null>(null);
   const [sentAt, setSentAt] = useState<Record<MessageChannel, string | null>>({ sms: null, line: null, email: null });
+  const [emailSendStatus, setEmailSendStatus] = useState<"sent" | "failed" | "disabled" | "no_email" | null>(null);
+  const [emailSending, setEmailSending] = useState(false);
   const [confirmChannel, setConfirmChannel] = useState<MessageChannel | null>(null);
   const [marking, setMarking] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
@@ -222,6 +227,11 @@ export default function ClinicNewPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (form.email.trim() && !isValidEmailFormat(form.email)) {
+      showToast("error", "メールアドレスの形式が正しくありません");
+      return;
+    }
+
     // Phase J セクションB: 「予約確認ポリシー」本文とtiersの無料境界の矛盾を保存時に警告する
     // （ブロックはしない。誤検知は許容し、検出できないケースはそのまま素通りさせる）
     if (cancelPolicyApplied && activeCancelPolicy?.tiers) {
@@ -255,7 +265,9 @@ export default function ClinicNewPage() {
     const url = `https://www.medipre.jp/confirm/${appt.token}`;
     setConfirmUrl(url);
     setApptToken(appt.token);
-    setSentAt({ sms: null, line: null, email: null });
+    setApptId(appt.id ?? null);
+    setEmailSendStatus(appt.emailSendStatus ?? null);
+    setSentAt({ sms: null, line: null, email: appt.emailSentAt ?? null });
 
     const vars = { patientName: form.patientName, clinicName, confirmUrl: url, description: form.description };
     setBodies(Object.fromEntries(CHANNELS.map(ch => [ch, renderTemplate(getMeta(ch).body, vars)])) as Record<MessageChannel, string>);
@@ -279,6 +291,32 @@ export default function ClinicNewPage() {
   const showToast = (type: "success" | "error" | "warning", message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const sendEmailNow = async () => {
+    if (!apptId || emailSending) return;
+    setEmailSending(true);
+    try {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/appointments/${apptId}/send-confirm-email`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      const body = await res.json().catch(() => ({}));
+      if (body.ok) {
+        setEmailSendStatus("sent");
+        setSentAt(prev => ({ ...prev, email: body.sentAt }));
+        showToast("success", "✅ メールを送信しました");
+      } else {
+        setEmailSendStatus(body.reason === "disabled" ? "disabled" : "failed");
+        showToast("error", "メールの送信に失敗しました");
+      }
+    } catch {
+      setEmailSendStatus("failed");
+      showToast("error", "メールの送信に失敗しました");
+    } finally {
+      setEmailSending(false);
+    }
   };
 
   const markSent = async (channel: MessageChannel) => {
@@ -361,9 +399,32 @@ export default function ClinicNewPage() {
             <p className="text-sm text-gray-500 mt-1">{form.patientName} 様 · {apptDate}</p>
           </div>
 
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 text-center">
+            <p className="text-sm font-bold text-gray-700 mb-3">患者さんにスマホで読み取ってもらってください</p>
+            <ConfirmUrlQr url={confirmUrl} />
+          </div>
+
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">確認URL</p>
             <p className="text-sm text-teal-700 break-all font-mono bg-gray-50 rounded-lg px-3 py-2 mb-4 leading-relaxed select-all border border-gray-200">{confirmUrl}</p>
+            {form.email.trim() && (
+              <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
+                <p className="text-xs text-gray-500">
+                  {emailSendStatus === "sent" && "✅ メールを送信しました"}
+                  {emailSendStatus === "failed" && "送信に失敗しました。再送できます"}
+                  {emailSendStatus === "disabled" && "メール送信は現在無効です"}
+                  {emailSendStatus === "no_email" && "メール送信は未実施です"}
+                  {!emailSendStatus && "メール送信の結果を確認中..."}
+                </p>
+                <button
+                  onClick={sendEmailNow}
+                  disabled={emailSending}
+                  className="px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 text-xs font-bold hover:bg-gray-50 transition disabled:opacity-50"
+                >
+                  {emailSending ? "送信中..." : "メールで送る"}
+                </button>
+              </div>
+            )}
             <button
               onClick={copyUrl}
               className="w-full py-3 rounded-xl bg-teal-600 text-white font-bold hover:bg-teal-700 transition text-sm"
@@ -464,6 +525,8 @@ export default function ClinicNewPage() {
               setPatients([]);
               setSearchDone(false);
               setApptToken(null);
+              setApptId(null);
+              setEmailSendStatus(null);
               setSentAt({ sms: null, line: null, email: null });
               setConfirmChannel(null);
               setToast(null);
@@ -588,6 +651,11 @@ export default function ClinicNewPage() {
                 />
               </div>
             ))}
+            {!form.email.trim() && (
+              <p className="text-xs text-gray-400 leading-relaxed">
+                連絡先が無くても予約できます。予約作成後のQRコードを患者さんに読み取ってもらうと、患者さんご自身でメールアドレスを登録できます
+              </p>
+            )}
           </div>
 
           {/* ③ 予約日時 */}
