@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { getAppointmentMock, savePatientRegisteredEmailMock, isEmailSendEnabledMock, sendEmailRegisteredNoticeMock } = vi.hoisted(() => ({
+const { getAppointmentMock, savePatientRegisteredEmailMock, isEmailSendEnabledMock, sendEmailRegisteredNoticeMock, isIdentityVerifiedMock } = vi.hoisted(() => ({
   getAppointmentMock: vi.fn(),
   savePatientRegisteredEmailMock: vi.fn(),
   isEmailSendEnabledMock: vi.fn(),
   sendEmailRegisteredNoticeMock: vi.fn(),
+  isIdentityVerifiedMock: vi.fn(),
 }));
 
 vi.mock("@/lib/store", () => ({ getAppointment: getAppointmentMock }));
@@ -14,6 +15,7 @@ vi.mock("@/lib/notify-email", () => ({
   isEmailSendEnabled: isEmailSendEnabledMock,
   sendEmailRegisteredNotice: sendEmailRegisteredNoticeMock,
 }));
+vi.mock("@/lib/identity-check", () => ({ isIdentityVerified: isIdentityVerifiedMock }));
 
 import { POST } from "./route";
 
@@ -45,7 +47,16 @@ describe("POST /api/appointments/[token]/register-email", () => {
     savePatientRegisteredEmailMock.mockReset();
     isEmailSendEnabledMock.mockReset();
     sendEmailRegisteredNoticeMock.mockReset();
+    isIdentityVerifiedMock.mockReset();
+    isIdentityVerifiedMock.mockReturnValue(true);
     delete process.env.ENABLE_REMINDER_SEND;
+  });
+
+  it("本人確認Cookieが無ければ401（他の処理は呼ばない）", async () => {
+    isIdentityVerifiedMock.mockReturnValue(false);
+    const res = await POST(makeRequest({ email: "a@example.com" }), params());
+    expect(res.status).toBe(401);
+    expect(getAppointmentMock).not.toHaveBeenCalled();
   });
 
   it("存在しない予約（不正トークン）は404", async () => {

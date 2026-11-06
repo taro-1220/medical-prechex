@@ -3,6 +3,7 @@ import { getAppointment } from "@/lib/store";
 import { isValidEmailFormat } from "@/lib/contact-info";
 import { savePatientRegisteredEmail } from "@/lib/patient-email-store";
 import { isEmailSendEnabled, sendEmailRegisteredNotice } from "@/lib/notify-email";
+import { isIdentityVerified } from "@/lib/identity-check";
 
 const BLOCKED_STATUSES = new Set(["cancelled", "expired", "checked_in", "completed"]);
 
@@ -14,6 +15,9 @@ export async function POST(
 ) {
   try {
     const { token } = await params;
+    if (!isIdentityVerified(req, token)) {
+      return NextResponse.json({ error: "identity_verification_required" }, { status: 401 });
+    }
     const appt = await getAppointment(token);
     if (!appt) return NextResponse.json({ error: "not_found" }, { status: 404 });
     if (BLOCKED_STATUSES.has(appt.status)) {

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { Appointment } from "@/lib/types";
 import CardRegistration, { formatDeadline, TierTable } from "./CardRegistration";
 import EmailRegistration from "./EmailRegistration";
+import IdentityCheck from "./IdentityCheck";
 import { computeFreeCancellationDeadline } from "@/lib/charge-policy";
 import { TERMS_PAGE_PATH } from "@/lib/terms";
 
@@ -25,6 +26,7 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
   const [submitting, setSubmitting] = useState(false);
   const [cancelPolicyConsented, setCancelPolicyConsented] = useState(false);
   const [termsConsented, setTermsConsented] = useState(false);
+  const [identityVerified, setIdentityVerified] = useState(false);
 
   useEffect(() => {
     params.then(({ token: t }) => setToken(t));
@@ -120,7 +122,7 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
           <div className="space-y-3">
             {[
               { label: "クリニック", value: appt.clinicName },
-              { label: "患者名", value: appt.patientName },
+              ...(identityVerified ? [{ label: "患者名", value: appt.patientName }] : []),
               { label: "予約日時", value: formatDate(appt.appointmentAt) },
               { label: "内容", value: appt.description },
             ].map((row) => (
@@ -132,8 +134,12 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
           </div>
         </div>
 
+        {!identityVerified && (
+          <IdentityCheck token={token!} hasPhone={!!appt.phone} onVerified={() => setIdentityVerified(true)} />
+        )}
+
         {/* キャンセルについて（適用ありの場合のみ描画。無い場合は「対象外」表示すら出さない） */}
-        {cancelPolicyApplied && (
+        {identityVerified && cancelPolicyApplied && (
           <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 space-y-3">
             <p className="text-xs font-bold uppercase tracking-widest text-gray-400">キャンセルについて</p>
             <p className="text-sm text-gray-700 leading-relaxed">
@@ -164,58 +170,62 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
           </div>
         )}
 
-        {/* MVP+2 D-1: カード登録（適用時かつ登録必須の予約のみ、同意ステップの後） */}
-        {needsCardRegistration && (
-          <CardRegistration
-            token={token!}
-            clinicName={appt.clinicName}
-            category={TREATMENT_CATEGORY_LABEL[appt.treatmentCategory] ?? appt.treatmentCategory}
-            tiers={appt.cancelPolicyTiers ?? null}
-            baseAmount={appt.baseAmount ?? null}
-            onRegistered={refetchAppointment}
-          />
-        )}
+        {identityVerified && (
+          <>
+            {/* MVP+2 D-1: カード登録（適用時かつ登録必須の予約のみ、同意ステップの後） */}
+            {needsCardRegistration && (
+              <CardRegistration
+                token={token!}
+                clinicName={appt.clinicName}
+                category={TREATMENT_CATEGORY_LABEL[appt.treatmentCategory] ?? appt.treatmentCategory}
+                tiers={appt.cancelPolicyTiers ?? null}
+                baseAmount={appt.baseAmount ?? null}
+                onRegistered={refetchAppointment}
+              />
+            )}
 
-        <EmailRegistration token={token!} currentEmail={appt.patientRegisteredEmail} />
+            <EmailRegistration token={token!} currentEmail={appt.patientRegisteredEmail} />
 
-        {/* 同意 */}
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={consented}
-            onChange={(e) => setConsented(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded accent-teal-600 shrink-0"
-          />
-          <span className="text-sm text-gray-700 leading-relaxed">予約内容を確認しました</span>
-        </label>
+            {/* 同意 */}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consented}
+                onChange={(e) => setConsented(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded accent-teal-600 shrink-0"
+              />
+              <span className="text-sm text-gray-700 leading-relaxed">予約内容を確認しました</span>
+            </label>
 
-        {/* Medipre利用規約への同意（キャンセルポリシーへの同意とは別枠） */}
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={termsConsented}
-            onChange={(e) => setTermsConsented(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded accent-teal-600 shrink-0"
-          />
-          <span className="text-sm text-gray-700 leading-relaxed">
-            medipreの
-            <a href={TERMS_PAGE_PATH} target="_blank" rel="noopener noreferrer" className="text-teal-700 underline">
-              利用規約
-            </a>
-            に同意します
-          </span>
-        </label>
+            {/* Medipre利用規約への同意（キャンセルポリシーへの同意とは別枠） */}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={termsConsented}
+                onChange={(e) => setTermsConsented(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded accent-teal-600 shrink-0"
+              />
+              <span className="text-sm text-gray-700 leading-relaxed">
+                medipreの
+                <a href={TERMS_PAGE_PATH} target="_blank" rel="noopener noreferrer" className="text-teal-700 underline">
+                  利用規約
+                </a>
+                に同意します
+              </span>
+            </label>
 
-        {/* CTA（Phase J セクションD: 最も強い見た目にする） */}
-        <button
-          onClick={handleConfirm}
-          disabled={!canConfirm || submitting}
-          className="w-full py-4 rounded-2xl bg-teal-600 text-white font-black text-base shadow-md hover:bg-teal-700 transition disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
-        >
-          {submitting ? "確認中..." : "予約内容を確認して確定"}
-        </button>
-        {!canConfirm && !submitting && disabledReason && (
-          <p className="text-center text-xs text-amber-600">{disabledReason}</p>
+            {/* CTA（Phase J セクションD: 最も強い見た目にする） */}
+            <button
+              onClick={handleConfirm}
+              disabled={!canConfirm || submitting}
+              className="w-full py-4 rounded-2xl bg-teal-600 text-white font-black text-base shadow-md hover:bg-teal-700 transition disabled:opacity-30 disabled:cursor-not-allowed disabled:shadow-none"
+            >
+              {submitting ? "確認中..." : "予約内容を確認して確定"}
+            </button>
+            {!canConfirm && !submitting && disabledReason && (
+              <p className="text-center text-xs text-amber-600">{disabledReason}</p>
+            )}
+          </>
         )}
 
         <p className="text-center text-xs text-gray-400 leading-relaxed">

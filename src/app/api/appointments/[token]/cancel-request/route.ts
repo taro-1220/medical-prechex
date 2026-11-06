@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAppointment, getClinicCancelPolicySettings, requestCancellation, updateStatus } from "@/lib/store";
 import { getClinicStripeAccount } from "@/lib/charge-store";
 import { attemptCancelCharge } from "@/lib/charge-execution";
+import { isIdentityVerified } from "@/lib/identity-check";
 import { handleAppointmentCancelledForSlotReopen } from "@/lib/available-slot-notify";
 
 // 患者側チケット画面からの［キャンセルを申し出る］。
@@ -9,11 +10,14 @@ import { handleAppointmentCancelledForSlotReopen } from "@/lib/available-slot-no
 // MVP+2: 予約を確定的にキャンセルし（E-1の患者起点）、キャンセルポリシー適用時は
 // 段階判定→成立条件確認→（フラグON時のみ）Stripe課金、を実行する。
 export async function POST(
-  _: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const { token } = await params;
+    if (!isIdentityVerified(req, token)) {
+      return NextResponse.json({ error: "identity_verification_required" }, { status: 401 });
+    }
     const appt = await getAppointment(token);
     if (!appt) return NextResponse.json({ error: "Not found" }, { status: 404 });
 

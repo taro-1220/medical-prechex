@@ -2,15 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAppointment } from "@/lib/store";
 import { getClinicStripeAccount, recordSetupIntent } from "@/lib/charge-store";
 import { createAppointmentSetupIntent } from "@/lib/stripe";
+import { isIdentityVerified } from "@/lib/identity-check";
 
 // D-1: カード登録用SetupIntent作成。登録のみで課金は一切発生しない（常に実際にStripeを呼ぶ。
 // ENABLE_CHARGE_EXECUTIONの対象外＝課金実行ではないため）
 export async function POST(
-  _: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
   try {
     const { token } = await params;
+    if (!isIdentityVerified(req, token)) {
+      return NextResponse.json({ error: "identity_verification_required" }, { status: 401 });
+    }
     const appt = await getAppointment(token);
     if (!appt) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (!appt.clinicId) return NextResponse.json({ error: "clinic not resolved" }, { status: 500 });

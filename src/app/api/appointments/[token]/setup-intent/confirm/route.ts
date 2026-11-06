@@ -2,15 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAppointment } from "@/lib/store";
 import { getClinicStripeAccount, recordPaymentMethod } from "@/lib/charge-store";
 import { retrieveSetupIntent, attachPaymentMethodToCustomer } from "@/lib/stripe";
+import { isIdentityVerified } from "@/lib/identity-check";
 
 // D-1: クライアントでの3DS込みのSetupIntent確認が終わった後、実際にsucceededしているかを
 // サーバー側で再確認してからpayment_method_idを保存する（クライアント申告のみを信用しない）
 export async function POST(
-  _: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
   try {
     const { token } = await params;
+    if (!isIdentityVerified(req, token)) {
+      return NextResponse.json({ error: "identity_verification_required" }, { status: 401 });
+    }
     const appt = await getAppointment(token);
     if (!appt) return NextResponse.json({ error: "Not found" }, { status: 404 });
     if (!appt.clinicId || !appt.stripeSetupIntentId) {
