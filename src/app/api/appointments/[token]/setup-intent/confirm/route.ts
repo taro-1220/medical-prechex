@@ -3,6 +3,7 @@ import { getAppointment } from "@/lib/store";
 import { getClinicStripeAccount, recordPaymentMethod } from "@/lib/charge-store";
 import { retrieveSetupIntent, attachPaymentMethodToCustomer } from "@/lib/stripe";
 import { isIdentityVerified } from "@/lib/identity-check";
+import { determineConfirmState, canWrite } from "@/lib/confirm-state";
 
 // D-1: クライアントでの3DS込みのSetupIntent確認が終わった後、実際にsucceededしているかを
 // サーバー側で再確認してからpayment_method_idを保存する（クライアント申告のみを信用しない）
@@ -17,6 +18,10 @@ export async function POST(
     }
     const appt = await getAppointment(token);
     if (!appt) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const state = determineConfirmState(appt.status, appt.appointmentAt, new Date().toISOString());
+    if (!canWrite(state)) {
+      return NextResponse.json({ error: "invalid_state" }, { status: 409 });
+    }
     if (!appt.clinicId || !appt.stripeSetupIntentId) {
       return NextResponse.json({ error: "setup intent not started" }, { status: 400 });
     }

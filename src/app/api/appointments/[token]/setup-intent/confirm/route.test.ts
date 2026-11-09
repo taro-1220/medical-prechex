@@ -1,0 +1,72 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
+
+const { getAppointmentMock, getClinicStripeAccountMock, recordPaymentMethodMock, retrieveSetupIntentMock, attachPaymentMethodToCustomerMock, isIdentityVerifiedMock } = vi.hoisted(() => ({
+  getAppointmentMock: vi.fn(),
+  getClinicStripeAccountMock: vi.fn(),
+  recordPaymentMethodMock: vi.fn(),
+  retrieveSetupIntentMock: vi.fn(),
+  attachPaymentMethodToCustomerMock: vi.fn(),
+  isIdentityVerifiedMock: vi.fn(),
+}));
+
+vi.mock("@/lib/store", () => ({ getAppointment: getAppointmentMock }));
+vi.mock("@/lib/charge-store", () => ({
+  getClinicStripeAccount: getClinicStripeAccountMock,
+  recordPaymentMethod: recordPaymentMethodMock,
+}));
+vi.mock("@/lib/stripe", () => ({
+  retrieveSetupIntent: retrieveSetupIntentMock,
+  attachPaymentMethodToCustomer: attachPaymentMethodToCustomerMock,
+}));
+vi.mock("@/lib/identity-check", () => ({ isIdentityVerified: isIdentityVerifiedMock }));
+
+import { POST } from "./route";
+
+function makeAppt(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "appt-1",
+    token: "tok1",
+    clinicId: "clinic-1",
+    stripeSetupIntentId: "seti_1",
+    status: "confirmation_pending",
+    appointmentAt: "2099-01-01T01:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function makeRequest() {
+  return new NextRequest("http://localhost/api/appointments/tok1/setup-intent/confirm", { method: "POST" });
+}
+
+function params() {
+  return { params: Promise.resolve({ token: "tok1" }) };
+}
+
+describe("POST /api/appointments/[token]/setup-intent/confirm", () => {
+  beforeEach(() => {
+    getAppointmentMock.mockReset();
+    getClinicStripeAccountMock.mockReset();
+    recordPaymentMethodMock.mockReset();
+    retrieveSetupIntentMock.mockReset();
+    attachPaymentMethodToCustomerMock.mockReset();
+    isIdentityVerifiedMock.mockReset();
+    isIdentityVerifiedMock.mockReturnValue(true);
+  });
+
+  for (const status of ["cancelled", "expired", "checked_in", "completed", "confirmed", "ticket_issued"]) {
+    it(`status=${status}（upcoming_pending以外）は409で拒否し、PaymentMethodを記録しない`, async () => {
+      getAppointmentMock.mockResolvedValue(makeAppt({ status }));
+      const res = await POST(makeRequest(), params());
+      expect(res.status).toBe(409);
+      expect(recordPaymentMethodMock).not.toHaveBeenCalled();
+    });
+  }
+
+  it("予約日時を過ぎたconfirmation_pending（past_pending）は409で拒否", async () => {
+    getAppointmentMock.mockResolvedValue(makeAppt({ appointmentAt: "2020-01-01T01:00:00.000Z" }));
+    const res = await POST(makeRequest(), params());
+    expect(res.status).toBe(409);
+    expect(recordPaymentMethodMock).not.toHaveBeenCalled();
+  });
+});

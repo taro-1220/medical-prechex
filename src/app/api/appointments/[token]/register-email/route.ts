@@ -4,8 +4,7 @@ import { isValidEmailFormat } from "@/lib/contact-info";
 import { savePatientRegisteredEmail } from "@/lib/patient-email-store";
 import { isEmailSendEnabled, sendEmailRegisteredNotice } from "@/lib/notify-email";
 import { isIdentityVerified } from "@/lib/identity-check";
-
-const BLOCKED_STATUSES = new Set(["cancelled", "expired", "checked_in", "completed"]);
+import { determineConfirmState, canWrite } from "@/lib/confirm-state";
 
 // 患者自身による、前日リマインド受取用メールの登録・変更・解除。トークンで対象を特定する
 // （既存の確認画面API群と同じ検証）。確認用トークンはログ・エラー文に出さない。
@@ -20,7 +19,8 @@ export async function POST(
     }
     const appt = await getAppointment(token);
     if (!appt) return NextResponse.json({ error: "not_found" }, { status: 404 });
-    if (BLOCKED_STATUSES.has(appt.status)) {
+    const state = determineConfirmState(appt.status, appt.appointmentAt, new Date().toISOString());
+    if (!canWrite(state)) {
       return NextResponse.json({ error: "invalid_status" }, { status: 409 });
     }
 

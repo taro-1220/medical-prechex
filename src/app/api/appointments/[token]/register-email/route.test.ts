@@ -24,8 +24,8 @@ function makeAppt(overrides: Record<string, unknown> = {}) {
     id: "appt-1",
     token: "tok1",
     clinicName: "テスト医院",
-    status: "confirmed",
-    appointmentAt: "2026-03-05T01:00:00.000Z",
+    status: "confirmation_pending",
+    appointmentAt: "2099-01-01T01:00:00.000Z",
     ...overrides,
   };
 }
@@ -65,14 +65,21 @@ describe("POST /api/appointments/[token]/register-email", () => {
     expect(res.status).toBe(404);
   });
 
-  for (const status of ["cancelled", "expired", "checked_in", "completed"]) {
-    it(`status=${status}は409で拒否`, async () => {
+  for (const status of ["cancelled", "expired", "checked_in", "completed", "confirmed", "ticket_issued"]) {
+    it(`status=${status}（upcoming_pending以外）は409で拒否`, async () => {
       getAppointmentMock.mockResolvedValue(makeAppt({ status }));
       const res = await POST(makeRequest({ email: "a@example.com" }), params());
       expect(res.status).toBe(409);
       expect(savePatientRegisteredEmailMock).not.toHaveBeenCalled();
     });
   }
+
+  it("予約日時を過ぎたconfirmation_pending（past_pending）は409で拒否", async () => {
+    getAppointmentMock.mockResolvedValue(makeAppt({ appointmentAt: "2020-01-01T01:00:00.000Z" }));
+    const res = await POST(makeRequest({ email: "a@example.com" }), params());
+    expect(res.status).toBe(409);
+    expect(savePatientRegisteredEmailMock).not.toHaveBeenCalled();
+  });
 
   it("不正な形式のメールは400", async () => {
     getAppointmentMock.mockResolvedValue(makeAppt());

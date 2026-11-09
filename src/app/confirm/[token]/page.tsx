@@ -7,6 +7,7 @@ import EmailRegistration from "./EmailRegistration";
 import IdentityCheck from "./IdentityCheck";
 import { computeFreeCancellationDeadline } from "@/lib/charge-policy";
 import { TERMS_PAGE_PATH } from "@/lib/terms";
+import { determineConfirmState, type ConfirmState } from "@/lib/confirm-state";
 
 const TREATMENT_CATEGORY_LABEL: Record<string, string> = { private: "自由診療", insurance: "保険診療" };
 
@@ -38,14 +39,12 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
       .then(async (res) => {
         if (!res.ok) { setError("予約が見つかりません"); return; }
         const data: Appointment = await res.json();
-        if (data.status === "confirmed" || data.status === "ticket_issued") {
-          router.replace(`/confirm/${token}/complete`);
-          return;
-        }
-        if (data.status === "cancelled") { setError("この予約はキャンセルされました"); return; }
-        if (data.status === "expired") { setError("確認期限が過ぎています。クリニックにお問い合わせください"); return; }
-        if (data.status === "checked_in") {
-          setError("来院確認済みです"); return;
+        if (data.appointmentAt) {
+          const state = determineConfirmState(data.status, data.appointmentAt, new Date().toISOString());
+          if (state === "upcoming_consented") {
+            router.replace(`/confirm/${token}/complete`);
+            return;
+          }
         }
         setAppt(data);
       })
@@ -90,6 +89,68 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <p className="text-gray-400 text-sm">読み込み中...</p>
+      </div>
+    );
+  }
+
+  const confirmState: ConfirmState = appt.appointmentAt
+    ? determineConfirmState(appt.status, appt.appointmentAt, new Date().toISOString())
+    : "cancelled";
+
+  if (confirmState === "past_pending" || confirmState === "past_closed" || confirmState === "cancelled") {
+    const message =
+      confirmState === "past_pending"
+        ? "この予約の日時は過ぎています"
+        : confirmState === "past_closed"
+          ? "この予約は終了しました"
+          : "この予約はキャンセルされています";
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+        <div className="text-center max-w-sm">
+          <p className="text-4xl mb-4">⚠️</p>
+          <p className="text-gray-700 font-bold">{message}</p>
+          {confirmState === "past_pending" && (
+            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+              予約の変更・取り直しは、クリニックへお電話でご連絡ください
+            </p>
+          )}
+          {appt.clinicName && (
+            <p className="text-sm text-gray-600 mt-4">
+              {appt.clinicName}
+              {appt.clinicPhone && (
+                <>
+                  {" "}
+                  <a href={`tel:${appt.clinicPhone}`} className="text-teal-700 underline">
+                    {appt.clinicPhone}
+                  </a>
+                </>
+              )}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (confirmState === "past_consented_today") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6">
+        <div className="max-w-sm w-full text-center">
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 text-left space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">予約内容</p>
+            <div className="flex gap-4">
+              <span className="text-sm text-gray-400 w-20 shrink-0">クリニック</span>
+              <span className="text-sm font-bold text-gray-900">{appt.clinicName}</span>
+            </div>
+            <div className="flex gap-4">
+              <span className="text-sm text-gray-400 w-20 shrink-0">予約日時</span>
+              <span className="text-sm font-bold text-gray-900">{formatDate(appt.appointmentAt)}</span>
+            </div>
+          </div>
+          <p className="text-sm font-bold text-amber-600 mt-4">
+            予約時刻を過ぎています。受付でこの画面をご提示ください
+          </p>
+        </div>
       </div>
     );
   }
