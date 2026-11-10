@@ -118,6 +118,8 @@ export interface AppointmentReminderEmailInput {
   clinicPhone: string;
   appointmentAt: string; // ISO
   confirmUrl: string | null;
+  /** 何日前のリマインドか（3日前／前日） */
+  daysBefore: 1 | 3;
 }
 
 function formatReminderDateTime(iso: string): string {
@@ -141,17 +143,18 @@ function buildContactFooter(clinicName: string, clinicPhone: string): string {
 export function buildAppointmentReminderEmail(input: AppointmentReminderEmailInput): EmailPayload {
   const when = formatReminderDateTime(input.appointmentAt);
   const time = formatReminderTime(input.appointmentAt);
+  const label = input.daysBefore === 3 ? "3日後" : "明日";
   const confirmLine = input.confirmUrl
     ? `\n\nまだご予約内容の確認・同意が完了していません。お手数ですが以下よりご確認ください。\n${input.confirmUrl}`
     : "";
   return {
     to: input.to,
-    subject: `【${input.clinicName}】明日${time}のご予約のご案内`,
+    subject: `【${input.clinicName}】${label}${time}のご予約のご案内`,
     text: `ご予約者様
 
 ${input.clinicName}よりお知らせです。
 
-明日 ${when} にご予約をお承りしております。${confirmLine}
+${label} ${when} にご予約をお承りしております。${confirmLine}
 
 お問い合わせ: ${input.clinicPhone || input.clinicName}
 

@@ -116,7 +116,7 @@ describe("buildClinicApprovedEmail / sendClinicApprovedEmail: Phase P1 承認完
 describe("患者向け自動送信3種（前日リマインド・確認URL・メール登録完了）の末尾案内・宛名", () => {
   const PATIENT_NAME = "山田太郎";
   const CASES = [
-    { name: "reminder", build: () => buildAppointmentReminderEmail({ to: "p@example.com", clinicName: "検収クリニック", clinicPhone: "03-1111-2222", appointmentAt: "2026-08-29T06:30:00Z", confirmUrl: null }) },
+    { name: "reminder", build: () => buildAppointmentReminderEmail({ to: "p@example.com", clinicName: "検収クリニック", clinicPhone: "03-1111-2222", appointmentAt: "2026-08-29T06:30:00Z", confirmUrl: null, daysBefore: 1 }) },
     { name: "confirmation-request", build: () => buildConfirmationRequestEmail({ to: "p@example.com", clinicName: "検収クリニック", clinicPhone: "03-1111-2222", appointmentAt: "2026-08-29T06:30:00Z", confirmUrl: "http://localhost:3000/confirm/tok1" }) },
     { name: "email-registered-notice", build: () => buildEmailRegisteredNotice({ to: "p@example.com", clinicName: "検収クリニック", clinicPhone: "03-1111-2222", appointmentAt: "2026-08-29T06:30:00Z" }) },
   ];
@@ -137,8 +137,15 @@ describe("患者向け自動送信3種（前日リマインド・確認URL・メ
   }
 
   it("電話番号が無いクリニックは、末尾の連絡先表記から電話部分を省く", () => {
-    const payload = buildAppointmentReminderEmail({ to: "p@example.com", clinicName: "検収クリニック", clinicPhone: "", appointmentAt: "2026-08-29T06:30:00Z", confirmUrl: null });
+    const payload = buildAppointmentReminderEmail({ to: "p@example.com", clinicName: "検収クリニック", clinicPhone: "", appointmentAt: "2026-08-29T06:30:00Z", confirmUrl: null, daysBefore: 1 });
     expect(payload.text).toContain("心当たりがない場合は、お手数ですが破棄のうえ、検収クリニックまでご連絡ください。");
     expect(payload.text).not.toContain("検収クリニック（）");
+  });
+
+  it("daysBefore=3は件名・本文が「3日後」になる", () => {
+    const payload = buildAppointmentReminderEmail({ to: "p@example.com", clinicName: "検収クリニック", clinicPhone: "03-1111-2222", appointmentAt: "2026-08-29T06:30:00Z", confirmUrl: null, daysBefore: 3 });
+    expect(payload.subject).toContain("3日後");
+    expect(payload.text).toContain("3日後");
+    expect(payload.text).not.toContain("明日");
   });
 });

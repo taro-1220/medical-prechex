@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getAllAppointments, getAppointmentById } from "@/lib/store";
+import type { Appointment } from "@/lib/types";
 import { selectReminderTargets, reminderEmailOf } from "@/lib/reminder-targets";
 import { isEmailSendEnabled, sendAppointmentReminderEmail } from "@/lib/notify-email";
-import { reminderAlreadySentIds, recordReminderSent } from "@/lib/reminder-store";
+import { reminderAlreadySentIds, recordReminderSent, REMINDER_NOTIFICATION_TYPE } from "@/lib/reminder-store";
 import { REMINDER_CLINIC_LIMIT, REMINDER_TOTAL_LIMIT } from "@/lib/notification-limits";
 import { recordNotificationRun, setEmailLastFailedAt } from "@/lib/notification-run-store";
 
-// Vercel Cron専用。毎日17:00 JST、翌日の予約（確認待ち/確認済み）にリマインドメールを送る。
+// Vercel Cron専用。毎日17:00 JST、3日後・翌日の予約（確認待ち/確認済み）にリマインドメールを送る。
 // vercel.jsonのcrons設定から `Authorization: Bearer $CRON_SECRET` 付きで呼ばれる想定。
 // ENABLE_REMINDER_SEND !== "true" の間は、対象件数のみ返し送信しない（試運転と同じ扱い）。
 function isReminderSendEnabled(): boolean {
@@ -15,7 +16,11 @@ function isReminderSendEnabled(): boolean {
 }
 
 const OK_STATUSES = new Set(["confirmation_pending", "confirmed", "ticket_issued"]);
-const NOTIFICATION_TYPE = "reminder_day_before";
+
+type ReminderKind = "threeDaysBefore" | "dayBefore";
+const DAYS_BEFORE: Record<ReminderKind, 1 | 3> = { threeDaysBefore: 3, dayBefore: 1 };
+type Counts = { sent: number; failed: number; skipped: number; capped: number };
+const emptyCounts = (): Counts => ({ sent: 0, failed: 0, skipped: 0, capped: 0 });
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get("authorization");
@@ -39,16 +44,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "internal_error", detail: String(e) }, { status: 500 });
   }
 
-  const alreadySent = await reminderAlreadySentIds(appointments.map((a) => a.id));
-  const targets = selectReminderTargets(appointments, nowIso, alreadySent);
+  const allIds = appointments.map((a) => a.id);
+  const [threeDaysSent, daySent] = await Promise.all([
+    reminderAlreadySentIds(allIds, REMINDER_NOTIFICATION_TYPE.threeDaysBefore),
+    reminderAlreadySentIds(allIds, REMINDER_NOTIFICATION_TYPE.dayBefore),
+  ]);
+  const targets = selectReminderTargets(appointments, nowIso, { threeDaysBefore: threeDaysSent, dayBefore: daySent });
 
   if (req.nextUrl.searchParams.get("dry") === "1") {
-    const clinicCount = new Set(targets.map((a) => a.clinicId)).size;
-    return NextResponse.json({ dryRun: true, targetCount: targets.length, clinicCount });
+    const clinicCount = new Set([...targets.threeDaysBefore, ...targets.dayBefore].map((a) => a.clinicId)).size;
+    return NextResponse.json({
+      dryRun: true,
+      targetCount: targets.threeDaysBefore.length + targets.dayBefore.length,
+      threeDaysBeforeCount: targets.threeDaysBefore.length,
+      dayBeforeCount: targets.dayBefore.length,
+      clinicCount,
+    });
   }
 
   if (!isReminderSendEnabled() || !isEmailSendEnabled()) {
-    return NextResponse.json({ sent: 0, skipped: targets.length, failed: 0, capped: 0 });
+    const skipped = targets.threeDaysBefore.length + targets.dayBefore.length;
+    return NextResponse.json({ sent: 0, skipped, failed: 0, capped: 0 });
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -57,19 +73,27 @@ export async function GET(req: NextRequest) {
   let skipped = 0;
   let capped = 0;
   const perClinicSent = new Map<string, number>();
-  const breakdown: Record<string, { sent: number; failed: number; skipped: number; capped: number }> = {};
-  const bump = (clinicId: string, key: "sent" | "failed" | "skipped" | "capped") => {
-    const row = breakdown[clinicId] ?? (breakdown[clinicId] = { sent: 0, failed: 0, skipped: 0, capped: 0 });
+  const byType: Record<ReminderKind, Counts> = { threeDaysBefore: emptyCounts(), dayBefore: emptyCounts() };
+  const breakdownByType: Record<ReminderKind, Record<string, Counts>> = { threeDaysBefore: {}, dayBefore: {} };
+  const bump = (kind: ReminderKind, clinicId: string, key: keyof Counts) => {
+    const map = breakdownByType[kind];
+    const row = map[clinicId] ?? (map[clinicId] = emptyCounts());
     row[key]++;
+    byType[kind][key]++;
   };
 
-  for (const appt of targets) {
-    if (!appt.clinicId) { failed++; continue; }
+  const queue: { appt: Appointment; kind: ReminderKind }[] = [
+    ...targets.threeDaysBefore.map((appt) => ({ appt, kind: "threeDaysBefore" as const })),
+    ...targets.dayBefore.map((appt) => ({ appt, kind: "dayBefore" as const })),
+  ];
 
-    // C: 送信上限（1クリニック100件・全体1,000件）。超えたクリニックは残りを送らず「上限で停止」として数える
+  for (const { appt, kind } of queue) {
+    if (!appt.clinicId) { failed++; byType[kind].failed++; continue; }
+
+    // C: 送信上限（1クリニック100件・全体1,000件）。2種別の合算で数える。超えたクリニックは残りを送らず「上限で停止」として数える
     if (sent >= REMINDER_TOTAL_LIMIT || (perClinicSent.get(appt.clinicId) ?? 0) >= REMINDER_CLINIC_LIMIT) {
       capped++;
-      bump(appt.clinicId, "capped");
+      bump(kind, appt.clinicId, "capped");
       continue;
     }
 
@@ -77,7 +101,7 @@ export async function GET(req: NextRequest) {
     const fresh = await getAppointmentById(appt.id);
     if (!fresh || !OK_STATUSES.has(fresh.status) || fresh.appointmentAt !== appt.appointmentAt) {
       skipped++;
-      bump(appt.clinicId, "skipped");
+      bump(kind, appt.clinicId, "skipped");
       continue;
     }
 
@@ -89,28 +113,41 @@ export async function GET(req: NextRequest) {
       clinicPhone: clinic?.phone ?? "",
       appointmentAt: fresh.appointmentAt,
       confirmUrl,
+      daysBefore: DAYS_BEFORE[kind],
     });
     if (result.ok) {
-      await recordReminderSent(appt.id);
+      await recordReminderSent(
+        appt.id,
+        kind === "threeDaysBefore" ? REMINDER_NOTIFICATION_TYPE.threeDaysBefore : REMINDER_NOTIFICATION_TYPE.dayBefore,
+      );
       await setEmailLastFailedAt(appt.id, null);
       sent++;
       perClinicSent.set(appt.clinicId, (perClinicSent.get(appt.clinicId) ?? 0) + 1);
-      bump(appt.clinicId, "sent");
+      bump(kind, appt.clinicId, "sent");
     } else {
       await setEmailLastFailedAt(appt.id, new Date().toISOString());
       failed++;
-      bump(appt.clinicId, "failed");
+      bump(kind, appt.clinicId, "failed");
     }
   }
 
   await recordNotificationRun({
-    notificationType: NOTIFICATION_TYPE,
+    notificationType: REMINDER_NOTIFICATION_TYPE.threeDaysBefore,
     startedAt: startedAtIso,
-    sentCount: sent,
-    failedCount: failed,
-    skippedCount: skipped,
-    cappedCount: capped,
-    clinicBreakdown: breakdown,
+    sentCount: byType.threeDaysBefore.sent,
+    failedCount: byType.threeDaysBefore.failed,
+    skippedCount: byType.threeDaysBefore.skipped,
+    cappedCount: byType.threeDaysBefore.capped,
+    clinicBreakdown: breakdownByType.threeDaysBefore,
+  });
+  await recordNotificationRun({
+    notificationType: REMINDER_NOTIFICATION_TYPE.dayBefore,
+    startedAt: startedAtIso,
+    sentCount: byType.dayBefore.sent,
+    failedCount: byType.dayBefore.failed,
+    skippedCount: byType.dayBefore.skipped,
+    cappedCount: byType.dayBefore.capped,
+    clinicBreakdown: breakdownByType.dayBefore,
   });
 
   return NextResponse.json({ sent, skipped, failed, capped });
