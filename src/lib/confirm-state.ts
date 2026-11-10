@@ -11,9 +11,20 @@ export type ConfirmState =
   | "past_closed"
   | "cancelled";
 
-/** 同意・カード登録・メール登録・本人確認の書き込みを許可する唯一の状態 */
-export function canWrite(state: ConfirmState): boolean {
-  return state === "upcoming_pending";
+export type ConfirmWriteAction = "consent" | "setup_intent" | "setup_intent_confirm" | "register_email" | "verify_identity";
+
+/** 操作ごとに書き込み（状態変更）を許可する状態を判定する */
+export function canWrite(state: ConfirmState, action: ConfirmWriteAction): boolean {
+  switch (action) {
+    case "consent":
+    case "setup_intent":
+    case "setup_intent_confirm":
+      return state === "upcoming_pending";
+    case "register_email":
+      return state === "upcoming_pending" || state === "upcoming_consented";
+    case "verify_identity":
+      return state === "upcoming_pending" || state === "upcoming_consented" || state === "past_consented_today";
+  }
 }
 
 export function determineConfirmState(status: AppointmentStatus, appointmentAt: string, nowIso: string): ConfirmState {

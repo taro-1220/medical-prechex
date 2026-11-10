@@ -65,8 +65,8 @@ describe("POST /api/appointments/[token]/register-email", () => {
     expect(res.status).toBe(404);
   });
 
-  for (const status of ["cancelled", "expired", "checked_in", "completed", "confirmed", "ticket_issued"]) {
-    it(`status=${status}（upcoming_pending以外）は409で拒否`, async () => {
+  for (const status of ["cancelled", "expired", "checked_in", "completed"]) {
+    it(`status=${status}は409で拒否`, async () => {
       getAppointmentMock.mockResolvedValue(makeAppt({ status }));
       const res = await POST(makeRequest({ email: "a@example.com" }), params());
       expect(res.status).toBe(409);
@@ -79,6 +79,14 @@ describe("POST /api/appointments/[token]/register-email", () => {
     const res = await POST(makeRequest({ email: "a@example.com" }), params());
     expect(res.status).toBe(409);
     expect(savePatientRegisteredEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("同意済み・来院前（upcoming_consented）のメール登録は200", async () => {
+    getAppointmentMock.mockResolvedValue(makeAppt({ status: "confirmed" }));
+    savePatientRegisteredEmailMock.mockResolvedValue({ ok: true });
+    const res = await POST(makeRequest({ email: "a@example.com" }), params());
+    expect(res.status).toBe(200);
+    expect(savePatientRegisteredEmailMock).toHaveBeenCalled();
   });
 
   it("不正な形式のメールは400", async () => {

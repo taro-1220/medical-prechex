@@ -19,7 +19,7 @@ export async function POST(
     if (!appt) return NextResponse.json({ error: "verification_failed" }, { status: 401 });
 
     const state = determineConfirmState(appt.status, appt.appointmentAt, new Date().toISOString());
-    if (!canWrite(state)) {
+    if (!canWrite(state, "verify_identity")) {
       return NextResponse.json({ error: "invalid_state" }, { status: 409 });
     }
 

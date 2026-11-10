@@ -76,8 +76,8 @@ describe("POST /api/appointments/[token]/verify-identity", () => {
     issueIdentityCookieValueMock.mockReturnValue("cookie-value");
   });
 
-  for (const status of ["cancelled", "expired", "checked_in", "completed", "confirmed", "ticket_issued"]) {
-    it(`status=${status}（upcoming_pending以外）は409で拒否し、照合も失敗記録もしない`, async () => {
+  for (const status of ["cancelled", "expired", "checked_in", "completed"]) {
+    it(`status=${status}（past_closed／cancelled）は409で拒否し、照合も失敗記録もしない`, async () => {
       getAppointmentMock.mockResolvedValue(makeAppt({ status }));
       const res = await POST(makeRequest(), params());
       expect(res.status).toBe(409);
@@ -85,6 +85,24 @@ describe("POST /api/appointments/[token]/verify-identity", () => {
       expect(recordIdentityCheckFailureMock).not.toHaveBeenCalled();
     });
   }
+
+  it("同意済み・来院前（upcoming_consented）の本人確認は200", async () => {
+    getAppointmentMock.mockResolvedValue(makeAppt({ status: "confirmed" }));
+    isPhoneLast4MatchMock.mockReturnValue(true);
+    const res = await POST(makeRequest(), params());
+    expect(res.status).toBe(200);
+    expect(isPhoneLast4MatchMock).toHaveBeenCalled();
+  });
+
+  it("予約当日・時刻を過ぎた後（past_consented_today）の本人確認は200", async () => {
+    getAppointmentMock.mockResolvedValue(
+      makeAppt({ status: "confirmed", appointmentAt: new Date(Date.now() - 60_000).toISOString() })
+    );
+    isPhoneLast4MatchMock.mockReturnValue(true);
+    const res = await POST(makeRequest(), params());
+    expect(res.status).toBe(200);
+    expect(isPhoneLast4MatchMock).toHaveBeenCalled();
+  });
 
   it("予約日時を過ぎたconfirmation_pending（past_pending）は409で拒否", async () => {
     getAppointmentMock.mockResolvedValue(makeAppt({ appointmentAt: "2020-01-01T01:00:00.000Z" }));

@@ -19,7 +19,7 @@ export async function POST(
     const appt = await getAppointment(token);
     if (!appt) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const state = determineConfirmState(appt.status, appt.appointmentAt, new Date().toISOString());
-    if (!canWrite(state)) {
+    if (!canWrite(state, "setup_intent")) {
       return NextResponse.json({ error: "invalid_state" }, { status: 409 });
     }
     if (!appt.clinicId) return NextResponse.json({ error: "clinic not resolved" }, { status: 500 });

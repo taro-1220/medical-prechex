@@ -45,11 +45,25 @@ describe("determineConfirmState", () => {
 });
 
 describe("canWrite", () => {
-  it("upcoming_pendingのみtrue", () => {
-    expect(canWrite("upcoming_pending")).toBe(true);
+  const ALL_STATES = ["upcoming_pending", "upcoming_consented", "past_pending", "past_consented_today", "past_closed", "cancelled"] as const;
+
+  for (const action of ["consent", "setup_intent", "setup_intent_confirm"] as const) {
+    it(`${action}はupcoming_pendingのみtrue`, () => {
+      for (const s of ALL_STATES) expect(canWrite(s, action)).toBe(s === "upcoming_pending");
+    });
+  }
+
+  it("register_emailはupcoming_pending・upcoming_consentedがtrue", () => {
+    for (const s of ALL_STATES) {
+      expect(canWrite(s, "register_email")).toBe(s === "upcoming_pending" || s === "upcoming_consented");
+    }
   });
-  it("他は全てfalse", () => {
-    const others = ["upcoming_consented", "past_pending", "past_consented_today", "past_closed", "cancelled"] as const;
-    for (const s of others) expect(canWrite(s)).toBe(false);
+
+  it("verify_identityはupcoming_pending・upcoming_consented・past_consented_todayがtrue", () => {
+    for (const s of ALL_STATES) {
+      expect(canWrite(s, "verify_identity")).toBe(
+        s === "upcoming_pending" || s === "upcoming_consented" || s === "past_consented_today"
+      );
+    }
   });
 });
