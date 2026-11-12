@@ -1,6 +1,7 @@
 // MVP+3: 通知メール送信の共通基盤。ResendのREST APIを直接呼ぶ（SDK追加なし、最小構成）。
 // 絶対制約（空き枠通知）: 元の予約患者（キャンセルした患者）の氏名・診療内容・キャンセル理由は
 // buildAvailableSlotEmailの引数に一切含めない設計にする（呼び出し側にも渡さない）。
+import { formatJstDateTime } from "./datetime-display";
 
 export function isEmailSendEnabled(): boolean {
   return !!process.env.RESEND_API_KEY;
@@ -46,10 +47,7 @@ export interface AvailableSlotEmailInput {
 }
 
 function formatSlotDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("ja-JP", {
-    month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
-    timeZone: "Asia/Tokyo",
-  });
+  return formatJstDateTime(iso, { month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 /** 送信内容の組み立てのみ（純粋関数）。PII混入防止をテストしやすいよう送信処理と分離する */
@@ -123,14 +121,11 @@ export interface AppointmentReminderEmailInput {
 }
 
 function formatReminderDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("ja-JP", {
-    month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
-    timeZone: "Asia/Tokyo",
-  });
+  return formatJstDateTime(iso, { month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 function formatReminderTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tokyo" });
+  return formatJstDateTime(iso, { hour: "2-digit", minute: "2-digit" });
 }
 
 /** 全ての自動送信メールの末尾に付ける案内（心当たりが無い場合の連絡先・お知らせ不要の申し出先） */

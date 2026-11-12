@@ -8,11 +8,12 @@ import IdentityCheck from "./IdentityCheck";
 import { computeFreeCancellationDeadline } from "@/lib/charge-policy";
 import { TERMS_PAGE_PATH } from "@/lib/terms";
 import { determineConfirmState, type ConfirmState } from "@/lib/confirm-state";
+import { formatJstDateTime } from "@/lib/datetime-display";
 
 const TREATMENT_CATEGORY_LABEL: Record<string, string> = { private: "自由診療", insurance: "保険診療" };
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("ja-JP", {
+  return formatJstDateTime(iso, {
     year: "numeric", month: "long", day: "numeric",
     weekday: "short", hour: "2-digit", minute: "2-digit",
   });

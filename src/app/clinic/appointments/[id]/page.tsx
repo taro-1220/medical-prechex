@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getAccessToken } from "@/lib/clinic-auth";
+import { formatJstDateTime } from "@/lib/datetime-display";
 
 interface TierMatch {
   reason: "grace_hours" | "tier" | "no_matching_tier" | "no_show_tier_missing";
@@ -52,7 +53,7 @@ const REASON_LABEL: Record<string, string> = {
 };
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("ja-JP", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return formatJstDateTime(iso, { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 export default function AppointmentJudgmentPage({ params }: { params: Promise<{ id: string }> }) {

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 import { getAccessToken } from "@/lib/clinic-auth";
+import { formatJstDateTime } from "@/lib/datetime-display";
 
 export const STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmation_pending: "確認待ち",
@@ -26,9 +27,7 @@ export const STATUS_COLOR: Record<AppointmentStatus, string> = {
 };
 
 export function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("ja-JP", {
-    month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
-  });
+  return formatJstDateTime(iso, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 const isCancelled = (s: AppointmentStatus) => s === "cancelled" || s === "expired";

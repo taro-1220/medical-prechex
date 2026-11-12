@@ -6,6 +6,7 @@ import type { Appointment, AppointmentStatus, TreatmentCategory } from "@/lib/ty
 import { getAccessToken, redirectToLogin } from "@/lib/clinic-auth";
 import { useClinicGuard } from "@/lib/useClinicGuard";
 import { shouldRenderClinicContent } from "@/lib/clinic-guard";
+import { formatJstDateTime } from "@/lib/datetime-display";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmation_pending: "確認待ち",
@@ -34,9 +35,7 @@ const TREATMENT_CATEGORY_LABEL: Record<TreatmentCategory, string> = {
 };
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("ja-JP", {
-    year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit",
-  });
+  return formatJstDateTime(iso, { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 type LoadState = "loading" | "ok" | "notfound" | "error";

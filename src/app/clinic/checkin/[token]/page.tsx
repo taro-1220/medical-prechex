@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 import { getAccessToken } from "@/lib/clinic-auth";
+import { formatJstDateTime } from "@/lib/datetime-display";
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString("ja-JP", {
+  return formatJstDateTime(iso, {
     year: "numeric", month: "long", day: "numeric",
     weekday: "short", hour: "2-digit", minute: "2-digit",
   });
