@@ -7,6 +7,8 @@ import { DEFAULT_TEMPLATES, renderTemplate, findUnresolvedPlaceholders } from "@
 import { resolveCancelPolicyApplication, shouldWarnMissingBaseAmount } from "@/lib/cancel-policy";
 import { checkPolicyTierConsistency } from "@/lib/charge-policy";
 import { isValidEmailFormat } from "@/lib/contact-info";
+import { formatJstDateTime, jstLocalInputToIso } from "@/lib/datetime-display";
+import { DEFAULT_APPOINTMENT_DESCRIPTION_OPTIONS } from "@/lib/appointment-description-options";
 import ConfirmUrlQr from "../ConfirmUrlQr";
 
 const TREATMENT_CATEGORY_LABEL: Record<TreatmentCategory, string> = { private: "自由診療", insurance: "保険診療", other: "その他" };
@@ -82,6 +84,14 @@ export default function ClinicNewPage() {
   const [cardRegistrationRequired, setCardRegistrationRequired] = useState(false);
   const [baseAmount, setBaseAmount] = useState("");
 
+  // 予約「内容」の選択肢（クリニックごと。未設定時は初期の選択肢）
+  const [descriptionOptions, setDescriptionOptions] = useState<string[]>(DEFAULT_APPOINTMENT_DESCRIPTION_OPTIONS);
+  const [addingDescriptionOption, setAddingDescriptionOption] = useState(false);
+  const [newDescriptionOptionInput, setNewDescriptionOptionInput] = useState("");
+  const [newDescriptionOptionConfirming, setNewDescriptionOptionConfirming] = useState(false);
+  const [newDescriptionOptionSaving, setNewDescriptionOptionSaving] = useState(false);
+  const [newDescriptionOptionError, setNewDescriptionOptionError] = useState<string | null>(null);
+
   // ログイン中クリニックから取得
   useEffect(() => {
     getCurrentClinic()
@@ -123,6 +133,71 @@ export default function ClinicNewPage() {
       setCancelPolicySettings(await res.json());
     })().catch(() => {});
   }, [clinicId]);
+
+  // 予約「内容」の選択肢（未設定時は初期の選択肢のまま）
+  useEffect(() => {
+    if (!clinicId) return;
+    (async () => {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/appointment-description-options?clinic_id=${clinicId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) return;
+      const { options } = await res.json();
+      if (Array.isArray(options) && options.length > 0) setDescriptionOptions(options);
+    })().catch(() => {});
+  }, [clinicId]);
+
+  const startConfirmDescriptionOption = () => {
+    const trimmed = newDescriptionOptionInput.trim();
+    if (trimmed.length < 1 || trimmed.length > 20) {
+      setNewDescriptionOptionError("1〜20文字で入力してください");
+      return;
+    }
+    if (descriptionOptions.includes(trimmed)) {
+      setNewDescriptionOptionError("すでに同じ項目があります");
+      return;
+    }
+    setNewDescriptionOptionInput(trimmed);
+    setNewDescriptionOptionError(null);
+    setNewDescriptionOptionConfirming(true);
+  };
+
+  const confirmAddDescriptionOption = async () => {
+    if (!clinicId) return;
+    setNewDescriptionOptionSaving(true);
+    setNewDescriptionOptionError(null);
+    try {
+      const token = await getAccessToken();
+      const res = await fetch("/api/clinic/appointment-description-options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ clinicId, label: newDescriptionOptionInput }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: null }));
+        setNewDescriptionOptionError(error === "duplicate" ? "すでに同じ項目があります" : "追加に失敗しました");
+        return;
+      }
+      const { options } = await res.json();
+      setDescriptionOptions(options);
+      setForm(prev => ({ ...prev, description: newDescriptionOptionInput }));
+      setAddingDescriptionOption(false);
+      setNewDescriptionOptionConfirming(false);
+      setNewDescriptionOptionInput("");
+    } catch {
+      setNewDescriptionOptionError("追加に失敗しました");
+    } finally {
+      setNewDescriptionOptionSaving(false);
+    }
+  };
+
+  const cancelAddDescriptionOption = () => {
+    setAddingDescriptionOption(false);
+    setNewDescriptionOptionConfirming(false);
+    setNewDescriptionOptionInput("");
+    setNewDescriptionOptionError(null);
+  };
 
   // 診療区分が変わったら手動上書きをリセット（既定ルールに戻す）
   useEffect(() => {
@@ -251,6 +326,7 @@ export default function ClinicNewPage() {
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({
         ...form,
+        appointmentAt: jstLocalInputToIso(form.appointmentAt),
         clinicName,
         ...(clinicId ? { clinicId } : {}),
         communicationChannel: "manual",
@@ -347,7 +423,7 @@ export default function ClinicNewPage() {
   // ─── 確認URL発行後の画面 ───────────────────────────────
   if (confirmUrl && bodies) {
     const apptDate = form.appointmentAt
-      ? new Date(form.appointmentAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      ? formatJstDateTime(jstLocalInputToIso(form.appointmentAt), { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
       : "";
 
     const activeMeta = getMeta(activeTab);
@@ -677,14 +753,66 @@ export default function ClinicNewPage() {
             <label className="block text-sm font-bold mb-1.5 text-gray-700">
               予約内容<span className="text-red-500 ml-1">*</span>
             </label>
-            <input
-              type="text"
+            <select
               required
-              placeholder="初診・一般診療"
               value={form.description}
-              onChange={set("description")}
-              className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-teal-500 transition text-sm"
-            />
+              onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+              className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-900 focus:outline-none focus:border-teal-500 transition text-sm"
+            >
+              <option value="" disabled>選択してください</option>
+              {descriptionOptions.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+
+            {!addingDescriptionOption ? (
+              <button
+                type="button"
+                onClick={() => setAddingDescriptionOption(true)}
+                className="mt-2 text-xs text-teal-700 font-bold hover:underline"
+              >
+                + 項目を追加
+              </button>
+            ) : newDescriptionOptionConfirming ? (
+              <div className="mt-2 rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
+                <p className="text-sm text-gray-700">「{newDescriptionOptionInput}」を選択肢に追加します</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={newDescriptionOptionSaving}
+                    onClick={confirmAddDescriptionOption}
+                    className="px-3 py-1.5 rounded-lg bg-teal-600 text-white text-xs font-bold disabled:opacity-50"
+                  >
+                    {newDescriptionOptionSaving ? "追加中..." : "追加する"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewDescriptionOptionConfirming(false)}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600"
+                  >
+                    修正する
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 flex gap-2">
+                <input
+                  type="text"
+                  value={newDescriptionOptionInput}
+                  onChange={(e) => setNewDescriptionOptionInput(e.target.value)}
+                  placeholder="項目名を入力"
+                  maxLength={20}
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-teal-500"
+                />
+                <button type="button" onClick={startConfirmDescriptionOption} className="px-3 py-2 rounded-lg bg-teal-600 text-white text-xs font-bold">
+                  確認
+                </button>
+                <button type="button" onClick={cancelAddDescriptionOption} className="px-3 py-2 rounded-lg border border-gray-200 text-xs text-gray-600">
+                  キャンセル
+                </button>
+              </div>
+            )}
+            {newDescriptionOptionError && <p className="text-xs text-red-600 mt-1">{newDescriptionOptionError}</p>}
           </div>
 
           {/* MVP+1: 診療区分（キャンセル料ポリシー適用判定に使う） */}
