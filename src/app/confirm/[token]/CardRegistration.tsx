@@ -4,13 +4,12 @@ import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import type { CancelTier } from "@/lib/types";
 import { formatTierAmount } from "@/lib/charge-policy";
-import { getCardSetupErrorMessage } from "@/lib/card-setup-error";
+import { getCardSetupErrorMessage, getCardSetupPrepErrorMessage } from "@/lib/card-setup-error";
 import { DAY_COUNTING_NOTE } from "@/lib/cancel-policy";
+import { formatJstDateTime } from "@/lib/datetime-display";
 
 export function formatDeadline(iso: string): string {
-  return new Date(iso).toLocaleString("ja-JP", {
-    month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit",
-  });
+  return formatJstDateTime(iso, { month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 const TIER_ROW_LABEL = (t: CancelTier): string => {
@@ -109,14 +108,14 @@ export default function CardRegistration({
     fetch(`/api/appointments/${token}/setup-intent`, { method: "POST" })
       .then(async (res) => {
         if (!res.ok) {
-          const { error } = await res.json().catch(() => ({ error: "準備に失敗しました" }));
-          setPrepError(String(error));
+          const { error } = await res.json().catch(() => ({ error: null }));
+          setPrepError(getCardSetupPrepErrorMessage(error));
           return;
         }
         const { connectedAccountId: acct } = await res.json();
         setConnectedAccountId(acct);
       })
-      .catch(() => setPrepError("準備に失敗しました"));
+      .catch(() => setPrepError(getCardSetupPrepErrorMessage(null)));
   }, [token]);
 
   const stripePromise = useMemo<Promise<StripeJs | null> | null>(() => {

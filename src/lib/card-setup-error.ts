@@ -16,3 +16,14 @@ export function getCardSetupErrorMessage(stripeError: { type?: string; message?:
   const contactLine = getSupportContactLine();
   return contactLine ? `${GENERIC_CARD_REGISTRATION_ERROR}\n${contactLine}` : GENERIC_CARD_REGISTRATION_ERROR;
 }
+
+/**
+ * /setup-intent（カード登録の準備API）がエラーを返した場合の患者向け表示。
+ * クリニックのStripe未準備は専用の案内にし、英語の内部エラー文字列は一切出さない。
+ */
+export function getCardSetupPrepErrorMessage(apiError: string | null | undefined): string {
+  if (apiError === "clinic stripe account not ready") {
+    return "現在、このクリニックではカードのご登録を受け付けていません";
+  }
+  return GENERIC_CARD_REGISTRATION_ERROR;
+}

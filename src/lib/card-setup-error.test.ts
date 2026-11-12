@@ -2,7 +2,7 @@
 // 患者側で対処できるcard_errorはそのまま見せ、それ以外（鍵の環境不一致など
 // システム側の問題）は日本語の汎用案内に置き換えることを検証する。
 import { describe, it, expect } from "vitest";
-import { getCardSetupErrorMessage } from "./card-setup-error";
+import { getCardSetupErrorMessage, getCardSetupPrepErrorMessage } from "./card-setup-error";
 
 describe("getCardSetupErrorMessage", () => {
   it("card_error（カード拒否等）はStripeのメッセージをそのまま返す", () => {
@@ -35,5 +35,18 @@ describe("getCardSetupErrorMessage", () => {
   it("stripeErrorがnull/undefinedでも汎用案内を返す", () => {
     expect(getCardSetupErrorMessage(null)).toContain("カードの登録に失敗しました");
     expect(getCardSetupErrorMessage(undefined)).toContain("カードの登録に失敗しました");
+  });
+});
+
+describe("getCardSetupPrepErrorMessage", () => {
+  it("クリニックのStripe未準備は専用の日本語案内にする（英語の内部エラーを見せない）", () => {
+    const message = getCardSetupPrepErrorMessage("clinic stripe account not ready");
+    expect(message).toBe("現在、このクリニックではカードのご登録を受け付けていません");
+  });
+
+  it("その他のエラー・null/undefinedは汎用案内にする", () => {
+    expect(getCardSetupPrepErrorMessage("clinic not resolved")).toContain("カードの登録に失敗しました");
+    expect(getCardSetupPrepErrorMessage(null)).toContain("カードの登録に失敗しました");
+    expect(getCardSetupPrepErrorMessage(undefined)).toContain("カードの登録に失敗しました");
   });
 });
