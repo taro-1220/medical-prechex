@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatJstDateTime, jstLocalInputToIso } from "./datetime-display";
+import { formatJstDateTime, jstLocalInputToIso, hasExplicitTimezoneOffset } from "./datetime-display";
 
 describe("jstLocalInputToIso", () => {
   it("datetime-localの値（タイムゾーン無し）を日本時間として明示したISOに変換する", () => {
@@ -19,6 +19,22 @@ describe("jstLocalInputToIso", () => {
   it("日付をまたぐ時刻（00:30 JST）も正しくUTCに変換される（前日のUTC日付になる）", () => {
     const iso = jstLocalInputToIso("2026-11-15T00:30");
     expect(new Date(iso).toISOString()).toBe("2026-11-14T15:30:00.000Z");
+  });
+});
+
+describe("hasExplicitTimezoneOffset", () => {
+  it("オフセット無しはfalse", () => {
+    expect(hasExplicitTimezoneOffset("2026-11-15T13:29:00")).toBe(false);
+    expect(hasExplicitTimezoneOffset("2026-11-15T13:29")).toBe(false);
+  });
+
+  it("Zはtrue", () => {
+    expect(hasExplicitTimezoneOffset("2026-11-15T13:29:00Z")).toBe(true);
+  });
+
+  it("+09:00などのオフセットはtrue", () => {
+    expect(hasExplicitTimezoneOffset("2026-11-15T13:29:00+09:00")).toBe(true);
+    expect(hasExplicitTimezoneOffset("2026-11-15T13:29:00-05:00")).toBe(true);
   });
 });
 

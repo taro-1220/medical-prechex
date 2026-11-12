@@ -125,6 +125,20 @@ describe("POST /api/appointments: 連絡先（任意）と確認URLメールの�
     expect(createAppointmentMock).not.toHaveBeenCalled();
   });
 
+  it("appointmentAtにタイムゾーンオフセットが無い場合は400で、作成しない", async () => {
+    stub([{ clinic_id: "c1", selected: true }], "active");
+    const res = await POST(req({ ...valid, appointmentAt: "2030-01-01T10:00:00" }));
+    expect(res.status).toBe(400);
+    expect(createAppointmentMock).not.toHaveBeenCalled();
+  });
+
+  it("appointmentAtに+09:00のオフセットがあれば201で作成できる", async () => {
+    stub([{ clinic_id: "c1", selected: true }], "active");
+    const res = await POST(req({ ...valid, appointmentAt: "2030-01-01T10:00:00+09:00" }));
+    expect(res.status).toBe(201);
+    expect(createAppointmentMock).toHaveBeenCalledTimes(1);
+  });
+
   it("メールがあっても送信基盤が無効なら、作成は成功しemailSendStatusはdisabled", async () => {
     stub([{ clinic_id: "c1", selected: true }], "active");
     createAppointmentMock.mockResolvedValue({ id: "a1", email: "patient@example.com", status: "confirmation_pending", token: "tok1", clinicName: "テスト医院", appointmentAt: valid.appointmentAt });

@@ -13,3 +13,12 @@ export function formatJstDateTime(iso: string, opts: Intl.DateTimeFormatOptions 
 export function jstLocalInputToIso(localValue: string): string {
   return `${localValue}:00+09:00`;
 }
+
+/**
+ * タイムゾーン（Z または +09:00 等のオフセット）が明示されているかを判定する。
+ * サーバー側の入力検証で使う（オフセット無しの文字列は、セッションのタイムゾーンで
+ * 解釈されてしまい時刻がずれるため、保存前に拒否する）。
+ */
+export function hasExplicitTimezoneOffset(iso: string): boolean {
+  return /(Z|[+-]\d{2}:\d{2})$/.test(iso);
+}

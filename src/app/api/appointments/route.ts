@@ -4,6 +4,7 @@ import { authenticateRequest, authorizeClinicAccess, getActiveClinicIdsForUser }
 import { createAppointment, getAllAppointments } from "@/lib/store";
 import { isValidEmailFormat } from "@/lib/contact-info";
 import { sendConfirmationEmailAndRecord } from "@/lib/confirm-email";
+import { hasExplicitTimezoneOffset } from "@/lib/datetime-display";
 
 function safeError(e: unknown) {
   const err = e instanceof Error ? e : new Error(String(e));
@@ -51,6 +52,9 @@ export async function POST(req: NextRequest) {
   const appointmentAt = typeof body?.appointmentAt === "string" ? body.appointmentAt.trim() : "";
   if (!patientName || !appointmentAt) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  }
+  if (!hasExplicitTimezoneOffset(appointmentAt)) {
+    return NextResponse.json({ error: "appointmentAt requires an explicit timezone offset" }, { status: 400 });
   }
   const email = typeof body?.email === "string" ? body.email.trim() : "";
   if (email && !isValidEmailFormat(email)) {
