@@ -190,6 +190,14 @@ export default function ClinicPage() {
           </Link>
         </div>
       )}
+      {activatedAt !== undefined && !profile?.phone && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between">
+          <p className="text-sm text-amber-800 font-medium">電話番号が未登録です。患者さんへのメールに連絡先が表示されません</p>
+          <Link href="/clinic/onboarding?mode=settings" className="px-4 py-1.5 bg-amber-500 rounded-lg text-white text-sm font-bold hover:bg-amber-600 transition">
+            電話番号を登録
+          </Link>
+        </div>
+      )}
 
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Summary */}
