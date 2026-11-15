@@ -1,6 +1,7 @@
 // 予約ページ（/clinic/appointments）向けの、副作用の無い日付・絞り込み純関数。
 // JST暦日の算出は既存の toJstDateKey（charge-policy.ts）を再利用する。
 import { toJstDateKey } from "./charge-policy";
+import { determineConfirmState } from "./confirm-state";
 import type { Appointment, AppointmentStatus } from "./types";
 
 export { toJstDateKey };
@@ -24,6 +25,14 @@ export function matchesStatus(status: AppointmentStatus, filter: StatusFilter | 
 
 export function isTodayJst(appointmentAtIso: string, nowIso: string): boolean {
   return toJstDateKey(appointmentAtIso) === toJstDateKey(nowIso);
+}
+
+/**
+ * 未同意（confirmation_pending）のまま予約時刻を過ぎた予約か。DBのstatusは変更せず、
+ * 表示上「期限切れ」として扱うための判定（confirm-state.tsのpast_pendingを流用）。
+ */
+export function isExpiredUnconfirmed(status: AppointmentStatus, appointmentAt: string, nowIso: string): boolean {
+  return determineConfirmState(status, appointmentAt, nowIso) === "past_pending";
 }
 
 export function matchesRange(appointmentAtIso: string, nowIso: string, range: PeriodRange): boolean {

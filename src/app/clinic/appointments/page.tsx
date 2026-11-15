@@ -23,7 +23,7 @@ import { StatsCards, activeFromQuery } from "../StatsCards";
 
 const RANGES: PeriodRange[] = ["today", "upcoming", "past", "all"];
 const RANGE_LABEL: Record<PeriodRange, string> = { today: "今日", upcoming: "これから", past: "過去", all: "すべて" };
-const STATUS_LABEL: Record<StatusFilter, string> = { pending: "確認待ち", confirmed: "確認済み", visited: "来院済み", canceled: "キャンセル" };
+const STATUS_LABEL: Record<StatusFilter, string> = { pending: "同意待ち", confirmed: "確認済み", visited: "来院済み", canceled: "キャンセル" };
 const STATUS_DOT: Record<StatusFilter, string> = { pending: "bg-yellow-500", confirmed: "bg-teal-500", visited: "bg-emerald-500", canceled: "bg-gray-400" };
 const WEEKDAY_LABEL = ["日", "月", "火", "水", "木", "金", "土"];
 
@@ -211,7 +211,7 @@ function AppointmentsPageInner() {
                     <h2 className="text-sm font-bold text-gray-500 mb-2">{formatDateHeading(g.dateKey)}</h2>
                     <div className="space-y-3">
                       {g.items.map((a) => (
-                        <AppointmentRow key={a.id} appointment={a} onChanged={load} />
+                        <AppointmentRow key={a.id} appointment={a} onChanged={load} nowIso={nowIso} />
                       ))}
                     </div>
                   </div>
@@ -293,7 +293,7 @@ function AppointmentsPageInner() {
                 ) : (
                   <div className="space-y-3">
                     {selectedDayItems.map((a) => (
-                      <AppointmentRow key={a.id} appointment={a} onChanged={load} />
+                      <AppointmentRow key={a.id} appointment={a} onChanged={load} nowIso={nowIso} />
                     ))}
                   </div>
                 )

@@ -1,6 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 import { getSupabaseBrowser } from "./supabase-browser";
-import type { Clinic, ClinicStatus, StripeAccountStatus } from "./types";
+import type { Clinic, ClinicStatus, StripeAccountStatus, OnboardingProgress, ClinicProfile } from "./types";
 import { getStripeAccountStatusLabel } from "./status-labels";
 
 const STRIPE_CONNECT_GENERIC_ERROR = "現在お支払い連携を開始できません。運営事務局までご連絡ください";
@@ -182,6 +182,22 @@ export function isStripePendingBannerVisible(status: StripeAccountStatus | null 
  * 初期設定（activate）が完了するまではStripeバナーを出さず、初期設定バナーのみ見せる。
  * /clinic/onboardingではこの制約を適用しない（そちらは元々Stripeバナーの表示のみ）。
  */
+/**
+ * /clinic（ダッシュボード）の「初期設定が完了していません」帯に出す、未完了項目名の一覧。
+ * activate済みでも電話番号が未登録なら「電話番号」を出す（activateの判定自体は変更しない）。
+ */
+export function incompleteOnboardingItems(
+  progress: Pick<OnboardingProgress, "profileCompleted" | "policyCompleted" | "notificationCompleted"> | null,
+  profile: Pick<ClinicProfile, "phone"> | null,
+): string[] {
+  const items: string[] = [];
+  if (!progress?.profileCompleted) items.push("医院プロフィール");
+  if (!progress?.policyCompleted) items.push("キャンセル料ポリシー");
+  if (!progress?.notificationCompleted) items.push("通知設定");
+  if (!profile?.phone) items.push("電話番号");
+  return items;
+}
+
 export function isStripePendingBannerVisibleOnDashboard(
   activatedAt: string | null | undefined,
   status: StripeAccountStatus | null | undefined,

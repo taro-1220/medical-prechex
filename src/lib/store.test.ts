@@ -7,7 +7,7 @@ vi.mock("./supabase", () => ({
   getSupabase: () => mockClient(),
 }));
 
-import { confirmWithConsent } from "./store";
+import { confirmWithConsent, recordConfirmPageFirstViewed } from "./store";
 import { TERMS_VERSION } from "./terms";
 
 const BASE_APPOINTMENT_ROW = {
@@ -35,6 +35,8 @@ const BASE_APPOINTMENT_ROW = {
 
 let insertCalls: { table: string; payload: unknown }[] = [];
 let appointmentRow: Record<string, unknown> = BASE_APPOINTMENT_ROW;
+let updateCalls: { table: string; payload: unknown }[] = [];
+let updateError: { code: string; message: string } | null = null;
 
 function mockClient() {
   return {
@@ -60,10 +62,14 @@ function mockClient() {
           insertCalls.push({ table, payload });
           return { then: (resolve: (v: { error: null }) => unknown) => Promise.resolve({ error: null }).then(resolve) };
         },
-        update() {
+        update(payload: unknown) {
+          updateCalls.push({ table, payload });
           return {
             eq() {
-              return { select: async () => ({ data: [{ id: "appt-1" }], error: null }) };
+              return {
+                select: async () => ({ data: [{ id: "appt-1" }], error: null }),
+                is: async () => ({ error: updateError }),
+              };
             },
           };
         },
@@ -102,5 +108,25 @@ describe("confirmWithConsent: 利用規約の同意記録", () => {
     const payload = consentLogInsert!.payload as Record<string, unknown>;
     expect(payload.policy_text).toBe(BASE_APPOINTMENT_ROW.cancellation_policy);
     expect(payload.patient_name).toBe(BASE_APPOINTMENT_ROW.patient_name);
+  });
+});
+
+describe("recordConfirmPageFirstViewed: 確認ページを最初に開いた日時の記録", () => {
+  beforeEach(() => {
+    updateCalls = [];
+    updateError = null;
+  });
+
+  it("appointmentsをid指定・confirm_page_first_viewed_at未設定の条件で更新する", async () => {
+    await recordConfirmPageFirstViewed("appt-1");
+    const update = updateCalls.find((c) => c.table === "appointments");
+    expect(update).toBeDefined();
+    const payload = update!.payload as Record<string, unknown>;
+    expect(typeof payload.confirm_page_first_viewed_at).toBe("string");
+  });
+
+  it("migration未適用(42703)でも例外を投げない", async () => {
+    updateError = { code: "42703", message: "column does not exist" };
+    await expect(recordConfirmPageFirstViewed("appt-1")).resolves.toBeUndefined();
   });
 });

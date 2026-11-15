@@ -193,6 +193,8 @@ export interface Appointment {
   patientRegisteredEmailAt?: string;
   /** 直近のメール送信失敗時刻（成功時はnullに戻る。migration 026） */
   emailLastFailedAt?: string;
+  /** 確認ページ(/confirm/[token])を最初に開いた日時（書き込み後は上書きしない。migration 028） */
+  confirmPageFirstViewedAt?: string;
   clinicId?: string;
   patientId?: string;
   createdAt: string;

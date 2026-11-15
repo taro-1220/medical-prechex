@@ -2,51 +2,32 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Appointment, AppointmentStatus } from "@/lib/types";
+import type { Appointment, StripeAccountStatus } from "@/lib/types";
 import { getAccessToken } from "@/lib/clinic-auth";
-import { formatJstDateTime } from "@/lib/datetime-display";
+import { isExpiredUnconfirmed } from "@/lib/clinic-appointments-view";
+import { STATUS_LABEL, STATUS_COLOR, formatDate, attentionReasons, confirmProgress } from "./appointment-row-view";
 
-export const STATUS_LABEL: Record<AppointmentStatus, string> = {
-  confirmation_pending: "確認待ち",
-  confirmed: "確認済み",
-  ticket_issued: "確認済み",
-  checked_in: "来院済み",
-  completed: "完了",
-  cancelled: "キャンセル",
-  expired: "期限切れ",
-};
-
-export const STATUS_COLOR: Record<AppointmentStatus, string> = {
-  confirmation_pending: "bg-yellow-100 text-yellow-700",
-  confirmed: "bg-teal-100 text-teal-700",
-  ticket_issued: "bg-teal-100 text-teal-700",
-  checked_in: "bg-emerald-100 text-emerald-700",
-  completed: "bg-gray-100 text-gray-600",
-  cancelled: "bg-gray-100 text-gray-400",
-  expired: "bg-gray-100 text-gray-400",
-};
-
-export function formatDate(iso: string) {
-  return formatJstDateTime(iso, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
-const isCancelled = (s: AppointmentStatus) => s === "cancelled" || s === "expired";
-
-/** Phase J セクションC: 一覧の「要対応」判定。時系列より上に固定表示する対象を決める */
-export function attentionReasons(a: Appointment): string[] {
-  const reasons: string[] = [];
-  if (a.cardRegistrationRequired && !a.stripePaymentMethodId && !isCancelled(a.status) && a.status !== "completed") {
-    reasons.push("カード未登録");
-  }
-  if (a.chargeStatus === "failed") reasons.push("請求失敗");
-  if (a.chargeStatus === "requires_action") reasons.push("要再認証");
-  return reasons;
-}
+export { STATUS_LABEL, STATUS_COLOR, formatDate, attentionReasons, confirmProgress };
+export type { ConfirmProgress } from "./appointment-row-view";
 
 /** /clinic と /clinic/appointments の一覧で共通して使う予約の行。行を押すと詳細へ移動する。 */
-export function AppointmentRow({ appointment: a, onChanged }: { appointment: Appointment; onChanged: () => void }) {
+export function AppointmentRow({
+  appointment: a,
+  onChanged,
+  nowIso,
+  stripeAccountStatus,
+}: {
+  appointment: Appointment;
+  onChanged: () => void;
+  nowIso?: string;
+  stripeAccountStatus?: StripeAccountStatus | null;
+}) {
   const router = useRouter();
   const [copyStatus, setCopyStatus] = useState<"success" | "error" | null>(null);
+  const now = nowIso ?? new Date().toISOString();
+  const expired = isExpiredUnconfirmed(a.status, a.appointmentAt, now);
+  const reasons = attentionReasons(a, now, stripeAccountStatus);
+  const progress = confirmProgress(a);
 
   const copyConfirmUrl = async () => {
     if (!a.token) return;
@@ -83,12 +64,12 @@ export function AppointmentRow({ appointment: a, onChanged }: { appointment: App
       <div className="flex-1 min-w-0">
         {/* Phase J セクションC: バッジは「状態」「要対応」の2軸のみ。他の内部状態はテキストで示す */}
         <div className="flex items-center gap-3 mb-2">
-          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${STATUS_COLOR[a.status]}`}>
-            {STATUS_LABEL[a.status]}
+          <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${expired ? STATUS_COLOR.expired : STATUS_COLOR[a.status]}`}>
+            {expired ? "期限切れ" : STATUS_LABEL[a.status]}
           </span>
-          {attentionReasons(a).length > 0 && (
+          {reasons.length > 0 && (
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
-              ⚠ 要対応（{attentionReasons(a).join("・")}）
+              ⚠ 要対応（{reasons.join("・")}）
             </span>
           )}
           <span className="text-gray-400 text-xs">{formatDate(a.appointmentAt)}</span>
@@ -101,11 +82,17 @@ export function AppointmentRow({ appointment: a, onChanged }: { appointment: App
         </div>
         <div className="mt-1 space-y-0.5">
           <p className="text-xs text-gray-400">
-            {(() => {
-              // 送信申告済み媒体（自動検知ではなくスタッフ申告の記録）
-              const sentChannels = [a.lineSentAt && "LINE", a.smsSentAt && "SMS", a.emailSentAt && "メール"].filter(Boolean);
-              return sentChannels.length ? `確認URL: 送信済み（${sentChannels.join("・")}）` : "確認URL未送信";
-            })()}
+            {a.status === "confirmation_pending" && !expired
+              ? progress.state === "viewed"
+                ? `ページを開いた（${formatDate(progress.viewedAt)}）`
+                : progress.state === "sent"
+                  ? "送信済み"
+                  : "未送信"
+              : (() => {
+                  // 送信申告済み媒体（自動検知ではなくスタッフ申告の記録）
+                  const sentChannels = [a.lineSentAt && "LINE", a.smsSentAt && "SMS", a.emailSentAt && "メール"].filter(Boolean);
+                  return sentChannels.length ? `確認URL: 送信済み（${sentChannels.join("・")}）` : "確認URL未送信";
+                })()}
           </p>
           {a.cancelPolicyApplied && (
             <p className="text-xs text-gray-400">

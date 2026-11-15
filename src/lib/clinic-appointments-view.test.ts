@@ -9,6 +9,7 @@ import {
   groupByDateJst,
   buildMonthWeeks,
   countsByDateAndStatus,
+  isExpiredUnconfirmed,
 } from "./clinic-appointments-view";
 
 function makeAppt(overrides: Partial<Appointment> & { appointmentAt: string }): Appointment {
@@ -182,5 +183,25 @@ describe("countsByDateAndStatus: 日ごとの状態別件数", () => {
 
   it("空配列は空オブジェクト", () => {
     expect(countsByDateAndStatus([])).toEqual({});
+  });
+});
+
+describe("isExpiredUnconfirmed", () => {
+  const future = "2026-03-10T00:00:00.000Z";
+  const past = "2026-03-01T00:00:00.000Z";
+  const now = "2026-03-05T00:00:00.000Z";
+
+  it("confirmation_pendingかつ予約時刻を過ぎていればtrue", () => {
+    expect(isExpiredUnconfirmed("confirmation_pending", past, now)).toBe(true);
+  });
+
+  it("confirmation_pendingでも予約時刻前はfalse", () => {
+    expect(isExpiredUnconfirmed("confirmation_pending", future, now)).toBe(false);
+  });
+
+  it("confirmed等、未同意以外はfalse（予約時刻を過ぎていても）", () => {
+    for (const status of ["confirmed", "ticket_issued", "checked_in", "completed", "cancelled", "expired"] as const) {
+      expect(isExpiredUnconfirmed(status, past, now)).toBe(false);
+    }
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import type { Appointment } from "@/lib/types";
-import { isTodayJst, matchesStatus } from "@/lib/clinic-appointments-view";
+import { isTodayJst, matchesStatus, isExpiredUnconfirmed } from "@/lib/clinic-appointments-view";
 import { activeFromQuery, type StatsCardsActive } from "./stats-cards-active";
 
 export { activeFromQuery };
@@ -21,7 +21,7 @@ export function StatsCards({
   const nowIso = new Date().toISOString();
   const summary = {
     today: appointments.filter((a) => isTodayJst(a.appointmentAt, nowIso)).length,
-    pending: appointments.filter((a) => matchesStatus(a.status, "pending")).length,
+    pending: appointments.filter((a) => matchesStatus(a.status, "pending") && !isExpiredUnconfirmed(a.status, a.appointmentAt, nowIso)).length,
     confirmed: appointments.filter((a) => matchesStatus(a.status, "confirmed")).length,
     visited: appointments.filter((a) => matchesStatus(a.status, "visited")).length,
     canceled: appointments.filter((a) => matchesStatus(a.status, "canceled")).length,
@@ -29,7 +29,7 @@ export function StatsCards({
 
   const cards: Card[] = [
     { key: "today", label: "本日の予約", value: summary.today, href: "/clinic/appointments?range=today" },
-    { key: "pending", label: "確認待ち", value: summary.pending, color: "text-yellow-600", href: "/clinic/appointments?range=all&status=pending" },
+    { key: "pending", label: "同意待ち", value: summary.pending, color: "text-yellow-600", href: "/clinic/appointments?range=all&status=pending" },
     { key: "confirmed", label: "確認済", value: summary.confirmed, color: "text-teal-600", href: "/clinic/appointments?range=all&status=confirmed" },
     { key: "visited", label: "来院済", value: summary.visited, color: "text-emerald-600", href: "/clinic/appointments?range=all&status=visited" },
     { key: "canceled", label: "キャンセル", value: summary.canceled, color: "text-gray-400", href: "/clinic/appointments?range=all&status=canceled" },

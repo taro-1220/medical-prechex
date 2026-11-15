@@ -41,6 +41,7 @@ export function toAppt(row: Record<string, unknown>): Appointment {
     patientRegisteredEmail:   row.patient_registered_email as string | undefined,
     patientRegisteredEmailAt: row.patient_registered_email_at as string | undefined,
     emailLastFailedAt:        row.email_last_failed_at as string | undefined,
+    confirmPageFirstViewedAt: row.confirm_page_first_viewed_at as string | undefined,
     clinicId:             row.clinic_id as string | undefined,
     patientId:            row.patient_id as string | undefined,
     createdAt:            row.created_at as string,
@@ -230,6 +231,23 @@ export async function getAppointmentById(id: string): Promise<Appointment | unde
  * （basis_note・医院電話番号・chargeFailureKind）を都度joinして返す。basis_note は
  * show_basis_to_patient=true の場合のみ載せる（内部の金額根拠メモを無条件に患者へ見せないため）
  */
+/**
+ * 確認ページ(/confirm/[token])を最初に開いた日時を記録する（書き込み後は上書きしない）。
+ * migration 028未適用(列不存在=42703)の間は何もしない（表示は止めない）。
+ */
+export async function recordConfirmPageFirstViewed(appointmentId: string): Promise<void> {
+  try {
+    const { error } = await getSupabase()
+      .from("appointments")
+      .update({ confirm_page_first_viewed_at: new Date().toISOString() })
+      .eq("id", appointmentId)
+      .is("confirm_page_first_viewed_at", null);
+    if (error && error.code !== "42703") throw new Error(error.message);
+  } catch {
+    // ネットワーク例外等でも表示処理自体は止めない
+  }
+}
+
 export async function getAppointmentForDisplay(token: string): Promise<Appointment | undefined> {
   const appt = await getAppointment(token);
   if (!appt || !appt.clinicId) return appt;

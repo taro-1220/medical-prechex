@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Appointment, Clinic, ClinicProfile, ChargeDashboardResponse } from "@/lib/types";
-import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin, getClinicApprovalRedirect, isStripePendingBannerVisibleOnDashboard } from "@/lib/clinic-auth";
+import type { Appointment, Clinic, ClinicProfile, OnboardingProgress, ChargeDashboardResponse } from "@/lib/types";
+import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin, getClinicApprovalRedirect, isStripePendingBannerVisibleOnDashboard, incompleteOnboardingItems } from "@/lib/clinic-auth";
 import { isTodayJst } from "@/lib/clinic-appointments-view";
 import OnboardingGuide, { GUIDE_KEY } from "./OnboardingGuide";
 import StripePendingBanner from "./StripePendingBanner";
@@ -39,6 +39,7 @@ export default function ClinicPage() {
   const [clinic, setClinic]   = useState<Clinic | null>(null);
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [activatedAt, setActivatedAt] = useState<string | null | undefined>(undefined);
+  const [onboardingProgress, setOnboardingProgress] = useState<OnboardingProgress | null>(null);
   const [profile, setProfile] = useState<ClinicProfile | null>(null);
   const [dashboard, setDashboard] = useState<ChargeDashboardResponse | null>(null);
   const [guardResolved, setGuardResolved] = useState(false);
@@ -74,6 +75,7 @@ export default function ClinicPage() {
       if (obRes.ok) {
         const { progress, profile: prof } = await obRes.json();
         setActivatedAt(progress?.activatedAt ?? null);
+        setOnboardingProgress(progress ?? null);
         setProfile(prof ?? null);
       } else {
         setActivatedAt(null);
@@ -116,10 +118,11 @@ export default function ClinicPage() {
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
-  // Phase J セクションC: 要対応の予約を時系列より上に固定表示する
-  const needsAttention = sorted.filter((a) => attentionReasons(a).length > 0);
-
   const nowIso = new Date().toISOString();
+
+  // Phase J セクションC: 要対応の予約を時系列より上に固定表示する
+  const needsAttention = sorted.filter((a) => attentionReasons(a, nowIso, profile?.stripeAccountStatus).length > 0);
+
   const todaysAppointments = sorted.filter((a) => isTodayJst(a.appointmentAt, nowIso));
 
   if (!guardResolved) {
@@ -182,22 +185,21 @@ export default function ClinicPage() {
       {clinic && isStripePendingBannerVisibleOnDashboard(activatedAt, profile?.stripeAccountStatus) && (
         <StripePendingBanner clinicId={clinic.id} />
       )}
-      {activatedAt === null && (
-        <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between">
-          <p className="text-sm text-amber-800 font-medium">初期設定が完了していません</p>
-          <Link href="/clinic/onboarding" className="px-4 py-1.5 bg-amber-500 rounded-lg text-white text-sm font-bold hover:bg-amber-600 transition">
-            初期設定へ
-          </Link>
-        </div>
-      )}
-      {activatedAt !== undefined && !profile?.phone && (
-        <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between">
-          <p className="text-sm text-amber-800 font-medium">電話番号が未登録です。患者さんへのメールに連絡先が表示されません</p>
-          <Link href="/clinic/onboarding?mode=settings" className="px-4 py-1.5 bg-amber-500 rounded-lg text-white text-sm font-bold hover:bg-amber-600 transition">
-            電話番号を登録
-          </Link>
-        </div>
-      )}
+      {activatedAt !== undefined && (() => {
+        const incomplete = incompleteOnboardingItems(onboardingProgress, profile);
+        if (activatedAt !== null && incomplete.length === 0) return null;
+        return (
+          <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between">
+            <p className="text-sm text-amber-800 font-medium">
+              初期設定が完了していません
+              {incomplete.length > 0 && `（未完了：${incomplete.join("・")}）`}
+            </p>
+            <Link href="/clinic/onboarding" className="px-4 py-1.5 bg-amber-500 rounded-lg text-white text-sm font-bold hover:bg-amber-600 transition">
+              初期設定へ
+            </Link>
+          </div>
+        );
+      })()}
 
       <div className="max-w-5xl mx-auto px-6 py-8">
         {/* Summary */}
@@ -259,7 +261,7 @@ export default function ClinicPage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700">
-                        {attentionReasons(a).join("・")}
+                        {attentionReasons(a, nowIso, profile?.stripeAccountStatus).join("・")}
                       </span>
                       <span className="text-xs text-gray-500">{formatDate(a.appointmentAt)}</span>
                     </div>
@@ -297,7 +299,7 @@ export default function ClinicPage() {
         ) : (
           <div className="space-y-3">
             {todaysAppointments.map((a) => (
-              <AppointmentRow key={a.id} appointment={a} onChanged={load} />
+              <AppointmentRow key={a.id} appointment={a} onChanged={load} nowIso={nowIso} stripeAccountStatus={profile?.stripeAccountStatus} />
             ))}
           </div>
         )}
