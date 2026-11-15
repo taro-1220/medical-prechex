@@ -2,7 +2,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import type { Appointment } from "@/lib/types";
+import type { Appointment, StripeAccountStatus } from "@/lib/types";
 import { getAccessToken } from "@/lib/clinic-auth";
 import { useClinicGuard } from "@/lib/useClinicGuard";
 import { shouldRenderClinicContent } from "@/lib/clinic-guard";
@@ -64,6 +64,7 @@ function AppointmentsPageInner() {
   const { state: guardState, clinic } = useClinicGuard(router);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stripeAccountStatus, setStripeAccountStatus] = useState<StripeAccountStatus | null | undefined>(undefined);
 
   const nowIso = new Date().toISOString();
   const todayKey = toJstDateKey(nowIso);
@@ -95,6 +96,20 @@ function AppointmentsPageInner() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guardState, clinic]);
+
+  // クリニックのStripe状態（/clinicと同じ取得方法。「カード未登録」要対応判定に使う）
+  useEffect(() => {
+    if (!clinic) return;
+    (async () => {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/onboarding?clinic_id=${clinic.id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) return;
+      const { profile } = await res.json();
+      setStripeAccountStatus(profile?.stripeAccountStatus ?? null);
+    })().catch(() => {});
+  }, [clinic]);
 
   const updateParams = (patch: Record<string, string | null>) => {
     const next = new URLSearchParams(searchParams.toString());
@@ -211,7 +226,7 @@ function AppointmentsPageInner() {
                     <h2 className="text-sm font-bold text-gray-500 mb-2">{formatDateHeading(g.dateKey)}</h2>
                     <div className="space-y-3">
                       {g.items.map((a) => (
-                        <AppointmentRow key={a.id} appointment={a} onChanged={load} nowIso={nowIso} />
+                        <AppointmentRow key={a.id} appointment={a} onChanged={load} nowIso={nowIso} stripeAccountStatus={stripeAccountStatus} />
                       ))}
                     </div>
                   </div>
@@ -293,7 +308,7 @@ function AppointmentsPageInner() {
                 ) : (
                   <div className="space-y-3">
                     {selectedDayItems.map((a) => (
-                      <AppointmentRow key={a.id} appointment={a} onChanged={load} nowIso={nowIso} />
+                      <AppointmentRow key={a.id} appointment={a} onChanged={load} nowIso={nowIso} stripeAccountStatus={stripeAccountStatus} />
                     ))}
                   </div>
                 )
