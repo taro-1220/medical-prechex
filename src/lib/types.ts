@@ -210,6 +210,8 @@ export interface Appointment {
   cancelPolicyShowBasisToPatient?: boolean;
   cancelPolicyTiers?: CancelTier[] | null;
   clinicPhone?: string;
+  /** getAppointmentForDisplay専用。メール実値は返さず有無のみ返す */
+  emailRegistered?: boolean;
   // Phase K: chargeStatus='failed'のときのみ、直近のcharge_eventsから都度joinする表示専用フィールド
   chargeFailureKind?: ChargeFailureKind | null;
   // MVP+2: カード登録・課金状態

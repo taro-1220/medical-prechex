@@ -250,7 +250,13 @@ export async function recordConfirmPageFirstViewed(appointmentId: string): Promi
 
 export async function getAppointmentForDisplay(token: string): Promise<Appointment | undefined> {
   const appt = await getAppointment(token);
-  if (!appt || !appt.clinicId) return appt;
+  if (!appt) return appt;
+
+  // 患者向け表示では、メールアドレスの実値は返さず「登録済みかどうか」のみ返す
+  const emailRegistered = !!(appt.email || appt.patientRegisteredEmail);
+  const { email: _email, patientRegisteredEmail: _patientRegisteredEmail, ...redacted } = appt;
+
+  if (!appt.clinicId) return { ...redacted, emailRegistered } as Appointment;
 
   const sb = getSupabase();
   const { data: profile } = await sb
@@ -286,16 +292,17 @@ export async function getAppointmentForDisplay(token: string): Promise<Appointme
       .eq("treatment_category", appt.treatmentCategory)
       .maybeSingle();
     return {
-      ...appt,
+      ...redacted,
       clinicPhone,
       chargeFailureKind,
+      emailRegistered,
       cancelPolicyShowBasisToPatient: (policy?.show_basis_to_patient as boolean | undefined) ?? false,
       cancelPolicyBasisNote: policy?.show_basis_to_patient ? (policy?.basis_note as string | undefined) : undefined,
       cancelPolicyTiers: (policy?.tiers as CancelTier[] | null | undefined) ?? null,
-    };
+    } as Appointment;
   }
 
-  return { ...appt, clinicPhone, chargeFailureKind };
+  return { ...redacted, clinicPhone, chargeFailureKind, emailRegistered } as Appointment;
 }
 
 async function findOrCreatePatient(

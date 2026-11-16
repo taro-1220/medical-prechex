@@ -1,13 +1,14 @@
 "use client";
 import { useState } from "react";
-import { maskEmail } from "@/lib/contact-info";
 
-/** 患者が自ら登録する、前日リマインド受取用メール（任意）。予約単位の保存で患者台帳は変更しない。 */
-export default function EmailRegistration({ token, currentEmail }: { token: string; currentEmail?: string }) {
-  const [editing, setEditing] = useState(!currentEmail);
+/** 患者が自ら登録する、予約前のお知らせ受取用メール（任意）。予約単位の保存で患者台帳は変更しない。 */
+export default function EmailRegistration({ token, emailRegistered }: { token: string; emailRegistered: boolean }) {
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<"success" | "error" | "invalid" | "rate_limited" | null>(null);
+
+  // 予約のメールアドレス・患者登録メールのいずれかが既にある場合は、欄自体を出さない
+  if (emailRegistered && result !== "success") return null;
 
   const save = async () => {
     setSubmitting(true);
@@ -20,7 +21,6 @@ export default function EmailRegistration({ token, currentEmail }: { token: stri
       });
       if (res.ok) {
         setResult("success");
-        setEditing(false);
       } else {
         const body = await res.json().catch(() => ({}));
         if (body.error === "invalid_email") setResult("invalid");
@@ -36,17 +36,9 @@ export default function EmailRegistration({ token, currentEmail }: { token: stri
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 space-y-3">
-      <p className="text-xs font-bold uppercase tracking-widest text-gray-400">前日のお知らせを受け取るメールアドレス（任意）</p>
-      {!editing && currentEmail ? (
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-sm text-gray-700">登録済み：{maskEmail(currentEmail)}</span>
-          <button
-            onClick={() => { setEditing(true); setValue(""); setResult(null); }}
-            className="text-xs text-teal-600 hover:underline shrink-0"
-          >
-            変更する
-          </button>
-        </div>
+      <p className="text-xs font-bold uppercase tracking-widest text-gray-400">予約前のお知らせを受け取るメールアドレス（任意）</p>
+      {result === "success" ? (
+        <p className="text-xs text-teal-600">登録しました</p>
       ) : (
         <div className="flex gap-2">
           <input
@@ -65,7 +57,6 @@ export default function EmailRegistration({ token, currentEmail }: { token: stri
           </button>
         </div>
       )}
-      {result === "success" && <p className="text-xs text-teal-600">登録しました</p>}
       {result === "invalid" && <p className="text-xs text-red-600">メールアドレスの形式が正しくありません</p>}
       {result === "rate_limited" && <p className="text-xs text-amber-600">しばらくしてから再度お試しください</p>}
       {result === "error" && <p className="text-xs text-red-600">保存に失敗しました</p>}

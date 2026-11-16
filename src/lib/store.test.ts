@@ -7,7 +7,7 @@ vi.mock("./supabase", () => ({
   getSupabase: () => mockClient(),
 }));
 
-import { confirmWithConsent, recordConfirmPageFirstViewed } from "./store";
+import { confirmWithConsent, recordConfirmPageFirstViewed, getAppointmentForDisplay } from "./store";
 import { TERMS_VERSION } from "./terms";
 
 const BASE_APPOINTMENT_ROW = {
@@ -128,5 +128,33 @@ describe("recordConfirmPageFirstViewed: 確認ページを最初に開いた日�
   it("migration未適用(42703)でも例外を投げない", async () => {
     updateError = { code: "42703", message: "column does not exist" };
     await expect(recordConfirmPageFirstViewed("appt-1")).resolves.toBeUndefined();
+  });
+});
+
+describe("getAppointmentForDisplay: メールアドレスは実値を返さず有無のみ返す", () => {
+  beforeEach(() => {
+    appointmentRow = BASE_APPOINTMENT_ROW;
+  });
+
+  it("予約のemail・patient_registered_emailがどちらも無ければemailRegistered:false、実値は含まない", async () => {
+    appointmentRow = { ...BASE_APPOINTMENT_ROW, email: "" };
+    const appt = await getAppointmentForDisplay("token-1");
+    expect(appt?.emailRegistered).toBe(false);
+    expect((appt as unknown as Record<string, unknown>).email).toBeUndefined();
+    expect((appt as unknown as Record<string, unknown>).patientRegisteredEmail).toBeUndefined();
+  });
+
+  it("予約のemailがあればemailRegistered:true、実値は返さない", async () => {
+    appointmentRow = { ...BASE_APPOINTMENT_ROW, email: "patient@example.com" };
+    const appt = await getAppointmentForDisplay("token-1");
+    expect(appt?.emailRegistered).toBe(true);
+    expect((appt as unknown as Record<string, unknown>).email).toBeUndefined();
+  });
+
+  it("患者自身が登録したメール(patient_registered_email)があればemailRegistered:true、実値は返さない", async () => {
+    appointmentRow = { ...BASE_APPOINTMENT_ROW, email: "", patient_registered_email: "self@example.com" };
+    const appt = await getAppointmentForDisplay("token-1");
+    expect(appt?.emailRegistered).toBe(true);
+    expect((appt as unknown as Record<string, unknown>).patientRegisteredEmail).toBeUndefined();
   });
 });

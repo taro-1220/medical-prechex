@@ -246,7 +246,7 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
               />
             )}
 
-            <EmailRegistration token={token!} currentEmail={appt.patientRegisteredEmail} />
+            <EmailRegistration token={token!} emailRegistered={!!appt.emailRegistered} />
 
             {/* 同意 */}
             <label className="flex items-start gap-3 cursor-pointer">
