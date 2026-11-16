@@ -2,11 +2,12 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import type { Appointment, AppointmentStatus, TreatmentCategory } from "@/lib/types";
+import type { Appointment, AppointmentStatus, TreatmentCategory, ClinicStaffMember } from "@/lib/types";
 import { getAccessToken, redirectToLogin } from "@/lib/clinic-auth";
 import { useClinicGuard } from "@/lib/useClinicGuard";
 import { shouldRenderClinicContent } from "@/lib/clinic-guard";
 import { formatJstDateTime } from "@/lib/datetime-display";
+import { canEditHandoffFields } from "@/lib/clinic-appointments-view";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmation_pending: "確認待ち",
@@ -53,6 +54,13 @@ export default function ClinicAppointmentDetailPage() {
   const [emailSending, setEmailSending] = useState(false);
   const [emailSendError, setEmailSendError] = useState<string | null>(null);
 
+  // 担当・備考（任意。来院済み以降は編集不可）
+  const [staffList, setStaffList] = useState<ClinicStaffMember[]>([]);
+  const [editStaffId, setEditStaffId] = useState("");
+  const [editHandoffNote, setEditHandoffNote] = useState("");
+  const [handoffSaving, setHandoffSaving] = useState(false);
+  const [handoffError, setHandoffError] = useState<string | null>(null);
+
   const load = async () => {
     try {
       const token = await getAccessToken();
@@ -63,7 +71,10 @@ export default function ClinicAppointmentDetailPage() {
       // 他院の予約も存在しない予約と同じ扱いにする（存在を知らせない）
       if (res.status === 404 || res.status === 403) { setState("notfound"); return; }
       if (!res.ok) { setState("error"); return; }
-      setAppt(await res.json());
+      const data: Appointment = await res.json();
+      setAppt(data);
+      setEditStaffId(data.staffId ?? "");
+      setEditHandoffNote(data.handoffNote ?? "");
       setState("ok");
     } catch {
       setState("error");
@@ -75,6 +86,40 @@ export default function ClinicAppointmentDetailPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guardState, clinic, id, router]);
+
+  // 担当の選択肢（有効なスタッフのみ）
+  useEffect(() => {
+    if (guardState !== "ok" || !clinic) return;
+    (async () => {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/staff?clinic_id=${clinic.id}&active_only=true`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (res.ok) setStaffList((await res.json()).members ?? []);
+    })().catch(() => {});
+  }, [guardState, clinic]);
+
+  const saveHandoff = async () => {
+    setHandoffSaving(true);
+    setHandoffError(null);
+    try {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/appointments/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ staffId: editStaffId || null, handoffNote: editHandoffNote }),
+      });
+      if (res.ok) {
+        await load();
+      } else {
+        setHandoffError("保存に失敗しました");
+      }
+    } catch {
+      setHandoffError("保存に失敗しました");
+    } finally {
+      setHandoffSaving(false);
+    }
+  };
 
   const copyConfirmUrl = async () => {
     if (!appt?.token) return;
@@ -259,6 +304,52 @@ export default function ClinicAppointmentDetailPage() {
                   <dd className="text-xs text-red-600 mt-1">メール送信に失敗しました（{formatDate(appt.emailLastFailedAt)}）</dd>
                 )}
               </div>
+              <div>
+                <dt className="text-xs text-gray-400">担当</dt>
+                <dd className="font-bold text-gray-900">
+                  {canEditHandoffFields(appt.status) ? (
+                    <select
+                      value={editStaffId}
+                      onChange={(e) => setEditStaffId(e.target.value)}
+                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      <option value="">未設定</option>
+                      {staffList.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    appt.staffNameSnapshot || "未設定"
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-gray-400">備考</dt>
+                {canEditHandoffFields(appt.status) ? (
+                  <dd>
+                    <textarea
+                      value={editHandoffNote}
+                      onChange={(e) => setEditHandoffNote(e.target.value)}
+                      maxLength={500}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-teal-500 min-h-[70px] resize-y"
+                    />
+                  </dd>
+                ) : (
+                  <dd className="text-gray-800 whitespace-pre-wrap">{appt.handoffNote || "なし"}</dd>
+                )}
+              </div>
+              {canEditHandoffFields(appt.status) && (
+                <div>
+                  <button
+                    onClick={saveHandoff}
+                    disabled={handoffSaving}
+                    className="px-3 py-1.5 rounded-lg bg-teal-600 text-white text-xs font-bold hover:bg-teal-700 transition disabled:opacity-50"
+                  >
+                    {handoffSaving ? "保存中..." : "担当・備考を保存"}
+                  </button>
+                  {handoffError && <span className="text-xs text-red-600 ml-2">{handoffError}</span>}
+                </div>
+              )}
             </dl>
 
             {appt.cancelPolicyApplied && (

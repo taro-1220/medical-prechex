@@ -161,3 +161,14 @@ export function countsByDateAndStatus(appointments: Appointment[]): Record<strin
   }
   return result;
 }
+
+/** 来院済み（checked_in以降）の予約では、担当・備考を編集不可にする */
+export function canEditHandoffFields(status: AppointmentStatus): boolean {
+  return status !== "checked_in" && status !== "completed";
+}
+
+/** 受付（QR読み取り後）の「担当」表示。担当未設定時は登録者（取れれば）を添える */
+export function staffDisplayLabel(staffNameSnapshot: string | undefined, createdByName: string | undefined): string {
+  if (staffNameSnapshot) return staffNameSnapshot;
+  return createdByName ? `担当未設定（登録：${createdByName}）` : "担当未設定";
+}

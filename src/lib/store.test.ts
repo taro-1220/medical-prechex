@@ -157,4 +157,20 @@ describe("getAppointmentForDisplay: メールアドレスは実値を返さず�
     expect(appt?.emailRegistered).toBe(true);
     expect((appt as unknown as Record<string, unknown>).patientRegisteredEmail).toBeUndefined();
   });
+
+  it("受付向けの備考・担当・登録者は患者向け表示に一切含めない", async () => {
+    appointmentRow = {
+      ...BASE_APPOINTMENT_ROW,
+      staff_id: "staff-1",
+      staff_name_snapshot: "受付担当",
+      handoff_note: "車椅子対応が必要",
+      created_by_name: "staff@example.com",
+    };
+    const appt = await getAppointmentForDisplay("token-1");
+    const raw = appt as unknown as Record<string, unknown>;
+    expect(raw.staffId).toBeUndefined();
+    expect(raw.staffNameSnapshot).toBeUndefined();
+    expect(raw.handoffNote).toBeUndefined();
+    expect(raw.createdByName).toBeUndefined();
+  });
 });

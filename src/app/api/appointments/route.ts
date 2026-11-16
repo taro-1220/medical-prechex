@@ -5,6 +5,7 @@ import { createAppointment, getAllAppointments } from "@/lib/store";
 import { isValidEmailFormat } from "@/lib/contact-info";
 import { sendConfirmationEmailAndRecord } from "@/lib/confirm-email";
 import { hasExplicitTimezoneOffset } from "@/lib/datetime-display";
+import { getClinicStaffMember } from "@/lib/clinic-staff-store";
 
 function safeError(e: unknown) {
   const err = e instanceof Error ? e : new Error(String(e));
@@ -104,9 +105,30 @@ export async function POST(req: NextRequest) {
     if (!p) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // 担当（任意）。他院のスタッフIDは無視する（指定自体を拒否はせず、担当無しとして扱う）
+  const requestedStaffId = typeof body?.staffId === "string" ? body.staffId : undefined;
+  let staffId: string | undefined;
+  if (requestedStaffId) {
+    const staff = await getClinicStaffMember(requestedStaffId);
+    if (staff && staff.clinicId === clinicId) staffId = requestedStaffId;
+  }
+
+  // 備考（任意・500文字まで）
+  const handoffNote = typeof body?.handoffNote === "string" ? body.handoffNote.trim().slice(0, 500) : undefined;
+  if (typeof body?.handoffNote === "string" && body.handoffNote.trim().length > 500) {
+    return NextResponse.json({ error: "handoff_note_too_long" }, { status: 400 });
+  }
+
   try {
     const appt = await createAppointment(
-      { ...body, patientName, appointmentAt, treatmentCategory, cancelPolicyManualOverride, cardRegistrationRequired, baseAmount },
+      {
+        ...body,
+        patientName, appointmentAt, treatmentCategory, cancelPolicyManualOverride, cardRegistrationRequired, baseAmount,
+        staffId,
+        handoffNote,
+        // 登録者はクライアント入力を信用せず、認証済みユーザーのメールで固定する
+        createdByName: user.email ?? undefined,
+      },
       clinicId,
     );
 

@@ -132,6 +132,27 @@ describe("POST /api/appointments: 連絡先（任意）と確認URLメールの�
     expect(createAppointmentMock).not.toHaveBeenCalled();
   });
 
+  it("備考(handoffNote)が500文字を超えると400で、作成しない", async () => {
+    stub([{ clinic_id: "c1", selected: true }], "active");
+    const res = await POST(req({ ...valid, handoffNote: "あ".repeat(501) }));
+    expect(res.status).toBe(400);
+    expect(createAppointmentMock).not.toHaveBeenCalled();
+  });
+
+  it("他院のスタッフID(staffId)を指定しても、担当無しとして作成される", async () => {
+    stub([{ clinic_id: "c1", selected: true }], "active");
+    const res = await POST(req({ ...valid, staffId: "other-clinic-staff" }));
+    expect(res.status).toBe(201);
+    expect(createAppointmentMock.mock.calls[0][0].staffId).toBeUndefined();
+  });
+
+  it("登録者(createdByName)はクライアント入力を無視し、認証済みユーザーのメールを使う", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: "u1", email: "staff@example.com" } }, error: null });
+    stub([{ clinic_id: "c1", selected: true }], "active");
+    await POST(req({ ...valid, createdByName: "なりすまし" }));
+    expect(createAppointmentMock.mock.calls[0][0].createdByName).toBe("staff@example.com");
+  });
+
   it("appointmentAtに+09:00のオフセットがあれば201で作成できる", async () => {
     stub([{ clinic_id: "c1", selected: true }], "active");
     const res = await POST(req({ ...valid, appointmentAt: "2030-01-01T10:00:00+09:00" }));

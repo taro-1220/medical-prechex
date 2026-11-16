@@ -19,6 +19,7 @@ import type {
 } from "./types";
 import { resolveCancelPolicyApplication } from "./cancel-policy";
 import { TERMS_VERSION } from "./terms";
+import { getClinicStaffMember } from "./clinic-staff-store";
 
 export function toAppt(row: Record<string, unknown>): Appointment {
   return {
@@ -42,6 +43,10 @@ export function toAppt(row: Record<string, unknown>): Appointment {
     patientRegisteredEmailAt: row.patient_registered_email_at as string | undefined,
     emailLastFailedAt:        row.email_last_failed_at as string | undefined,
     confirmPageFirstViewedAt: row.confirm_page_first_viewed_at as string | undefined,
+    staffId:                  row.staff_id as string | undefined,
+    staffNameSnapshot:        row.staff_name_snapshot as string | undefined,
+    handoffNote:              row.handoff_note as string | undefined,
+    createdByName:            row.created_by_name as string | undefined,
     clinicId:             row.clinic_id as string | undefined,
     patientId:            row.patient_id as string | undefined,
     createdAt:            row.created_at as string,
@@ -254,7 +259,15 @@ export async function getAppointmentForDisplay(token: string): Promise<Appointme
 
   // 患者向け表示では、メールアドレスの実値は返さず「登録済みかどうか」のみ返す
   const emailRegistered = !!(appt.email || appt.patientRegisteredEmail);
-  const { email: _email, patientRegisteredEmail: _patientRegisteredEmail, ...redacted } = appt;
+  const {
+    email: _email,
+    patientRegisteredEmail: _patientRegisteredEmail,
+    staffId: _staffId,
+    staffNameSnapshot: _staffNameSnapshot,
+    handoffNote: _handoffNote,
+    createdByName: _createdByName,
+    ...redacted
+  } = appt;
 
   if (!appt.clinicId) return { ...redacted, emailRegistered } as Appointment;
 
@@ -385,7 +398,36 @@ export async function createAppointment(
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return toAppt(data);
+  const appt = toAppt(data);
+
+  // 受付向けの担当・備考・登録者は migration 029 が前提。未適用でも予約作成自体は失敗させない
+  if (input.staffId || input.handoffNote || input.createdByName) {
+    let staffNameSnapshot: string | undefined;
+    if (input.staffId) {
+      const staff = await getClinicStaffMember(input.staffId);
+      if (staff && staff.clinicId === clinicId) staffNameSnapshot = staff.name;
+    }
+    try {
+      const { error: updateErr } = await sb
+        .from("appointments")
+        .update({
+          ...(staffNameSnapshot ? { staff_id: input.staffId, staff_name_snapshot: staffNameSnapshot } : {}),
+          ...(input.handoffNote ? { handoff_note: input.handoffNote } : {}),
+          ...(input.createdByName ? { created_by_name: input.createdByName } : {}),
+        })
+        .eq("id", appt.id);
+      if (updateErr && updateErr.code !== "42703") throw new Error(updateErr.message);
+      else if (!updateErr) {
+        if (staffNameSnapshot) { appt.staffId = input.staffId; appt.staffNameSnapshot = staffNameSnapshot; }
+        if (input.handoffNote) appt.handoffNote = input.handoffNote;
+        if (input.createdByName) appt.createdByName = input.createdByName;
+      }
+    } catch {
+      // migration未適用・ネットワーク例外等でも予約作成自体は止めない
+    }
+  }
+
+  return appt;
 }
 
 export async function confirmWithConsent(token: string): Promise<boolean> {
@@ -455,6 +497,33 @@ export async function updateStatus(
     .select("id");
   if (error) throw new Error(error.message);
   return (data?.length ?? 0) > 0;
+}
+
+export type UpdateAppointmentHandoffResult = { ok: true } | { ok: false; reason: "unsupported" };
+
+/** 受付向けの担当・備考の更新。担当のstaff_name_snapshotは更新時点の氏名で取り直す */
+export async function updateAppointmentHandoff(
+  id: string,
+  updates: { staffId?: string | null; handoffNote?: string | null },
+): Promise<UpdateAppointmentHandoffResult> {
+  const patch: Record<string, unknown> = {};
+  if ("staffId" in updates) {
+    patch.staff_id = updates.staffId ?? null;
+    if (updates.staffId) {
+      const staff = await getClinicStaffMember(updates.staffId);
+      patch.staff_name_snapshot = staff ? staff.name : null;
+    } else {
+      patch.staff_name_snapshot = null;
+    }
+  }
+  if ("handoffNote" in updates) patch.handoff_note = updates.handoffNote ?? null;
+
+  const { error } = await getSupabase().from("appointments").update(patch).eq("id", id);
+  if (error) {
+    if (error.code === "42703") return { ok: false, reason: "unsupported" };
+    throw new Error(error.message);
+  }
+  return { ok: true };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import type { MessageChannel, Patient, TemplateWithMeta, TreatmentCategory, ClinicCancelPolicySettings } from "@/lib/types";
+import type { MessageChannel, Patient, TemplateWithMeta, TreatmentCategory, ClinicCancelPolicySettings, ClinicStaffMember } from "@/lib/types";
 import { getAccessToken, getCurrentClinic } from "@/lib/clinic-auth";
 import { DEFAULT_TEMPLATES, renderTemplate, findUnresolvedPlaceholders } from "@/lib/message-templates";
 import { resolveCancelPolicyApplication, shouldWarnMissingBaseAmount } from "@/lib/cancel-policy";
@@ -95,6 +95,11 @@ export default function ClinicNewPage() {
   const [newDescriptionOptionSaving, setNewDescriptionOptionSaving] = useState(false);
   const [newDescriptionOptionError, setNewDescriptionOptionError] = useState<string | null>(null);
 
+  // 担当・備考（任意）
+  const [staffList, setStaffList] = useState<ClinicStaffMember[]>([]);
+  const [staffId, setStaffId] = useState("");
+  const [handoffNote, setHandoffNote] = useState("");
+
   // ログイン中クリニックから取得
   useEffect(() => {
     getCurrentClinic()
@@ -122,6 +127,19 @@ export default function ClinicNewPage() {
         setForm(prev => ({ ...prev, cancellationPolicy: profile.cancellationPolicy }));
       }
       setClinicPhone(profile?.phone ?? "");
+    })().catch(() => {});
+  }, [clinicId]);
+
+  // 担当の選択肢（有効なスタッフのみ）
+  useEffect(() => {
+    if (!clinicId) return;
+    (async () => {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/staff?clinic_id=${clinicId}&active_only=true`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (!res.ok) return;
+      setStaffList((await res.json()).members ?? []);
     })().catch(() => {});
   }, [clinicId]);
 
@@ -339,6 +357,8 @@ export default function ClinicNewPage() {
         cancelPolicyManualOverride,
         cardRegistrationRequired,
         ...(cardRegistrationRequired ? { baseAmount: Number(baseAmount) || 0 } : {}),
+        ...(staffId ? { staffId } : {}),
+        ...(handoffNote.trim() ? { handoffNote: handoffNote.trim() } : {}),
       }),
     });
     const appt = await res.json();
@@ -825,6 +845,33 @@ export default function ClinicNewPage() {
               </div>
             )}
             {newDescriptionOptionError && <p className="text-xs text-red-600 mt-1">{newDescriptionOptionError}</p>}
+          </div>
+
+          {/* 担当（任意） */}
+          <div>
+            <label className="block text-sm font-bold mb-1.5 text-gray-700">担当（任意）</label>
+            <select
+              value={staffId}
+              onChange={(e) => setStaffId(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-900 focus:outline-none focus:border-teal-500 transition text-sm"
+            >
+              <option value="">未設定</option>
+              {staffList.map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 備考（任意） */}
+          <div>
+            <label className="block text-sm font-bold mb-1.5 text-gray-700">備考（任意）</label>
+            <textarea
+              value={handoffNote}
+              onChange={(e) => setHandoffNote(e.target.value)}
+              maxLength={500}
+              placeholder="受付への引き継ぎ事項など"
+              className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-teal-500 transition text-sm min-h-[80px] resize-y"
+            />
           </div>
 
           {/* MVP+1: 診療区分（キャンセル料ポリシー適用判定に使う） */}

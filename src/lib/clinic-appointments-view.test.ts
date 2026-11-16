@@ -11,6 +11,8 @@ import {
   countsByDateAndStatus,
   isExpiredUnconfirmed,
   isEarlyCheckin,
+  canEditHandoffFields,
+  staffDisplayLabel,
 } from "./clinic-appointments-view";
 
 function makeAppt(overrides: Partial<Appointment> & { appointmentAt: string }): Appointment {
@@ -218,5 +220,33 @@ describe("isEarlyCheckin", () => {
 
   it("予約日が今日より前（翌日以降に来院）ならfalse", () => {
     expect(isEarlyCheckin("2026-03-01T01:00:00.000Z", "2026-03-05T00:00:00.000Z")).toBe(false);
+  });
+});
+
+describe("canEditHandoffFields", () => {
+  it("checked_in・completedはfalse（編集不可）", () => {
+    expect(canEditHandoffFields("checked_in")).toBe(false);
+    expect(canEditHandoffFields("completed")).toBe(false);
+  });
+
+  it("それ以外はtrue（編集可）", () => {
+    for (const status of ["confirmation_pending", "confirmed", "ticket_issued", "cancelled", "expired"] as const) {
+      expect(canEditHandoffFields(status)).toBe(true);
+    }
+  });
+});
+
+describe("staffDisplayLabel", () => {
+  it("担当の氏名スナップショットがあればそれを表示する（無効化されたスタッフの予約でも変わらない）", () => {
+    expect(staffDisplayLabel("受付担当", "staff@example.com")).toBe("受付担当");
+    expect(staffDisplayLabel("受付担当", undefined)).toBe("受付担当");
+  });
+
+  it("担当未設定・登録者が取れる場合は登録者を添える", () => {
+    expect(staffDisplayLabel(undefined, "staff@example.com")).toBe("担当未設定（登録：staff@example.com）");
+  });
+
+  it("担当未設定・登録者も取れない場合は「担当未設定」のみ", () => {
+    expect(staffDisplayLabel(undefined, undefined)).toBe("担当未設定");
   });
 });
