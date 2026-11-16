@@ -24,6 +24,16 @@ export interface ClinicUser {
   createdAt: string;
 }
 
+/** 受付の「担当」選択用の医院スタッフ名簿（clinic_usersとは別。ログインアカウント不要。migration 029） */
+export interface ClinicStaffMember {
+  id: string;
+  clinicId: string;
+  name: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type AppointmentStatus =
   | "confirmation_pending"
   | "confirmed"
@@ -212,6 +222,11 @@ export interface Appointment {
   clinicPhone?: string;
   /** getAppointmentForDisplay専用。メール実値は返さず有無のみ返す */
   emailRegistered?: boolean;
+  // 受付（QR読み取り後）向け。患者向けの画面・APIには一切返さない（migration 029）
+  staffId?: string;
+  staffNameSnapshot?: string;
+  handoffNote?: string;
+  createdByName?: string;
   // Phase K: chargeStatus='failed'のときのみ、直近のcharge_eventsから都度joinする表示専用フィールド
   chargeFailureKind?: ChargeFailureKind | null;
   // MVP+2: カード登録・課金状態

@@ -11,7 +11,7 @@ import {
 } from "@/lib/clinic-auth";
 import { useClinicGuard } from "@/lib/useClinicGuard";
 import { shouldRenderClinicContent } from "@/lib/clinic-guard";
-import type { ClinicProfile, OnboardingProgress, CancelPolicyScope, ClinicCancelPolicySettings, CancelTier } from "@/lib/types";
+import type { ClinicProfile, OnboardingProgress, CancelPolicyScope, ClinicCancelPolicySettings, CancelTier, ClinicStaffMember } from "@/lib/types";
 import { findRiskyPolicyWording, scopeAppliesToCategory, isInsuranceAcknowledgmentSatisfied, isInsuranceNotificationConfirmationSatisfied, isBasisNoteValid } from "@/lib/cancel-policy";
 import { areTierPercentsValid } from "@/lib/charge-policy";
 import StripePreCheckModal from "../StripePreCheckModal";
@@ -65,6 +65,48 @@ export default function OnboardingPage() {
   // MVP+3: 空き枠自動通知
   const [autoNotifySlot, setAutoNotifySlot] = useState(false);
   const [savingSlotSettings, setSavingSlotSettings] = useState(false);
+
+  // 受付の「担当」選択肢（スタッフ名簿）
+  const [staffList, setStaffList] = useState<ClinicStaffMember[]>([]);
+  const [newStaffName, setNewStaffName] = useState("");
+  const [staffSaving, setStaffSaving] = useState(false);
+  const [staffError, setStaffError] = useState<string | null>(null);
+
+  async function loadStaff(cid: string) {
+    const token = await getAccessToken();
+    const res = await fetch(`/api/clinic/staff?clinic_id=${cid}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.ok) setStaffList((await res.json()).members ?? []);
+  }
+
+  async function addStaff() {
+    if (!clinicId || !newStaffName.trim()) return;
+    setStaffSaving(true);
+    setStaffError(null);
+    const token = await getAccessToken();
+    const res = await fetch("/api/clinic/staff", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ clinicId, name: newStaffName }),
+    });
+    if (res.ok) {
+      setNewStaffName("");
+      await loadStaff(clinicId);
+    } else {
+      setStaffError("追加に失敗しました");
+    }
+    setStaffSaving(false);
+  }
+
+  async function deactivateStaff(staffId: string) {
+    if (!clinicId) return;
+    const token = await getAccessToken();
+    await fetch(`/api/clinic/staff/${staffId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ clinicId, active: false }),
+    });
+    await loadStaff(clinicId);
+  }
 
   async function loadOnboarding(cid: string) {
     const token = await getAccessToken();
@@ -121,6 +163,7 @@ export default function OnboardingPage() {
       if (approvalRedirect) { router.replace(approvalRedirect); return; }
       setClinicId(clinic.id);
       await loadOnboarding(clinic.id);
+      await loadStaff(clinic.id);
       setLoading(false);
 
       // Stripe Connect オンボーディングから戻ってきた直後は、最新状態をポーリングして反映する
@@ -646,6 +689,44 @@ export default function OnboardingPage() {
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
+          <p className="font-bold text-gray-900">スタッフ管理（受付の「担当」の選択肢）</p>
+          <p className="text-xs text-gray-400 mt-0.5 mb-4">無効化したスタッフは、新規予約の担当の選択肢に出ません。予約に保存済みの担当名は変わりません</p>
+          <div className="space-y-2">
+            {staffList.length === 0 && <p className="text-xs text-gray-400">スタッフが登録されていません</p>}
+            {staffList.map((s) => (
+              <div key={s.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-gray-50">
+                <span className={`text-sm ${s.active ? "text-gray-900" : "text-gray-400"}`}>
+                  {s.name}{!s.active && "（無効）"}
+                </span>
+                {s.active && (
+                  <button onClick={() => deactivateStaff(s.id)} className="text-xs text-red-600 hover:underline shrink-0">
+                    無効化
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-4">
+            <input
+              type="text"
+              value={newStaffName}
+              onChange={(e) => setNewStaffName(e.target.value)}
+              placeholder="氏名"
+              maxLength={40}
+              className={inputCls}
+            />
+            <button
+              onClick={addStaff}
+              disabled={staffSaving || !newStaffName.trim()}
+              className="shrink-0 px-4 py-2 bg-teal-600 rounded-xl text-white text-sm font-bold hover:bg-teal-700 transition disabled:opacity-50"
+            >
+              {staffSaving ? "追加中..." : "追加"}
+            </button>
+          </div>
+          {staffError && <p className="text-xs text-red-600 mt-2">{staffError}</p>}
         </div>
 
         <div className={`rounded-2xl border shadow-sm p-5 flex items-center justify-between ${allDone ? "border-teal-200 bg-teal-50" : "border-gray-200 bg-white"}`}>
