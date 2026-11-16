@@ -190,10 +190,15 @@ export default function ClinicPage() {
         if (activatedAt !== null && incomplete.length === 0) return null;
         return (
           <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between">
-            <p className="text-sm text-amber-800 font-medium">
-              初期設定が完了していません
-              {incomplete.length > 0 && `（未完了：${incomplete.join("・")}）`}
-            </p>
+            <div>
+              <p className="text-sm text-amber-800 font-medium">
+                初期設定が完了していません
+                {incomplete.length > 0 && `（未完了：${incomplete.join("・")}）`}
+              </p>
+              {!profile?.phone && (
+                <p className="text-sm text-amber-800 font-medium">電話番号が未登録のため、患者さんへのメールに連絡先が載りません</p>
+              )}
+            </div>
             <Link href="/clinic/onboarding" className="px-4 py-1.5 bg-amber-500 rounded-lg text-white text-sm font-bold hover:bg-amber-600 transition">
               初期設定へ
             </Link>

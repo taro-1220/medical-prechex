@@ -293,7 +293,7 @@ export default function OnboardingPage() {
         </div>
       </header>
 
-      {clinicId && isStripePendingBannerVisible(profile?.stripeAccountStatus) && (
+      {clinicId && allDone && isStripePendingBannerVisible(profile?.stripeAccountStatus) && (
         <StripePendingBanner clinicId={clinicId} />
       )}
 
@@ -303,11 +303,16 @@ export default function OnboardingPage() {
 
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-4">
 
+        <h2 className="text-xs font-bold text-gray-400 tracking-wide">必須（3項目）</h2>
+
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-bold text-gray-900">医院プロフィール</p>
               <p className="text-xs text-gray-400 mt-0.5">医院名・院長名・連絡先・住所</p>
+              {!progress?.profileCompleted && !profile?.phone && (
+                <p className="text-xs text-amber-600 mt-0.5">電話番号が未登録の間は、患者さんへのメールに連絡先が表示されません</p>
+              )}
             </div>
             <div className="flex items-center gap-3">
               {progress?.profileCompleted
@@ -384,6 +389,8 @@ export default function OnboardingPage() {
           )}
         </div>
 
+        <h2 className="text-xs font-bold text-gray-400 tracking-wide pt-2">任意</h2>
+
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -405,7 +412,7 @@ export default function OnboardingPage() {
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-bold text-gray-900">キャンセル料ポリシー</p>
+              <p className="font-bold text-gray-900">キャンセル料の同意文（任意）</p>
               <p className="text-xs text-gray-400 mt-0.5">任意設定。予約時に患者さまへ提示し、同意をいただく文章です</p>
             </div>
             <div className="flex items-center gap-3">
