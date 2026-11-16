@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 import { getAccessToken } from "@/lib/clinic-auth";
 import { formatJstDateTime } from "@/lib/datetime-display";
-import { isEarlyCheckin } from "@/lib/clinic-appointments-view";
+import { isEarlyCheckin, staffDisplayLabel } from "@/lib/clinic-appointments-view";
 
 function formatDate(iso: string) {
   return formatJstDateTime(iso, {
@@ -45,6 +45,17 @@ export default function ClinicCheckinPage({ params }: { params: Promise<{ token:
           setPageState("done");
         } else {
           setPageState("invalid");
+        }
+
+        // 担当・備考・登録者はスタッフ認証のAPIから取得する（患者向けAPIには含まれない）
+        const accessToken = await getAccessToken();
+        if (!accessToken) return;
+        const staffRes = await fetch(`/api/clinic/appointments/${data.id}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (staffRes.ok) {
+          const staffData: Appointment = await staffRes.json();
+          setAppt((prev) => (prev ? { ...prev, handoffNote: staffData.handoffNote, staffNameSnapshot: staffData.staffNameSnapshot, createdByName: staffData.createdByName } : prev));
         }
       })
       .catch(() => setPageState("not_found"));
@@ -138,6 +149,8 @@ export default function ClinicCheckinPage({ params }: { params: Promise<{ token:
             { label: "予約日時",   value: formatDate(appt!.appointmentAt) },
             { label: "クリニック", value: appt!.clinicName },
             { label: "ステータス", value: "確認済み" },
+            { label: "担当",       value: staffDisplayLabel(appt!.staffNameSnapshot, appt!.createdByName) },
+            ...(appt!.handoffNote ? [{ label: "備考", value: appt!.handoffNote }] : []),
           ].map((row) => (
             <div key={row.label} className="flex gap-4">
               <span className="text-sm text-gray-400 w-24 shrink-0">{row.label}</span>
