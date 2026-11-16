@@ -35,6 +35,14 @@ export function isExpiredUnconfirmed(status: AppointmentStatus, appointmentAt: s
   return determineConfirmState(status, appointmentAt, nowIso) === "past_pending";
 }
 
+/**
+ * 来院受付（スタッフ画面）で、予約日より前に来院したか（JST暦日で比較）。
+ * 受付の許可・拒否は変えない。表示用の警告にのみ使う。
+ */
+export function isEarlyCheckin(appointmentAt: string, nowIso: string): boolean {
+  return toJstDateKey(appointmentAt) > toJstDateKey(nowIso);
+}
+
 export function matchesRange(appointmentAtIso: string, nowIso: string, range: PeriodRange): boolean {
   if (range === "all") return true;
   const apptKey = toJstDateKey(appointmentAtIso);

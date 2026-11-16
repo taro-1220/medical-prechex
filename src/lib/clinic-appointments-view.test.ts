@@ -10,6 +10,7 @@ import {
   buildMonthWeeks,
   countsByDateAndStatus,
   isExpiredUnconfirmed,
+  isEarlyCheckin,
 } from "./clinic-appointments-view";
 
 function makeAppt(overrides: Partial<Appointment> & { appointmentAt: string }): Appointment {
@@ -203,5 +204,19 @@ describe("isExpiredUnconfirmed", () => {
     for (const status of ["confirmed", "ticket_issued", "checked_in", "completed", "cancelled", "expired"] as const) {
       expect(isExpiredUnconfirmed(status, past, now)).toBe(false);
     }
+  });
+});
+
+describe("isEarlyCheckin", () => {
+  it("予約日がJST暦日で今日より先ならtrue（前日などの早い来院）", () => {
+    expect(isEarlyCheckin("2026-03-10T01:00:00.000Z", "2026-03-05T00:00:00.000Z")).toBe(true);
+  });
+
+  it("予約日が今日と同じJST暦日ならfalse", () => {
+    expect(isEarlyCheckin("2026-03-05T10:00:00.000Z", "2026-03-05T00:00:00.000Z")).toBe(false);
+  });
+
+  it("予約日が今日より前（翌日以降に来院）ならfalse", () => {
+    expect(isEarlyCheckin("2026-03-01T01:00:00.000Z", "2026-03-05T00:00:00.000Z")).toBe(false);
   });
 });

@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Appointment, AppointmentStatus } from "@/lib/types";
 import { getAccessToken } from "@/lib/clinic-auth";
 import { formatJstDateTime } from "@/lib/datetime-display";
+import { isEarlyCheckin } from "@/lib/clinic-appointments-view";
 
 function formatDate(iso: string) {
   return formatJstDateTime(iso, {
@@ -144,6 +145,12 @@ export default function ClinicCheckinPage({ params }: { params: Promise<{ token:
             </div>
           ))}
         </div>
+
+        {appt && isEarlyCheckin(appt.appointmentAt, new Date().toISOString()) && (
+          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+            予約日と異なります（{formatJstDateTime(appt.appointmentAt, { month: "numeric", day: "numeric" })}）
+          </p>
+        )}
 
         <button
           onClick={handleCheckin}
