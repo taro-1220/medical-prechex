@@ -784,7 +784,10 @@ export default function OnboardingPage() {
               {saving ? "処理中..." : "利用開始"}
             </button>
           </div>
-          <p className="text-xs text-gray-400 mt-2">利用開始すると、ホームの「初期設定が完了していません」の表示が消えます</p>
+          <p className="text-xs text-gray-400 mt-2">
+            利用開始を押すと、ホームの「初期設定が完了していません」の表示が消えます。<br />
+            予約の作成・受付は、押す前でも使えます。
+          </p>
         </div>
 
       </div>

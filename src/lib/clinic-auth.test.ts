@@ -151,7 +151,7 @@ describe("incompleteOnboardingItems: /clinicの「初期設定が完了してい
   });
 
   it("progressがnullなら、プロフィール・ポリシー・通知の3項目が未完了になる", () => {
-    expect(incompleteOnboardingItems(null, { phone: "03-0000-0000" })).toEqual(["医院プロフィール", "キャンセル料ポリシー", "通知設定"]);
+    expect(incompleteOnboardingItems(null, { phone: "03-0000-0000" })).toEqual(["医院プロフィール", "キャンセルポリシー", "通知設定"]);
   });
 
   it("他は完了していても電話番号が空なら「電話番号」のみ未完了", () => {

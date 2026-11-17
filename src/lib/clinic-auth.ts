@@ -192,7 +192,7 @@ export function incompleteOnboardingItems(
 ): string[] {
   const items: string[] = [];
   if (!progress?.profileCompleted) items.push("医院プロフィール");
-  if (!progress?.policyCompleted) items.push("キャンセル料ポリシー");
+  if (!progress?.policyCompleted) items.push("キャンセルポリシー");
   if (!progress?.notificationCompleted) items.push("通知設定");
   if (!profile?.phone) items.push("電話番号");
   return items;
