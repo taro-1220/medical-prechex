@@ -11,6 +11,9 @@ vi.mock("@/lib/store", () => ({ createAppointment: createAppointmentMock, getAll
 
 import { POST } from "./route";
 
+const COMPLETE_CLINIC_PROFILE = { clinic_display_name: "テスト医院", phone: "03-0000-0000", cancellation_policy: "前日までキャンセル無料" };
+let clinicProfileOverride: Record<string, unknown> | null = COMPLETE_CLINIC_PROFILE;
+
 function stub(memberships: Array<{ clinic_id: string; selected: boolean; role?: string }>, status: string) {
   fromMock.mockImplementation((table: string) => {
     const chain: Record<string, unknown> = {
@@ -22,6 +25,7 @@ function stub(memberships: Array<{ clinic_id: string; selected: boolean; role?: 
           const m = memberships[0];
           return { data: m ? { role: m.role ?? "owner" } : null, error: null };
         }
+        if (table === "clinic_profile") return { data: clinicProfileOverride, error: null };
         return { data: null, error: null };
       },
       then: (r: (v: unknown) => void) =>
@@ -44,6 +48,7 @@ describe("POST /api/appointments: 認証・所属・承認", () => {
     vi.clearAllMocks();
     getUserMock.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
     createAppointmentMock.mockResolvedValue({ id: "a1" });
+    clinicProfileOverride = COMPLETE_CLINIC_PROFILE;
   });
   it("未認証は401", async () => {
     stub([], "active");
@@ -107,6 +112,7 @@ describe("POST /api/appointments: 連絡先（任意）と確認URLメールの�
     vi.clearAllMocks();
     getUserMock.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
     createAppointmentMock.mockResolvedValue({ id: "a1" });
+    clinicProfileOverride = COMPLETE_CLINIC_PROFILE;
     delete process.env.ENABLE_REMINDER_SEND;
     delete process.env.RESEND_API_KEY;
   });
@@ -167,5 +173,34 @@ describe("POST /api/appointments: 連絡先（任意）と確認URLメールの�
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.emailSendStatus).toBe("disabled");
+  });
+
+  it("医院設定の必須項目（電話番号）が未設定なら400で作成しない", async () => {
+    stub([{ clinic_id: "c1", selected: true }], "active");
+    clinicProfileOverride = { ...COMPLETE_CLINIC_PROFILE, phone: "" };
+    const res = await POST(req(valid));
+    expect(res.status).toBe(400);
+    expect(createAppointmentMock).not.toHaveBeenCalled();
+    const body = await res.json();
+    expect(body.error).toContain("電話番号");
+  });
+
+  it("医院設定の必須項目が複数未設定なら、すべて列挙して400", async () => {
+    stub([{ clinic_id: "c1", selected: true }], "active");
+    clinicProfileOverride = { clinic_display_name: "", phone: "", cancellation_policy: "" };
+    const res = await POST(req(valid));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("クリニック名");
+    expect(body.error).toContain("電話番号");
+    expect(body.error).toContain("キャンセルポリシー");
+  });
+
+  it("医院設定の必須項目がすべて設定済みなら201で作成できる", async () => {
+    stub([{ clinic_id: "c1", selected: true }], "active");
+    clinicProfileOverride = COMPLETE_CLINIC_PROFILE;
+    const res = await POST(req(valid));
+    expect(res.status).toBe(201);
+    expect(createAppointmentMock).toHaveBeenCalledTimes(1);
   });
 });

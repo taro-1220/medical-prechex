@@ -6,6 +6,7 @@ import { isValidEmailFormat } from "@/lib/contact-info";
 import { sendConfirmationEmailAndRecord } from "@/lib/confirm-email";
 import { hasExplicitTimezoneOffset } from "@/lib/datetime-display";
 import { getClinicStaffMember } from "@/lib/clinic-staff-store";
+import { missingPatientFacingSettings, missingPatientFacingSettingsMessage } from "@/lib/clinic-readiness";
 
 function safeError(e: unknown) {
   const err = e instanceof Error ? e : new Error(String(e));
@@ -92,6 +93,21 @@ export async function POST(req: NextRequest) {
   // 予約作成は owner/manager のみ。承認制(Phase P1): 未承認(pending_approval)・却下(rejected)の医院は不可
   const access = await authorizeClinicAccess(user, clinicId, "reservation", { requireActive: true });
   if (!access.ok) return access.response;
+
+  // 患者向けの予約作成・送信を行う前に、医院設定の必須項目（クリニック名・電話番号・キャンセルポリシー）を確認する
+  const { data: clinicProfile } = await getSupabase()
+    .from("clinic_profile")
+    .select("clinic_display_name, phone, cancellation_policy")
+    .eq("clinic_id", clinicId)
+    .maybeSingle();
+  const missingSettings = missingPatientFacingSettings({
+    clinicDisplayName: clinicProfile?.clinic_display_name as string | undefined,
+    phone: clinicProfile?.phone as string | undefined,
+    cancellationPolicy: clinicProfile?.cancellation_policy as string | undefined,
+  });
+  if (missingSettings.length > 0) {
+    return NextResponse.json({ error: missingPatientFacingSettingsMessage(missingSettings) }, { status: 400 });
+  }
 
   // patientId 指定時は、その患者が認可済み clinic に属することを検証（他院患者の再利用を防ぐ）
   if (body?.patientId) {

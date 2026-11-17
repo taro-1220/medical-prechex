@@ -10,8 +10,10 @@ import {
   insertSlotNotification,
   markSlotNotificationSent,
   getPatientUnsubscribeToken,
+  getPatientFacingClinicProfile,
 } from "./available-slots-store";
 import { isEmailSendEnabled, sendAvailableSlotEmail } from "./notify-email";
+import { missingPatientFacingSettings } from "./clinic-readiness";
 
 const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -40,6 +42,14 @@ export async function handleAppointmentCancelledForSlotReopen(
 
   const autoNotifyEnabled = await getClinicAutoNotifySetting(cancelledAppt.clinicId);
   if (!autoNotifyEnabled) return { triggered: false, reason: "clinic_setting_off" };
+
+  // 医院設定の必須項目（クリニック名・電話番号・キャンセルポリシー）が未設定の間は送らない
+  const clinicProfile = await getPatientFacingClinicProfile(cancelledAppt.clinicId);
+  const missingSettings = missingPatientFacingSettings(clinicProfile);
+  if (missingSettings.length > 0) {
+    console.warn(`[available-slot-notify] skip clinic_settings_incomplete clinicId=${cancelledAppt.clinicId} missing=${missingSettings.join(",")}`);
+    return { triggered: false, reason: "clinic_settings_incomplete" };
+  }
 
   const eligible = isEligibleForSlotReopen({
     previousStatus,

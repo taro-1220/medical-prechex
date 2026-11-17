@@ -44,6 +44,25 @@ export async function getClinicAutoNotifySetting(clinicId: string): Promise<bool
   return (data?.auto_notify_available_slot as boolean | null) ?? false;
 }
 
+/** 患者向け送信の前提となる医院設定（クリニック名・電話番号・キャンセルポリシー）を取得する */
+export async function getPatientFacingClinicProfile(clinicId: string): Promise<{
+  clinicDisplayName: string;
+  phone: string;
+  cancellationPolicy: string;
+}> {
+  const { data, error } = await getSupabase()
+    .from("clinic_profile")
+    .select("clinic_display_name, phone, cancellation_policy")
+    .eq("clinic_id", clinicId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return {
+    clinicDisplayName: (data?.clinic_display_name as string | null) ?? "",
+    phone: (data?.phone as string | null) ?? "",
+    cancellationPolicy: (data?.cancellation_policy as string | null) ?? "",
+  };
+}
+
 export async function setClinicAutoNotifySetting(clinicId: string, enabled: boolean): Promise<void> {
   const { error } = await getSupabase()
     .from("clinic_profile")

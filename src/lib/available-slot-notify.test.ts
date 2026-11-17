@@ -11,6 +11,7 @@ const countRecentNotificationsMock = vi.fn();
 const insertSlotNotificationMock = vi.fn();
 const markSlotNotificationSentMock = vi.fn();
 const getPatientUnsubscribeTokenMock = vi.fn();
+const getPatientFacingClinicProfileMock = vi.fn();
 
 vi.mock("./available-slots-store", () => ({
   getClinicAutoNotifySetting: (...a: unknown[]) => getClinicAutoNotifySettingMock(...a),
@@ -20,6 +21,7 @@ vi.mock("./available-slots-store", () => ({
   insertSlotNotification: (...a: unknown[]) => insertSlotNotificationMock(...a),
   markSlotNotificationSent: (...a: unknown[]) => markSlotNotificationSentMock(...a),
   getPatientUnsubscribeToken: (...a: unknown[]) => getPatientUnsubscribeTokenMock(...a),
+  getPatientFacingClinicProfile: (...a: unknown[]) => getPatientFacingClinicProfileMock(...a),
 }));
 
 let emailSendEnabled = false;
@@ -49,6 +51,11 @@ beforeEach(() => {
   createAvailableSlotFromCancelledAppointmentMock.mockResolvedValue(SLOT);
   countRecentNotificationsMock.mockResolvedValue(0);
   insertSlotNotificationMock.mockResolvedValue({ id: "notif-1", token: "notif-token-1" });
+  getPatientFacingClinicProfileMock.mockResolvedValue({
+    clinicDisplayName: "検収クリニック",
+    phone: "03-0000-0000",
+    cancellationPolicy: "前日までキャンセル無料",
+  });
 });
 
 describe("handleAppointmentCancelledForSlotReopen", () => {
@@ -56,6 +63,16 @@ describe("handleAppointmentCancelledForSlotReopen", () => {
     getClinicAutoNotifySettingMock.mockResolvedValue(false);
     const result = await handleAppointmentCancelledForSlotReopen(CANCELLED_APPT, "confirmed");
     expect(result).toEqual({ triggered: false, reason: "clinic_setting_off" });
+    expect(createAvailableSlotFromCancelledAppointmentMock).not.toHaveBeenCalled();
+  });
+
+  it("医院設定の必須項目（電話番号）が未設定なら送らない（空き枠も作らない）", async () => {
+    getClinicAutoNotifySettingMock.mockResolvedValue(true);
+    getPatientFacingClinicProfileMock.mockResolvedValue({
+      clinicDisplayName: "検収クリニック", phone: "", cancellationPolicy: "前日までキャンセル無料",
+    });
+    const result = await handleAppointmentCancelledForSlotReopen(CANCELLED_APPT, "confirmed");
+    expect(result).toEqual({ triggered: false, reason: "clinic_settings_incomplete" });
     expect(createAvailableSlotFromCancelledAppointmentMock).not.toHaveBeenCalled();
   });
 

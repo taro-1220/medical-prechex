@@ -9,6 +9,7 @@ import { checkPolicyTierConsistency } from "@/lib/charge-policy";
 import { isValidEmailFormat } from "@/lib/contact-info";
 import { formatJstDateTime, jstLocalInputToIso } from "@/lib/datetime-display";
 import { DEFAULT_APPOINTMENT_DESCRIPTION_OPTIONS } from "@/lib/appointment-description-options";
+import { missingPatientFacingSettings, missingPatientFacingSettingsMessage } from "@/lib/clinic-readiness";
 import ConfirmUrlQr from "../ConfirmUrlQr";
 
 const TREATMENT_CATEGORY_LABEL: Record<TreatmentCategory, string> = { private: "自由診療", insurance: "保険診療", other: "その他" };
@@ -84,8 +85,8 @@ export default function ClinicNewPage() {
   const [cardRegistrationRequired, setCardRegistrationRequired] = useState(false);
   const [baseAmount, setBaseAmount] = useState("");
 
-  // 電話番号未登録の注意表示用（未取得はnull、取得済みで空なら未登録）
-  const [clinicPhone, setClinicPhone] = useState<string | null>(null);
+  // 医院設定の必須項目（クリニック名・電話番号・キャンセルポリシー）の未設定表示用。未取得はnull
+  const [missingSettings, setMissingSettings] = useState<string[] | null>(null);
 
   // 予約「内容」の選択肢（クリニックごと。未設定時は初期の選択肢）
   const [descriptionOptions, setDescriptionOptions] = useState<string[]>(DEFAULT_APPOINTMENT_DESCRIPTION_OPTIONS);
@@ -126,7 +127,7 @@ export default function ClinicNewPage() {
       if (profile?.cancellationPolicy) {
         setForm(prev => ({ ...prev, cancellationPolicy: profile.cancellationPolicy }));
       }
-      setClinicPhone(profile?.phone ?? "");
+      setMissingSettings(missingPatientFacingSettings(profile ?? {}));
     })().catch(() => {});
   }, [clinicId]);
 
@@ -656,11 +657,11 @@ export default function ClinicNewPage() {
       </header>
 
       <div className="max-w-lg mx-auto px-6 py-6">
-        {clinicPhone !== null && !clinicPhone && (
+        {missingSettings !== null && missingSettings.length > 0 && (
           <div className="mb-5 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-center justify-between gap-3">
-            <p className="text-sm text-amber-800 font-medium">電話番号が未登録です。患者さんへのメールに連絡先が載りません</p>
+            <p className="text-sm text-amber-800 font-medium">{missingPatientFacingSettingsMessage(missingSettings)}</p>
             <Link href="/clinic/onboarding?mode=settings" className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition">
-              電話番号を登録
+              医院設定を開く
             </Link>
           </div>
         )}
@@ -990,7 +991,7 @@ export default function ClinicNewPage() {
           {/* ⑥ 確認URL発行 */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !!(missingSettings && missingSettings.length > 0)}
             className="w-full py-4 rounded-2xl bg-teal-600 text-white font-bold hover:bg-teal-700 transition disabled:opacity-50 text-base"
           >
             {loading ? "作成中..." : "確認URLを発行"}

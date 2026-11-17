@@ -7,6 +7,7 @@ import { isEmailSendEnabled, sendAppointmentReminderEmail } from "@/lib/notify-e
 import { reminderAlreadySentIds, recordReminderSent, REMINDER_NOTIFICATION_TYPE } from "@/lib/reminder-store";
 import { REMINDER_CLINIC_LIMIT, REMINDER_TOTAL_LIMIT } from "@/lib/notification-limits";
 import { recordNotificationRun, setEmailLastFailedAt } from "@/lib/notification-run-store";
+import { missingPatientFacingSettings } from "@/lib/clinic-readiness";
 
 // Vercel Cron専用。毎日17:00 JST、3日後・翌日の予約（確認待ち/確認済み）にリマインドメールを送る。
 // vercel.jsonのcrons設定から `Authorization: Bearer $CRON_SECRET` 付きで呼ばれる想定。
@@ -87,8 +88,37 @@ export async function GET(req: NextRequest) {
     ...targets.dayBefore.map((appt) => ({ appt, kind: "dayBefore" as const })),
   ];
 
+  // D: 医院設定の必須項目（クリニック名・電話番号・キャンセルポリシー）が未設定の間は送らない。
+  // クリニック単位で一度だけ判定する（notification_run_logには理由を残す列が無いため、理由はconsoleに出す）
+  const clinicReadiness = new Map<string, boolean>();
+  async function isClinicReady(clinicId: string): Promise<boolean> {
+    if (clinicReadiness.has(clinicId)) return clinicReadiness.get(clinicId)!;
+    const { data: profile } = await sb
+      .from("clinic_profile")
+      .select("clinic_display_name, phone, cancellation_policy")
+      .eq("clinic_id", clinicId)
+      .maybeSingle();
+    const missing = missingPatientFacingSettings({
+      clinicDisplayName: profile?.clinic_display_name as string | undefined,
+      phone: profile?.phone as string | undefined,
+      cancellationPolicy: profile?.cancellation_policy as string | undefined,
+    });
+    if (missing.length > 0) {
+      console.warn(`[appointment-reminders] skip clinic_settings_incomplete clinicId=${clinicId} missing=${missing.join(",")}`);
+    }
+    const ready = missing.length === 0;
+    clinicReadiness.set(clinicId, ready);
+    return ready;
+  }
+
   for (const { appt, kind } of queue) {
     if (!appt.clinicId) { failed++; byType[kind].failed++; continue; }
+
+    if (!(await isClinicReady(appt.clinicId))) {
+      skipped++;
+      bump(kind, appt.clinicId, "skipped");
+      continue;
+    }
 
     // C: 送信上限（1クリニック100件・全体1,000件）。2種別の合算で数える。超えたクリニックは残りを送らず「上限で停止」として数える
     if (sent >= REMINDER_TOTAL_LIMIT || (perClinicSent.get(appt.clinicId) ?? 0) >= REMINDER_CLINIC_LIMIT) {

@@ -65,10 +65,15 @@ function makeRequest(url: string, authHeader?: string) {
   return new NextRequest(url, { headers: authHeader ? { authorization: authHeader } : undefined });
 }
 
+const COMPLETE_CLINIC_PROFILE = { clinic_display_name: "テスト医院", phone: "03-0000-0000", cancellation_policy: "前日までキャンセル無料" };
+
 function stubClinics() {
   fromMock.mockImplementation((table: string) => {
     if (table === "clinics") {
       return { select: () => Promise.resolve({ data: [{ id: "clinic-1", name: "テスト医院", phone: "03-0000-0000" }], error: null }) };
+    }
+    if (table === "clinic_profile") {
+      return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: COMPLETE_CLINIC_PROFILE, error: null }) }) }) };
     }
     throw new Error(`unexpected table: ${table}`);
   });
@@ -243,6 +248,9 @@ describe("GET /api/cron/appointment-reminders", () => {
           }),
         };
       }
+      if (table === "clinic_profile") {
+        return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: COMPLETE_CLINIC_PROFILE, error: null }) }) }) };
+      }
       throw new Error(`unexpected table: ${table}`);
     });
     const clinicAAppts = Array.from({ length: 101 }, (_, i) => makeAppt({ id: `a${i}`, appointmentAt: TOMORROW, clinicId: "clinic-1" }));
@@ -255,5 +263,26 @@ describe("GET /api/cron/appointment-reminders", () => {
     const body = await res.json();
     expect(body.sent).toBe(101); // クリニックA 100件 + クリニックB 1件
     expect(body.capped).toBe(1); // クリニックAの101件目
+  });
+
+  it("医院設定の必須項目が未設定のクリニックには送らない（clinic_settings_incomplete）", async () => {
+    process.env.CRON_SECRET = "correct";
+    process.env.ENABLE_REMINDER_SEND = "true";
+    fromMock.mockImplementation((table: string) => {
+      if (table === "clinics") {
+        return { select: () => Promise.resolve({ data: [{ id: "clinic-1", name: "テスト医院", phone: "03-0000-0000" }], error: null }) };
+      }
+      if (table === "clinic_profile") {
+        return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { ...COMPLETE_CLINIC_PROFILE, phone: "" }, error: null }) }) }) };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+    getAllAppointmentsMock.mockResolvedValue([makeAppt({ id: "1", appointmentAt: TOMORROW })]);
+    isEmailSendEnabledMock.mockReturnValue(true);
+
+    const res = await GET(makeRequest("http://localhost/api/cron/appointment-reminders", "Bearer correct"));
+    const body = await res.json();
+    expect(body).toEqual({ sent: 0, skipped: 1, failed: 0, capped: 0 });
+    expect(sendAppointmentReminderEmailMock).not.toHaveBeenCalled();
   });
 });
