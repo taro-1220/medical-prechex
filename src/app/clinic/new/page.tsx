@@ -47,6 +47,7 @@ export default function ClinicNewPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [confirmUrl, setConfirmUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<MessageChannel>("line");
   const [copiedTpl, setCopiedTpl] = useState(false);
@@ -343,25 +344,39 @@ export default function ClinicNewPage() {
     }
 
     setLoading(true);
-    const token = await getAccessToken();
-    const res = await fetch("/api/appointments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({
-        ...form,
-        appointmentAt: jstLocalInputToIso(form.appointmentAt),
-        clinicName,
-        ...(clinicId ? { clinicId } : {}),
-        communicationChannel: "manual",
-        ...(selectedPatient ? { patientId: selectedPatient.id } : {}),
-        treatmentCategory,
-        cancelPolicyManualOverride,
-        cardRegistrationRequired,
-        ...(cardRegistrationRequired ? { baseAmount: Number(baseAmount) || 0 } : {}),
-        ...(staffId ? { staffId } : {}),
-        ...(handoffNote.trim() ? { handoffNote: handoffNote.trim() } : {}),
-      }),
-    });
+    setCreateError(null);
+    let res: Response;
+    try {
+      const token = await getAccessToken();
+      res = await fetch("/api/appointments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          ...form,
+          appointmentAt: jstLocalInputToIso(form.appointmentAt),
+          clinicName,
+          ...(clinicId ? { clinicId } : {}),
+          communicationChannel: "manual",
+          ...(selectedPatient ? { patientId: selectedPatient.id } : {}),
+          treatmentCategory,
+          cancelPolicyManualOverride,
+          cardRegistrationRequired,
+          ...(cardRegistrationRequired ? { baseAmount: Number(baseAmount) || 0 } : {}),
+          ...(staffId ? { staffId } : {}),
+          ...(handoffNote.trim() ? { handoffNote: handoffNote.trim() } : {}),
+        }),
+      });
+    } catch {
+      setCreateError("予約を作成できませんでした。時間をおいてもう一度お試しください。");
+      setLoading(false);
+      return;
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setCreateError(typeof body?.error === "string" ? body.error : "予約を作成できませんでした。時間をおいてもう一度お試しください。");
+      setLoading(false);
+      return;
+    }
     const appt = await res.json();
     const url = `https://www.medipre.jp/confirm/${appt.token}`;
     setConfirmUrl(url);
@@ -663,6 +678,11 @@ export default function ClinicNewPage() {
             <Link href="/clinic/onboarding?mode=settings" className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition">
               医院設定を開く
             </Link>
+          </div>
+        )}
+        {createError && (
+          <div className="mb-5 rounded-xl bg-red-50 border border-red-200 px-4 py-3">
+            <p className="text-sm text-red-700 font-medium">{createError}</p>
           </div>
         )}
         <form onSubmit={handleSubmit} className="space-y-5">
