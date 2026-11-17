@@ -4,6 +4,7 @@ import type { Appointment } from "@/lib/types";
 import { maskPatientName, buildIcsContent } from "@/lib/ticket";
 import { computeFreeCancellationDeadline, formatYen } from "@/lib/charge-policy";
 import { formatJstDateTime } from "@/lib/datetime-display";
+import { generateQrDataUrl } from "@/lib/qr";
 import CardRegistration, { formatDeadline } from "../CardRegistration";
 
 const TREATMENT_CATEGORY_LABEL: Record<string, string> = { private: "自由診療", insurance: "保険診療" };
@@ -31,10 +32,21 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
   const [retryingCard, setRetryingCard] = useState(false);
   const [notifyAvailableSlot, setNotifyAvailableSlot] = useState(false);
   const [notifySaving, setNotifySaving] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     params.then(({ token: t }) => setToken(t));
   }, [params]);
+
+  // QRは外部サービスへ送らず、ブラウザ内でdata URLとして生成する
+  useEffect(() => {
+    if (!appt?.token) return;
+    let cancelled = false;
+    generateQrDataUrl(`${window.location.origin}/confirm/${appt.token}/complete`, { width: 236, margin: 16 })
+      .then((d) => { if (!cancelled) setQrDataUrl(d); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [appt?.token]);
 
   useEffect(() => {
     if (!token) return;
@@ -273,8 +285,6 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
     );
   }
 
-  const qrData = encodeURIComponent(`${window.location.origin}/confirm/${appt.token}/complete`);
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=236x236&data=${qrData}&bgcolor=ffffff&color=0f766e&margin=16`;
   const ticketUrl = `${window.location.origin}/confirm/${appt.token}/complete`;
   const alreadyRequestedCancel = cancelRequested || !!appt.cancelRequestedAt;
 
@@ -344,13 +354,17 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
 
         {/* QR */}
         <div className="rounded-2xl border border-gray-200 bg-white p-4 flex flex-col items-center gap-3">
-          <img
-            src={qrUrl}
-            alt="受付提示用QRコード"
-            width={236}
-            height={236}
-            className="rounded-xl"
-          />
+          {qrDataUrl ? (
+            <img
+              src={qrDataUrl}
+              alt="受付提示用QRコード"
+              width={236}
+              height={236}
+              className="rounded-xl"
+            />
+          ) : (
+            <div className="w-[236px] h-[236px] rounded-xl bg-gray-100 animate-pulse" />
+          )}
           <p className="text-sm text-gray-600 text-center">ご来院当日、この画面を受付スタッフへご提示ください。画面のスクリーンショットでも受付できます。</p>
           <div className="w-full rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 space-y-1">
             <p className="text-xs text-amber-800 font-bold">受付では、この画面をスタッフへご提示ください。</p>
