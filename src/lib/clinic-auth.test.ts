@@ -20,6 +20,8 @@ import {
   isStripePendingBannerVisible,
   isStripePendingBannerVisibleOnDashboard,
   incompleteOnboardingItems,
+  incompleteRequiredOnboardingItems,
+  staffStatusLabel,
   requestStripeConnectUrl,
   calculateFeeExampleReceivedAmount,
   getSupportContactLine,
@@ -158,6 +160,33 @@ describe("incompleteOnboardingItems: /clinicの「初期設定が完了してい
 
   it("profileがnullも電話番号未登録として扱う", () => {
     expect(incompleteOnboardingItems(completeProgress, null)).toEqual(["電話番号"]);
+  });
+});
+
+describe("incompleteRequiredOnboardingItems: 「利用開始」ボタンの未完了項目（必須3項目のみ）", () => {
+  const completeProgress = { profileCompleted: true, policyCompleted: true, notificationCompleted: true };
+
+  it("全て完了なら空配列", () => {
+    expect(incompleteRequiredOnboardingItems(completeProgress)).toEqual([]);
+  });
+
+  it("progressがnullなら3項目すべてが未完了になる", () => {
+    expect(incompleteRequiredOnboardingItems(null)).toEqual(["医院プロフィール", "キャンセルポリシー", "予約確認メッセージ"]);
+  });
+
+  it("一部のみ未完了なら、その項目名だけを返す", () => {
+    expect(incompleteRequiredOnboardingItems({ ...completeProgress, policyCompleted: false })).toEqual(["キャンセルポリシー"]);
+  });
+
+  it("電話番号は対象に含めない", () => {
+    expect(incompleteRequiredOnboardingItems(completeProgress)).not.toContain("電話番号");
+  });
+});
+
+describe("staffStatusLabel", () => {
+  it("activeなら「有効」、そうでなければ「無効」", () => {
+    expect(staffStatusLabel(true)).toBe("有効");
+    expect(staffStatusLabel(false)).toBe("無効");
   });
 });
 

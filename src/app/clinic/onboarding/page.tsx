@@ -8,6 +8,8 @@ import {
   shouldShowStripePreCheck,
   getStripeStatusLabel,
   isStripePendingBannerVisible,
+  incompleteRequiredOnboardingItems,
+  staffStatusLabel,
 } from "@/lib/clinic-auth";
 import { useClinicGuard } from "@/lib/useClinicGuard";
 import { shouldRenderClinicContent } from "@/lib/clinic-guard";
@@ -71,6 +73,8 @@ export default function OnboardingPage() {
   const [newStaffName, setNewStaffName] = useState("");
   const [staffSaving, setStaffSaving] = useState(false);
   const [staffError, setStaffError] = useState<string | null>(null);
+  const [staffAddedMessage, setStaffAddedMessage] = useState<string | null>(null);
+  const [confirmingStaffId, setConfirmingStaffId] = useState<string | null>(null);
 
   async function loadStaff(cid: string) {
     const token = await getAccessToken();
@@ -82,6 +86,8 @@ export default function OnboardingPage() {
     if (!clinicId || !newStaffName.trim()) return;
     setStaffSaving(true);
     setStaffError(null);
+    setStaffAddedMessage(null);
+    const addedName = newStaffName.trim();
     const token = await getAccessToken();
     const res = await fetch("/api/clinic/staff", {
       method: "POST",
@@ -90,6 +96,7 @@ export default function OnboardingPage() {
     });
     if (res.ok) {
       setNewStaffName("");
+      setStaffAddedMessage(`${addedName}さんを追加しました`);
       await loadStaff(clinicId);
     } else {
       setStaffError("追加に失敗しました");
@@ -99,6 +106,7 @@ export default function OnboardingPage() {
 
   async function deactivateStaff(staffId: string) {
     if (!clinicId) return;
+    setConfirmingStaffId(null);
     const token = await getAccessToken();
     await fetch(`/api/clinic/staff/${staffId}`, {
       method: "PATCH",
@@ -697,14 +705,44 @@ export default function OnboardingPage() {
           <div className="space-y-2">
             {staffList.length === 0 && <p className="text-xs text-gray-400">スタッフが登録されていません</p>}
             {staffList.map((s) => (
-              <div key={s.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-gray-50">
-                <span className={`text-sm ${s.active ? "text-gray-900" : "text-gray-400"}`}>
-                  {s.name}{!s.active && "（無効）"}
-                </span>
-                {s.active && (
-                  <button onClick={() => deactivateStaff(s.id)} className="text-xs text-red-600 hover:underline shrink-0">
-                    無効化
-                  </button>
+              <div key={s.id} className="rounded-lg bg-gray-50 px-3 py-2">
+                {confirmingStaffId === s.id ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-700 leading-relaxed">
+                      {s.name}さんを無効にしますか？新規予約の担当の選択肢に出なくなります。保存済みの予約の担当名は変わりません。
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => deactivateStaff(s.id)}
+                        className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition"
+                      >
+                        無効にする
+                      </button>
+                      <button
+                        onClick={() => setConfirmingStaffId(null)}
+                        className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-100 transition"
+                      >
+                        やめる
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm ${s.active ? "text-gray-900" : "text-gray-400"}`}>{s.name}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${s.active ? "bg-teal-100 text-teal-700" : "bg-gray-200 text-gray-500"}`}>
+                        {staffStatusLabel(s.active)}
+                      </span>
+                    </div>
+                    {s.active && (
+                      <button
+                        onClick={() => setConfirmingStaffId(s.id)}
+                        className="shrink-0 px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 transition"
+                      >
+                        無効にする
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
@@ -726,23 +764,27 @@ export default function OnboardingPage() {
               {staffSaving ? "追加中..." : "追加"}
             </button>
           </div>
+          {staffAddedMessage && <p className="text-xs text-teal-600 mt-2">{staffAddedMessage}</p>}
           {staffError && <p className="text-xs text-red-600 mt-2">{staffError}</p>}
         </div>
 
-        <div className={`rounded-2xl border shadow-sm p-5 flex items-center justify-between ${allDone ? "border-teal-200 bg-teal-50" : "border-gray-200 bg-white"}`}>
-          <div>
-            <p className="font-bold text-gray-900">利用開始</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {allDone ? "すべての設定が完了しました" : "上記3項目をすべて設定してください"}
-            </p>
+        <div className={`rounded-2xl border shadow-sm p-5 ${allDone ? "border-teal-200 bg-teal-50" : "border-gray-200 bg-white"}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-bold text-gray-900">利用開始</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {allDone ? "すべての設定が完了しました" : `未設定：${incompleteRequiredOnboardingItems(progress).join("、")}`}
+              </p>
+            </div>
+            <button
+              onClick={activate}
+              disabled={!allDone || saving}
+              className="px-5 py-2.5 bg-teal-600 rounded-xl text-white font-bold text-sm hover:bg-teal-700 transition disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              {saving ? "処理中..." : "利用開始"}
+            </button>
           </div>
-          <button
-            onClick={activate}
-            disabled={!allDone || saving}
-            className="px-5 py-2.5 bg-teal-600 rounded-xl text-white font-bold text-sm hover:bg-teal-700 transition disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            {saving ? "処理中..." : "利用開始"}
-          </button>
+          <p className="text-xs text-gray-400 mt-2">利用開始すると、ホームの「初期設定が完了していません」の表示が消えます</p>
         </div>
 
       </div>

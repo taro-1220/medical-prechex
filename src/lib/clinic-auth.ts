@@ -198,6 +198,25 @@ export function incompleteOnboardingItems(
   return items;
 }
 
+/**
+ * /clinic/onboarding の「利用開始」ボタンの未完了項目（必須3項目のみ。電話番号は含まない）。
+ * activateの判定条件（profileCompleted/policyCompleted/notificationCompleted）と同じ3項目。
+ */
+export function incompleteRequiredOnboardingItems(
+  progress: Pick<OnboardingProgress, "profileCompleted" | "policyCompleted" | "notificationCompleted"> | null,
+): string[] {
+  const items: string[] = [];
+  if (!progress?.profileCompleted) items.push("医院プロフィール");
+  if (!progress?.policyCompleted) items.push("キャンセルポリシー");
+  if (!progress?.notificationCompleted) items.push("予約確認メッセージ");
+  return items;
+}
+
+/** スタッフ管理の行バッジ表示 */
+export function staffStatusLabel(active: boolean): string {
+  return active ? "有効" : "無効";
+}
+
 export function isStripePendingBannerVisibleOnDashboard(
   activatedAt: string | null | undefined,
   status: StripeAccountStatus | null | undefined,
