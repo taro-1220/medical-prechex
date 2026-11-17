@@ -18,6 +18,9 @@ export async function POST(
     if (!canWrite(state, "consent")) {
       return NextResponse.json({ error: "invalid_state" }, { status: 409 });
     }
+    if (!appt.cancellationPolicy?.trim()) {
+      return NextResponse.json({ error: "cancellation_policy_missing" }, { status: 409 });
+    }
     const ok = await confirmWithConsent(token);
     if (!ok) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ ok: true });

@@ -18,6 +18,7 @@ function makeAppt(overrides: Record<string, unknown> = {}) {
     token: "tok1",
     status: "confirmation_pending",
     appointmentAt: "2099-01-01T01:00:00.000Z",
+    cancellationPolicy: "予約日前日までのキャンセルは無料です。",
     ...overrides,
   };
 }
@@ -60,5 +61,26 @@ describe("POST /api/appointments/[token]/confirm", () => {
     const res = await POST(makeRequest(), params());
     expect(res.status).toBe(200);
     expect(confirmWithConsentMock).toHaveBeenCalledWith("tok1");
+  });
+
+  it("cancellationPolicyが空なら409で拒否し、DBに書き込まない", async () => {
+    getAppointmentMock.mockResolvedValue(makeAppt({ cancellationPolicy: "" }));
+    const res = await POST(makeRequest(), params());
+    expect(res.status).toBe(409);
+    expect(confirmWithConsentMock).not.toHaveBeenCalled();
+  });
+
+  it("cancellationPolicyが空白のみでも409で拒否", async () => {
+    getAppointmentMock.mockResolvedValue(makeAppt({ cancellationPolicy: "   " }));
+    const res = await POST(makeRequest(), params());
+    expect(res.status).toBe(409);
+    expect(confirmWithConsentMock).not.toHaveBeenCalled();
+  });
+
+  it("cancellationPolicyが未設定(undefined)でも409で拒否", async () => {
+    getAppointmentMock.mockResolvedValue(makeAppt({ cancellationPolicy: undefined }));
+    const res = await POST(makeRequest(), params());
+    expect(res.status).toBe(409);
+    expect(confirmWithConsentMock).not.toHaveBeenCalled();
   });
 });

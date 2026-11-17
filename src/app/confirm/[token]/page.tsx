@@ -54,7 +54,8 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
 
   const cancelPolicyApplied = appt?.cancelPolicyApplied ?? false;
   const needsCardRegistration = !!appt?.cardRegistrationRequired && !appt?.stripePaymentMethodId;
-  const canConfirm = consented && termsConsented && (!cancelPolicyApplied || cancelPolicyConsented) && !needsCardRegistration;
+  const cancellationPolicyMissing = !appt?.cancellationPolicy?.trim();
+  const canConfirm = !cancellationPolicyMissing && consented && termsConsented && (!cancelPolicyApplied || cancelPolicyConsented) && !needsCardRegistration;
 
   const refetchAppointment = () => {
     if (!token) return;
@@ -160,7 +161,9 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
     ? computeFreeCancellationDeadline(appt.appointmentAt, appt.cancelPolicyTiers ?? null)
     : null;
   // Phase J セクションD: 確定ボタンがdisabledの間、押下条件を明示する
-  const disabledReason = !consented
+  const disabledReason = cancellationPolicyMissing
+    ? "クリニックの規定が未設定のため、同意できません。クリニックへお問い合わせください。"
+    : !consented
     ? "同意にチェックすると確定できます"
     : !termsConsented
       ? "利用規約への同意にチェックすると確定できます"
@@ -198,6 +201,22 @@ export default function ConfirmPage({ params }: { params: Promise<{ token: strin
 
         {!identityVerified && (
           <IdentityCheck token={token!} hasPhone={!!appt.phone} onVerified={() => setIdentityVerified(true)} />
+        )}
+
+        {/* キャンセルポリシー（必須項目。cancelPolicyApplied の有無に関係なく常に表示する） */}
+        {identityVerified && (
+          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">キャンセルポリシー</p>
+            {cancellationPolicyMissing ? (
+              <p className="text-sm text-red-600 leading-relaxed">
+                クリニックの規定が未設定のため、同意できません。クリニックへお問い合わせください。
+              </p>
+            ) : (
+              <p className="text-sm text-gray-700 leading-relaxed" style={{ whiteSpace: "pre-wrap" }}>
+                {appt.cancellationPolicy}
+              </p>
+            )}
+          </div>
         )}
 
         {/* キャンセルについて（適用ありの場合のみ描画。無い場合は「対象外」表示すら出さない） */}
