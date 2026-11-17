@@ -6,6 +6,14 @@ import { getAccessToken } from "@/lib/clinic-auth";
 import { formatJstDateTime } from "@/lib/datetime-display";
 import { isEarlyCheckin, staffDisplayLabel } from "@/lib/clinic-appointments-view";
 
+type AppointmentNoteItem = {
+  id: string;
+  kind: "note" | "staff_change";
+  body: string;
+  createdByName: string;
+  createdAt: string;
+};
+
 function formatDate(iso: string) {
   return formatJstDateTime(iso, {
     year: "numeric", month: "long", day: "numeric",
@@ -27,6 +35,7 @@ export default function ClinicCheckinPage({ params }: { params: Promise<{ token:
   const [appt, setAppt] = useState<Appointment | null>(null);
   const [pageState, setPageState] = useState<PageState>("loading");
   const [submitting, setSubmitting] = useState(false);
+  const [notes, setNotes] = useState<AppointmentNoteItem[]>([]);
 
   useEffect(() => {
     params.then(({ token: t }) => setToken(t));
@@ -56,6 +65,13 @@ export default function ClinicCheckinPage({ params }: { params: Promise<{ token:
         if (staffRes.ok) {
           const staffData: Appointment = await staffRes.json();
           setAppt((prev) => (prev ? { ...prev, handoffNote: staffData.handoffNote, staffNameSnapshot: staffData.staffNameSnapshot, createdByName: staffData.createdByName } : prev));
+        }
+        const notesRes = await fetch(`/api/clinic/appointments/${data.id}/notes`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (notesRes.ok) {
+          const notesData = await notesRes.json();
+          setNotes(notesData.notes ?? []);
         }
       })
       .catch(() => setPageState("not_found"));
@@ -150,7 +166,6 @@ export default function ClinicCheckinPage({ params }: { params: Promise<{ token:
             { label: "クリニック", value: appt!.clinicName },
             { label: "ステータス", value: "確認済み" },
             { label: "担当",       value: staffDisplayLabel(appt!.staffNameSnapshot, appt!.createdByName) },
-            ...(appt!.handoffNote ? [{ label: "備考", value: appt!.handoffNote }] : []),
           ].map((row) => (
             <div key={row.label} className="flex gap-4">
               <span className="text-sm text-gray-400 w-24 shrink-0">{row.label}</span>
@@ -158,6 +173,29 @@ export default function ClinicCheckinPage({ params }: { params: Promise<{ token:
             </div>
           ))}
         </div>
+
+        {(appt?.handoffNote || notes.length > 0) && (
+          <div className="rounded-2xl border border-gray-200 bg-white p-6 space-y-2">
+            <p className="text-sm text-gray-400">備考</p>
+            <ul className="space-y-2">
+              {appt?.handoffNote && (
+                <li className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                  <p className="text-xs text-gray-400">登録時の備考</p>
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap mt-0.5">{appt.handoffNote}</p>
+                </li>
+              )}
+              {notes.map((n) => (
+                <li
+                  key={n.id}
+                  className={`rounded-lg border px-3 py-2 ${n.kind === "staff_change" ? "border-teal-100 bg-teal-50" : "border-gray-100 bg-white"}`}
+                >
+                  <p className="text-xs text-gray-400">{formatJstDateTime(n.createdAt, { year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}・{n.createdByName}</p>
+                  <p className="text-sm text-gray-800 whitespace-pre-wrap mt-0.5">{n.body}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {appt && isEarlyCheckin(appt.appointmentAt, new Date().toISOString()) && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">

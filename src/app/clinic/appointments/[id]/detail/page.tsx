@@ -9,6 +9,14 @@ import { shouldRenderClinicContent } from "@/lib/clinic-guard";
 import { formatJstDateTime } from "@/lib/datetime-display";
 import { canEditHandoffFields } from "@/lib/clinic-appointments-view";
 
+type AppointmentNoteItem = {
+  id: string;
+  kind: "note" | "staff_change";
+  body: string;
+  createdByName: string;
+  createdAt: string;
+};
+
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmation_pending: "確認待ち",
   confirmed: "確認済み",
@@ -54,12 +62,18 @@ export default function ClinicAppointmentDetailPage() {
   const [emailSending, setEmailSending] = useState(false);
   const [emailSendError, setEmailSendError] = useState<string | null>(null);
 
-  // 担当・備考（任意。来院済み以降は編集不可）
+  // 担当（任意。来院済み以降は編集不可。選択時に即保存）
   const [staffList, setStaffList] = useState<ClinicStaffMember[]>([]);
   const [editStaffId, setEditStaffId] = useState("");
-  const [editHandoffNote, setEditHandoffNote] = useState("");
-  const [handoffSaving, setHandoffSaving] = useState(false);
-  const [handoffError, setHandoffError] = useState<string | null>(null);
+  const [staffSaving, setStaffSaving] = useState(false);
+  const [staffSaveMsg, setStaffSaveMsg] = useState(false);
+  const [staffSaveError, setStaffSaveError] = useState<string | null>(null);
+
+  // 備考（追記のみ・削除修正なし）
+  const [notes, setNotes] = useState<AppointmentNoteItem[]>([]);
+  const [noteInput, setNoteInput] = useState("");
+  const [noteSubmitting, setNoteSubmitting] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   const load = async () => {
     try {
@@ -74,16 +88,31 @@ export default function ClinicAppointmentDetailPage() {
       const data: Appointment = await res.json();
       setAppt(data);
       setEditStaffId(data.staffId ?? "");
-      setEditHandoffNote(data.handoffNote ?? "");
       setState("ok");
     } catch {
       setState("error");
     }
   };
 
+  const loadNotes = async () => {
+    try {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/appointments/${id}/notes`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotes(data.notes ?? []);
+      }
+    } catch {
+      // 一覧取得失敗時は空のまま（追記自体は可能）
+    }
+  };
+
   useEffect(() => {
     if (guardState !== "ok" || !clinic) return;
     load();
+    loadNotes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guardState, clinic, id, router]);
 
@@ -99,25 +128,58 @@ export default function ClinicAppointmentDetailPage() {
     })().catch(() => {});
   }, [guardState, clinic]);
 
-  const saveHandoff = async () => {
-    setHandoffSaving(true);
-    setHandoffError(null);
+  const changeStaff = async (newStaffId: string) => {
+    const prevStaffId = editStaffId;
+    setEditStaffId(newStaffId);
+    setStaffSaving(true);
+    setStaffSaveMsg(false);
+    setStaffSaveError(null);
     try {
       const token = await getAccessToken();
       const res = await fetch(`/api/clinic/appointments/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ staffId: editStaffId || null, handoffNote: editHandoffNote }),
+        body: JSON.stringify({ staffId: newStaffId || null }),
       });
       if (res.ok) {
         await load();
+        await loadNotes();
+        setStaffSaveMsg(true);
+        setTimeout(() => setStaffSaveMsg(false), 2000);
       } else {
-        setHandoffError("保存に失敗しました");
+        setEditStaffId(prevStaffId);
+        setStaffSaveError("保存に失敗しました");
       }
     } catch {
-      setHandoffError("保存に失敗しました");
+      setEditStaffId(prevStaffId);
+      setStaffSaveError("保存に失敗しました");
     } finally {
-      setHandoffSaving(false);
+      setStaffSaving(false);
+    }
+  };
+
+  const appendNote = async () => {
+    const body = noteInput.trim();
+    if (!body) return;
+    setNoteSubmitting(true);
+    setNoteError(null);
+    try {
+      const token = await getAccessToken();
+      const res = await fetch(`/api/clinic/appointments/${id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ body }),
+      });
+      if (res.ok) {
+        setNoteInput("");
+        await loadNotes();
+      } else {
+        setNoteError("追記に失敗しました");
+      }
+    } catch {
+      setNoteError("追記に失敗しました");
+    } finally {
+      setNoteSubmitting(false);
     }
   };
 
@@ -308,16 +370,22 @@ export default function ClinicAppointmentDetailPage() {
                 <dt className="text-xs text-gray-400">担当</dt>
                 <dd className="font-bold text-gray-900">
                   {canEditHandoffFields(appt.status) ? (
-                    <select
-                      value={editStaffId}
-                      onChange={(e) => setEditStaffId(e.target.value)}
-                      className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-teal-500"
-                    >
-                      <option value="">未設定</option>
-                      {staffList.map((s) => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
+                    <>
+                      <select
+                        value={editStaffId}
+                        onChange={(e) => changeStaff(e.target.value)}
+                        disabled={staffSaving}
+                        className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:opacity-50"
+                      >
+                        <option value="">未設定</option>
+                        {staffList.map((s) => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                      {staffSaving && <span className="text-xs text-gray-400 ml-2">保存中...</span>}
+                      {staffSaveMsg && <span className="text-xs text-teal-600 ml-2">保存しました</span>}
+                      {staffSaveError && <span className="text-xs text-red-600 ml-2">{staffSaveError}</span>}
+                    </>
                   ) : (
                     appt.staffNameSnapshot || "未設定"
                   )}
@@ -325,31 +393,46 @@ export default function ClinicAppointmentDetailPage() {
               </div>
               <div>
                 <dt className="text-xs text-gray-400">備考</dt>
-                {canEditHandoffFields(appt.status) ? (
-                  <dd>
-                    <textarea
-                      value={editHandoffNote}
-                      onChange={(e) => setEditHandoffNote(e.target.value)}
-                      maxLength={500}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-teal-500 min-h-[70px] resize-y"
-                    />
-                  </dd>
-                ) : (
-                  <dd className="text-gray-800 whitespace-pre-wrap">{appt.handoffNote || "なし"}</dd>
-                )}
+                <dd className="mt-1 space-y-2">
+                  <ul className="space-y-2">
+                    {appt.handoffNote && (
+                      <li className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                        <p className="text-xs text-gray-400">登録時の備考</p>
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap mt-0.5">{appt.handoffNote}</p>
+                      </li>
+                    )}
+                    {notes.map((n) => (
+                      <li
+                        key={n.id}
+                        className={`rounded-lg border px-3 py-2 ${n.kind === "staff_change" ? "border-teal-100 bg-teal-50" : "border-gray-100 bg-white"}`}
+                      >
+                        <p className="text-xs text-gray-400">{formatDate(n.createdAt)}・{n.createdByName}</p>
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap mt-0.5">{n.body}</p>
+                      </li>
+                    ))}
+                    {!appt.handoffNote && notes.length === 0 && (
+                      <li className="text-sm text-gray-400">記録はありません</li>
+                    )}
+                  </ul>
+                  <textarea
+                    value={noteInput}
+                    onChange={(e) => setNoteInput(e.target.value)}
+                    maxLength={500}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-teal-500 min-h-[70px] resize-y"
+                  />
+                  <div>
+                    <button
+                      onClick={appendNote}
+                      disabled={noteSubmitting || !noteInput.trim()}
+                      className="px-3 py-1.5 rounded-lg bg-teal-600 text-white text-xs font-bold hover:bg-teal-700 transition disabled:opacity-50"
+                    >
+                      {noteSubmitting ? "追記中..." : "追記する"}
+                    </button>
+                    {noteError && <span className="text-xs text-red-600 ml-2">{noteError}</span>}
+                  </div>
+                  <p className="text-xs text-gray-400">追記した内容は削除・修正できません。誤りは「訂正：」として追記してください。</p>
+                </dd>
               </div>
-              {canEditHandoffFields(appt.status) && (
-                <div>
-                  <button
-                    onClick={saveHandoff}
-                    disabled={handoffSaving}
-                    className="px-3 py-1.5 rounded-lg bg-teal-600 text-white text-xs font-bold hover:bg-teal-700 transition disabled:opacity-50"
-                  >
-                    {handoffSaving ? "保存中..." : "担当・備考を保存"}
-                  </button>
-                  {handoffError && <span className="text-xs text-red-600 ml-2">{handoffError}</span>}
-                </div>
-              )}
             </dl>
 
             {appt.cancelPolicyApplied && (

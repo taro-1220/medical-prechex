@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { getUserMock, fromMock, getAppointmentByIdMock, updateAppointmentHandoffMock, getClinicStaffMemberMock } = vi.hoisted(() => ({
+const { getUserMock, fromMock, getAppointmentByIdMock, updateAppointmentHandoffMock, getClinicStaffMemberMock, addAppointmentNoteMock } = vi.hoisted(() => ({
   getUserMock: vi.fn(),
   fromMock: vi.fn(),
   getAppointmentByIdMock: vi.fn(),
   updateAppointmentHandoffMock: vi.fn(),
   getClinicStaffMemberMock: vi.fn(),
+  addAppointmentNoteMock: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -20,6 +21,10 @@ vi.mock("@/lib/store", () => ({
 
 vi.mock("@/lib/clinic-staff-store", () => ({
   getClinicStaffMember: getClinicStaffMemberMock,
+}));
+
+vi.mock("@/lib/appointment-notes-store", () => ({
+  addAppointmentNote: addAppointmentNoteMock,
 }));
 
 import { GET, PUT } from "./route";
@@ -117,14 +122,16 @@ describe("PUT /api/clinic/appointments/[id]", () => {
     getAppointmentByIdMock.mockReset();
     updateAppointmentHandoffMock.mockReset();
     getClinicStaffMemberMock.mockReset();
-    getUserMock.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    addAppointmentNoteMock.mockReset();
+    getUserMock.mockResolvedValue({ data: { user: { id: "u1", email: "staff@example.com" } }, error: null });
     updateAppointmentHandoffMock.mockResolvedValue({ ok: true });
+    addAppointmentNoteMock.mockResolvedValue({ ok: true, note: {} });
   });
 
   it("来院済み（checked_in）は編集不可で409", async () => {
     getAppointmentByIdMock.mockResolvedValue({ id: VALID_ID, clinicId: "clinic-1", status: "checked_in" });
     stubClinicMember(true);
-    const res = await PUT(makePutRequest({ handoffNote: "備考" }), params());
+    const res = await PUT(makePutRequest({ staffId: null }), params());
     expect(res.status).toBe(409);
     expect(updateAppointmentHandoffMock).not.toHaveBeenCalled();
   });
@@ -132,17 +139,45 @@ describe("PUT /api/clinic/appointments/[id]", () => {
   it("completedも編集不可で409", async () => {
     getAppointmentByIdMock.mockResolvedValue({ id: VALID_ID, clinicId: "clinic-1", status: "completed" });
     stubClinicMember(true);
-    const res = await PUT(makePutRequest({ handoffNote: "備考" }), params());
+    const res = await PUT(makePutRequest({ staffId: null }), params());
     expect(res.status).toBe(409);
   });
 
-  it("confirmation_pending等は編集でき、担当・備考を保存する", async () => {
-    getAppointmentByIdMock.mockResolvedValue({ id: VALID_ID, clinicId: "clinic-1", status: "confirmation_pending" });
+  it("staffIdが無ければ400", async () => {
+    getAppointmentByIdMock.mockResolvedValue({ id: VALID_ID, clinicId: "clinic-1", status: "confirmed" });
+    stubClinicMember(true);
+    const res = await PUT(makePutRequest({}), params());
+    expect(res.status).toBe(400);
+    expect(updateAppointmentHandoffMock).not.toHaveBeenCalled();
+  });
+
+  it("confirmation_pending等は編集でき、担当を即時保存する", async () => {
+    getAppointmentByIdMock.mockResolvedValue({ id: VALID_ID, clinicId: "clinic-1", status: "confirmation_pending", staffId: null, staffNameSnapshot: null });
     stubClinicMember(true);
     getClinicStaffMemberMock.mockResolvedValue({ id: "staff-1", clinicId: "clinic-1", name: "受付担当", active: true, createdAt: "", updatedAt: "" });
-    const res = await PUT(makePutRequest({ staffId: "staff-1", handoffNote: "車椅子対応" }), params());
+    const res = await PUT(makePutRequest({ staffId: "staff-1" }), params());
     expect(res.status).toBe(200);
-    expect(updateAppointmentHandoffMock).toHaveBeenCalledWith(VALID_ID, { staffId: "staff-1", handoffNote: "車椅子対応" });
+    expect(updateAppointmentHandoffMock).toHaveBeenCalledWith(VALID_ID, { staffId: "staff-1" });
+    expect(await res.json()).toEqual({ ok: true, staffId: "staff-1", staffName: "受付担当" });
+  });
+
+  it("担当が変わるとstaff_changeノートが1件積まれる", async () => {
+    getAppointmentByIdMock.mockResolvedValue({ id: VALID_ID, clinicId: "clinic-1", status: "confirmed", staffId: "staff-old", staffNameSnapshot: "旧担当" });
+    stubClinicMember(true);
+    getClinicStaffMemberMock.mockResolvedValue({ id: "staff-new", clinicId: "clinic-1", name: "新担当", active: true, createdAt: "", updatedAt: "" });
+    const res = await PUT(makePutRequest({ staffId: "staff-new" }), params());
+    expect(res.status).toBe(200);
+    expect(addAppointmentNoteMock).toHaveBeenCalledTimes(1);
+    expect(addAppointmentNoteMock).toHaveBeenCalledWith(VALID_ID, "clinic-1", "staff_change", "担当を 旧担当 → 新担当 に変更", expect.any(String));
+  });
+
+  it("同じ担当を選び直してもstaff_changeノートは積まれない", async () => {
+    getAppointmentByIdMock.mockResolvedValue({ id: VALID_ID, clinicId: "clinic-1", status: "confirmed", staffId: "staff-1", staffNameSnapshot: "受付担当" });
+    stubClinicMember(true);
+    getClinicStaffMemberMock.mockResolvedValue({ id: "staff-1", clinicId: "clinic-1", name: "受付担当", active: true, createdAt: "", updatedAt: "" });
+    const res = await PUT(makePutRequest({ staffId: "staff-1" }), params());
+    expect(res.status).toBe(200);
+    expect(addAppointmentNoteMock).not.toHaveBeenCalled();
   });
 
   it("他院のスタッフIDを指定すると400", async () => {
@@ -154,18 +189,10 @@ describe("PUT /api/clinic/appointments/[id]", () => {
     expect(updateAppointmentHandoffMock).not.toHaveBeenCalled();
   });
 
-  it("備考が500文字を超えると400", async () => {
-    getAppointmentByIdMock.mockResolvedValue({ id: VALID_ID, clinicId: "clinic-1", status: "confirmed" });
-    stubClinicMember(true);
-    const res = await PUT(makePutRequest({ handoffNote: "あ".repeat(501) }), params());
-    expect(res.status).toBe(400);
-    expect(updateAppointmentHandoffMock).not.toHaveBeenCalled();
-  });
-
   it("所属していない医院なら403", async () => {
     getAppointmentByIdMock.mockResolvedValue({ id: VALID_ID, clinicId: "clinic-1", status: "confirmed" });
     stubClinicMember(false);
-    const res = await PUT(makePutRequest({ handoffNote: "備考" }), params());
+    const res = await PUT(makePutRequest({ staffId: null }), params());
     expect(res.status).toBe(403);
   });
 });

@@ -1,4 +1,5 @@
 import { getSupabase } from "./supabase";
+import { addAppointmentNote } from "./appointment-notes-store";
 import type {
   Appointment,
   AppointmentStatus,
@@ -400,8 +401,8 @@ export async function createAppointment(
   if (error) throw new Error(error.message);
   const appt = toAppt(data);
 
-  // 受付向けの担当・備考・登録者は migration 029 が前提。未適用でも予約作成自体は失敗させない
-  if (input.staffId || input.handoffNote || input.createdByName) {
+  // 受付向けの担当・登録者は migration 029 が前提。未適用でも予約作成自体は失敗させない
+  if (input.staffId || input.createdByName) {
     let staffNameSnapshot: string | undefined;
     if (input.staffId) {
       const staff = await getClinicStaffMember(input.staffId);
@@ -412,19 +413,22 @@ export async function createAppointment(
         .from("appointments")
         .update({
           ...(staffNameSnapshot ? { staff_id: input.staffId, staff_name_snapshot: staffNameSnapshot } : {}),
-          ...(input.handoffNote ? { handoff_note: input.handoffNote } : {}),
           ...(input.createdByName ? { created_by_name: input.createdByName } : {}),
         })
         .eq("id", appt.id);
       if (updateErr && updateErr.code !== "42703") throw new Error(updateErr.message);
       else if (!updateErr) {
         if (staffNameSnapshot) { appt.staffId = input.staffId; appt.staffNameSnapshot = staffNameSnapshot; }
-        if (input.handoffNote) appt.handoffNote = input.handoffNote;
         if (input.createdByName) appt.createdByName = input.createdByName;
       }
     } catch {
       // migration未適用・ネットワーク例外等でも予約作成自体は止めない
     }
+  }
+
+  // 新規予約作成時の備考は handoff_note ではなく appointment_notes の1件目(kind='note')として保存する
+  if (input.handoffNote) {
+    await addAppointmentNote(appt.id, clinicId, "note", input.handoffNote, input.createdByName ?? "").catch(() => {});
   }
 
   return appt;

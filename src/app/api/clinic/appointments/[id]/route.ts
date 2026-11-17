@@ -3,6 +3,7 @@ import { authenticateRequest, authorizeClinicAccess } from "@/lib/clinic-access"
 import { getAppointmentById, updateAppointmentHandoff } from "@/lib/store";
 import { getClinicStaffMember } from "@/lib/clinic-staff-store";
 import { canEditHandoffFields } from "@/lib/clinic-appointments-view";
+import { addAppointmentNote } from "@/lib/appointment-notes-store";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -36,7 +37,8 @@ export async function GET(
   }
 }
 
-// 担当・備考の更新。来院済み（checked_in以降）は編集不可
+// 担当の更新のみ（選択時に即保存する想定）。来院済み（checked_in以降）は編集不可。
+// 備考(handoff_note)の書き換えはここでは行わない（appointment_notesへの追記に移行したため）。
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -56,7 +58,7 @@ export async function PUT(
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }
 
-    // 予約業務（担当・備考の記録）のため reservation 権限
+    // 予約業務（担当の記録）のため reservation 権限
     const access = await authorizeClinicAccess(user, appt.clinicId, "reservation", { requireActive: true });
     if (!access.ok) return access.response;
 
@@ -65,30 +67,31 @@ export async function PUT(
     }
 
     const body = await req.json().catch(() => ({}));
-    const updates: { staffId?: string | null; handoffNote?: string | null } = {};
-
-    if ("staffId" in body) {
-      const staffId = (body.staffId as string | null) || null;
-      if (staffId) {
-        const staff = await getClinicStaffMember(staffId);
-        if (!staff || staff.clinicId !== appt.clinicId) {
-          return NextResponse.json({ error: "invalid_staff" }, { status: 400 });
-        }
-      }
-      updates.staffId = staffId;
+    if (!("staffId" in body)) {
+      return NextResponse.json({ error: "staffId required" }, { status: 400 });
     }
 
-    if ("handoffNote" in body) {
-      const note = typeof body.handoffNote === "string" ? body.handoffNote.trim() : "";
-      if (note.length > 500) {
-        return NextResponse.json({ error: "handoff_note_too_long" }, { status: 400 });
+    const newStaffId = (body.staffId as string | null) || null;
+    let newStaffName: string | null = null;
+    if (newStaffId) {
+      const staff = await getClinicStaffMember(newStaffId);
+      if (!staff || staff.clinicId !== appt.clinicId) {
+        return NextResponse.json({ error: "invalid_staff" }, { status: 400 });
       }
-      updates.handoffNote = note || null;
+      newStaffName = staff.name;
     }
 
-    const result = await updateAppointmentHandoff(id, updates);
+    const oldStaffId = appt.staffId ?? null;
+    const result = await updateAppointmentHandoff(id, { staffId: newStaffId });
     if (!result.ok) return NextResponse.json({ error: "not_supported" }, { status: 503 });
-    return NextResponse.json({ ok: true });
+
+    if (newStaffId !== oldStaffId) {
+      const from = appt.staffNameSnapshot ?? "なし";
+      const to = newStaffName ?? "なし";
+      await addAppointmentNote(id, appt.clinicId, "staff_change", `担当を ${from} → ${to} に変更`, user.email ?? "").catch(() => {});
+    }
+
+    return NextResponse.json({ ok: true, staffId: newStaffId, staffName: newStaffName });
   } catch {
     return NextResponse.json({ error: "internal_error" }, { status: 500 });
   }
