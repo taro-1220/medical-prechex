@@ -8,20 +8,6 @@ export function isTicketExpired(appointmentAt: string, now: string, expiryDays: 
   return new Date(now).getTime() > expiresAtMs;
 }
 
-/**
- * 患者名をマスク表示する（例: "山田 太郎" → "山田 太様"）。
- * スペース区切りの姓名を想定し、姓 + 名の頭文字 + "様" にする。区切りが無い場合は先頭1文字のみ残す。
- */
-export function maskPatientName(fullName: string): string {
-  const trimmed = fullName.trim();
-  if (!trimmed) return "";
-  const parts = trimmed.split(/\s+/);
-  if (parts.length >= 2) {
-    const [family, given] = parts;
-    return `${family} ${given.charAt(0)}様`;
-  }
-  return `${trimmed.charAt(0)}様`;
-}
 
 function escapeIcsText(text: string): string {
   return text

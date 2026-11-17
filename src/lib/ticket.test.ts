@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isTicketExpired, maskPatientName, buildIcsContent } from "./ticket";
+import { isTicketExpired, buildIcsContent } from "./ticket";
 
 describe("isTicketExpired", () => {
   it("来院日+30日以内は失効していない", () => {
@@ -13,24 +13,6 @@ describe("isTicketExpired", () => {
   });
   it("来院前は失効していない", () => {
     expect(isTicketExpired("2026-08-01T00:00:00.000Z", "2026-07-01T00:00:00.000Z")).toBe(false);
-  });
-});
-
-describe("maskPatientName", () => {
-  it("姓名スペース区切りは姓＋名の頭文字＋様", () => {
-    expect(maskPatientName("山田 太郎")).toBe("山田 太様");
-  });
-  it("全角スペース区切りにも対応", () => {
-    expect(maskPatientName("田中　花子")).toBe("田中 花様");
-  });
-  it("区切りが無い場合は先頭1文字＋様", () => {
-    expect(maskPatientName("山田太郎")).toBe("山様");
-  });
-  it("前後の空白は無視する", () => {
-    expect(maskPatientName("  山田 太郎  ")).toBe("山田 太様");
-  });
-  it("空文字は空文字を返す", () => {
-    expect(maskPatientName("")).toBe("");
   });
 });
 

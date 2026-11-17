@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { Appointment } from "@/lib/types";
-import { maskPatientName, buildIcsContent } from "@/lib/ticket";
+import { buildIcsContent } from "@/lib/ticket";
 import { computeFreeCancellationDeadline, formatYen } from "@/lib/charge-policy";
 import { formatJstDateTime } from "@/lib/datetime-display";
 import { generateQrDataUrl } from "@/lib/qr";
@@ -377,7 +377,7 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
           {[
             { label: "予約番号", value: appt.id.slice(0, 8).toUpperCase() },
             { label: "クリニック", value: appt.clinicName },
-            { label: "患者名", value: maskPatientName(appt.patientName) },
+            { label: "患者名", value: appt.patientName },
             { label: "予約日時", value: formatDate(appt.appointmentAt) },
             { label: "内容", value: appt.description },
           ].map((row) => (
