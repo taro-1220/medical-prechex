@@ -351,7 +351,7 @@ export default function CompletePage({ params }: { params: Promise<{ token: stri
             height={236}
             className="rounded-xl"
           />
-          <p className="text-sm text-gray-600 text-center">ご来院当日、この画面を受付スタッフへご提示ください。</p>
+          <p className="text-sm text-gray-600 text-center">ご来院当日、この画面を受付スタッフへご提示ください。画面のスクリーンショットでも受付できます。</p>
           <div className="w-full rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 space-y-1">
             <p className="text-xs text-amber-800 font-bold">受付では、この画面をスタッフへご提示ください。</p>
             <p className="text-xs text-amber-700">受付はスタッフが行います。</p>
