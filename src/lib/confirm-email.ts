@@ -4,6 +4,7 @@ import { getSupabase } from "./supabase";
 import { getAppointmentById } from "./store";
 import { sendConfirmationRequestEmail, isEmailSendEnabled } from "./notify-email";
 import { setEmailLastFailedAt } from "./notification-run-store";
+import { resolvePatientFacingClinicPhone } from "./patient-facing-clinic";
 import type { Appointment } from "./types";
 
 export type SendConfirmationEmailResult =
@@ -36,8 +37,9 @@ export async function sendConfirmationEmailAndRecord(appt: Appointment): Promise
   const sb = getSupabase();
   let clinicPhone = "";
   if (fresh.clinicId) {
-    const { data } = await sb.from("clinics").select("phone").eq("id", fresh.clinicId).maybeSingle();
-    clinicPhone = (data?.phone as string | undefined) ?? "";
+    const { data: clinic } = await sb.from("clinics").select("phone").eq("id", fresh.clinicId).maybeSingle();
+    const { data: profile } = await sb.from("clinic_profile").select("phone").eq("clinic_id", fresh.clinicId).maybeSingle();
+    clinicPhone = resolvePatientFacingClinicPhone(profile, clinic);
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";

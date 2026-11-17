@@ -8,6 +8,7 @@ import { reminderAlreadySentIds, recordReminderSent, REMINDER_NOTIFICATION_TYPE 
 import { REMINDER_CLINIC_LIMIT, REMINDER_TOTAL_LIMIT } from "@/lib/notification-limits";
 import { recordNotificationRun, setEmailLastFailedAt } from "@/lib/notification-run-store";
 import { missingPatientFacingSettings } from "@/lib/clinic-readiness";
+import { resolvePatientFacingClinicName, resolvePatientFacingClinicPhone } from "@/lib/patient-facing-clinic";
 
 // Vercel Cron専用。毎日17:00 JST、3日後・翌日の予約（確認待ち/確認済み）にリマインドメールを送る。
 // vercel.jsonのcrons設定から `Authorization: Bearer $CRON_SECRET` 付きで呼ばれる想定。
@@ -91,13 +92,20 @@ export async function GET(req: NextRequest) {
   // D: 医院設定の必須項目（クリニック名・電話番号・キャンセルポリシー）が未設定の間は送らない。
   // クリニック単位で一度だけ判定する（notification_run_logには理由を残す列が無いため、理由はconsoleに出す）
   const clinicReadiness = new Map<string, boolean>();
-  async function isClinicReady(clinicId: string): Promise<boolean> {
-    if (clinicReadiness.has(clinicId)) return clinicReadiness.get(clinicId)!;
-    const { data: profile } = await sb
+  const clinicProfileCache = new Map<string, { clinic_display_name?: string; phone?: string; cancellation_policy?: string } | null>();
+  async function getClinicProfile(clinicId: string) {
+    if (clinicProfileCache.has(clinicId)) return clinicProfileCache.get(clinicId) ?? null;
+    const { data } = await sb
       .from("clinic_profile")
       .select("clinic_display_name, phone, cancellation_policy")
       .eq("clinic_id", clinicId)
       .maybeSingle();
+    clinicProfileCache.set(clinicId, data ?? null);
+    return data ?? null;
+  }
+  async function isClinicReady(clinicId: string): Promise<boolean> {
+    if (clinicReadiness.has(clinicId)) return clinicReadiness.get(clinicId)!;
+    const profile = await getClinicProfile(clinicId);
     const missing = missingPatientFacingSettings({
       clinicDisplayName: profile?.clinic_display_name as string | undefined,
       phone: profile?.phone as string | undefined,
@@ -136,11 +144,13 @@ export async function GET(req: NextRequest) {
     }
 
     const clinic = clinicById.get(appt.clinicId);
+    const profile = await getClinicProfile(appt.clinicId);
+    const profileFields = profile ? { clinicDisplayName: profile.clinic_display_name, phone: profile.phone } : null;
     const confirmUrl = fresh.status === "confirmation_pending" ? `${appUrl}/confirm/${fresh.token}` : null;
     const result = await sendAppointmentReminderEmail({
       to: reminderEmailOf(fresh),
-      clinicName: clinic?.name ?? fresh.clinicName,
-      clinicPhone: clinic?.phone ?? "",
+      clinicName: resolvePatientFacingClinicName(profileFields, clinic) || fresh.clinicName,
+      clinicPhone: resolvePatientFacingClinicPhone(profileFields, clinic),
       appointmentAt: fresh.appointmentAt,
       confirmUrl,
       daysBefore: DAYS_BEFORE[kind],

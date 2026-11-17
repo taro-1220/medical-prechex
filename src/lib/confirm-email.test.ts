@@ -51,6 +51,9 @@ function stub() {
     if (table === "clinics") {
       return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { phone: "03-0000-0000" }, error: null }) }) }) };
     }
+    if (table === "clinic_profile") {
+      return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }) };
+    }
     if (table === "appointments") {
       return {
         update: (payload: unknown) => {

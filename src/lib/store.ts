@@ -1,5 +1,6 @@
 import { getSupabase } from "./supabase";
 import { addAppointmentNote } from "./appointment-notes-store";
+import { resolvePatientFacingClinicName, resolvePatientFacingClinicPhone } from "./patient-facing-clinic";
 import type {
   Appointment,
   AppointmentStatus,
@@ -278,11 +279,12 @@ export async function getAppointmentForDisplay(token: string): Promise<Appointme
     .select("phone")
     .eq("clinic_id", appt.clinicId)
     .maybeSingle();
-  let clinicPhone = (profile?.phone as string | undefined) || undefined;
-  if (!clinicPhone) {
-    const { data: clinic } = await sb.from("clinics").select("phone").eq("id", appt.clinicId).maybeSingle();
-    clinicPhone = (clinic?.phone as string | undefined) || undefined;
+  let clinic: { phone?: string } | null = null;
+  if (!profile?.phone?.trim()) {
+    const { data } = await sb.from("clinics").select("phone").eq("id", appt.clinicId).maybeSingle();
+    clinic = data;
   }
+  const clinicPhone = resolvePatientFacingClinicPhone(profile, clinic) || undefined;
 
   // Phase K: chargeStatus='failed'のとき、患者表示の分岐（別カード導線 vs 医院連絡のみ）に使う
   let chargeFailureKind: "card_declined" | "system_error" | null = null;
@@ -352,8 +354,15 @@ export async function createAppointment(
 ): Promise<Appointment> {
   const sb = getSupabase();
   // clinic_name は認可済み clinicId から取得する（クライアント入力を表示名として信用しない）
+  // 患者向け表示の規則（clinic_profile優先・clinicsにフォールバック）に揃える
   const { data: clinic } = await sb.from("clinics").select("name").eq("id", clinicId).maybeSingle();
-  const clinicName = (clinic?.name as string | undefined) ?? input.clinicName;
+  const { data: clinicProfile } = await sb.from("clinic_profile").select("clinic_display_name, cancellation_policy").eq("clinic_id", clinicId).maybeSingle();
+  const clinicName = resolvePatientFacingClinicName(
+    clinicProfile ? { clinicDisplayName: clinicProfile.clinic_display_name as string | undefined } : null,
+    clinic,
+  ) || input.clinicName;
+  // キャンセルポリシー文面はクライアント入力(input.cancellationPolicy)を信用せず、サーバーで clinic_profile から読む
+  const cancellationPolicy = (clinicProfile?.cancellation_policy as string | undefined) ?? "";
 
   // patientId は API 層で clinicId 所属を検証済みのものだけが渡る想定。未指定なら医院単位で照合/作成
   const patientId = input.patientId ?? await findOrCreatePatient(input.patientName, input.phone ?? "", input.email ?? "", clinicId);
@@ -386,7 +395,7 @@ export async function createAppointment(
       communication_channel: input.communicationChannel ?? "manual",
       appointment_at:        input.appointmentAt,
       description:           input.description,
-      cancellation_policy:   input.cancellationPolicy,
+      cancellation_policy:   cancellationPolicy,
       status:                "confirmation_pending",
       clinic_id:             clinicId,
       patient_id:            patientId,
