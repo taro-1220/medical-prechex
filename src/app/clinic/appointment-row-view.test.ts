@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Appointment } from "@/lib/types";
-import { STATUS_LABEL, attentionReasons, confirmProgress } from "./appointment-row-view";
+import { STATUS_LABEL, attentionReasons, confirmProgress, precheckinBadgeLabel } from "./appointment-row-view";
 
 function makeAppt(overrides: Partial<Appointment> & { appointmentAt: string }): Appointment {
   return {
@@ -86,5 +86,24 @@ describe("confirmProgress", () => {
 
   it("どちらも無ければnot_sent", () => {
     expect(confirmProgress(makeAppt({ appointmentAt: FUTURE }))).toEqual({ state: "not_sent" });
+  });
+});
+
+describe("precheckinBadgeLabel", () => {
+  const appointmentAt = "2026-03-10T01:00:00.000Z"; // JST 2026-03-10 10:00
+
+  it("前倒し来院でない場合はnull", () => {
+    expect(precheckinBadgeLabel(makeAppt({ appointmentAt }), "today")).toBeNull();
+    expect(precheckinBadgeLabel(makeAppt({ appointmentAt, checkedInAt: appointmentAt }), "all")).toBeNull();
+  });
+
+  it("本日一覧(today)では「前倒し来院（予約日 M/D HH:mm）」", () => {
+    const a = makeAppt({ appointmentAt, checkedInAt: "2026-03-05T00:00:00.000Z" });
+    expect(precheckinBadgeLabel(a, "today")).toBe("前倒し来院（予約日 3/10 10:00）");
+  });
+
+  it("すべての予約(all)では「M/D に来院済み（前倒し）」", () => {
+    const a = makeAppt({ appointmentAt, checkedInAt: "2026-03-05T00:00:00.000Z" });
+    expect(precheckinBadgeLabel(a, "all")).toBe("3/5 に来院済み（前倒し）");
   });
 });

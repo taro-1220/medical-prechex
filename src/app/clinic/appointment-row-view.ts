@@ -2,7 +2,7 @@
 // tsconfig.json の jsx:"preserve" により、JSXを含む.tsxをvitestが単体で解析できないための分離。
 import type { Appointment, AppointmentStatus, StripeAccountStatus } from "@/lib/types";
 import { formatJstDateTime } from "@/lib/datetime-display";
-import { isExpiredUnconfirmed } from "@/lib/clinic-appointments-view";
+import { isExpiredUnconfirmed, isPrecheckinVisit } from "@/lib/clinic-appointments-view";
 
 export const STATUS_LABEL: Record<AppointmentStatus, string> = {
   confirmation_pending: "同意待ち",
@@ -26,6 +26,18 @@ export const STATUS_COLOR: Record<AppointmentStatus, string> = {
 
 export function formatDate(iso: string) {
   return formatJstDateTime(iso, { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * 前倒し来院（予約日より前に受付済み）の行に出す注記。前倒しでなければnull。
+ * 「本日」一覧(today)では予約日を、「すべての予約」一覧(all)では来院日を主に示す。
+ */
+export function precheckinBadgeLabel(appointment: Appointment, listContext: "today" | "all"): string | null {
+  if (!isPrecheckinVisit(appointment.appointmentAt, appointment.checkedInAt)) return null;
+  if (listContext === "today") {
+    return `前倒し来院（予約日 ${formatDate(appointment.appointmentAt)}）`;
+  }
+  return `${formatJstDateTime(appointment.checkedInAt as string, { month: "numeric", day: "numeric" })} に来院済み（前倒し）`;
 }
 
 const isCancelled = (s: AppointmentStatus) => s === "cancelled" || s === "expired";

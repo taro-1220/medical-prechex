@@ -11,6 +11,8 @@ import {
   countsByDateAndStatus,
   isExpiredUnconfirmed,
   isEarlyCheckin,
+  isPrecheckinVisit,
+  displayDateIso,
   canEditHandoffFields,
   staffDisplayLabel,
 } from "./clinic-appointments-view";
@@ -56,6 +58,31 @@ describe("isTodayJst / matchesRange: JST境界", () => {
     expect(matchesRange("2026-03-05T15:00:00.000Z", now, "upcoming")).toBe(true); // JST 3/6
     expect(matchesRange("2026-03-03T23:00:00.000Z", now, "past")).toBe(true); // JST 3/4
     expect(matchesRange("2026-03-04T15:00:00.000Z", now, "today")).toBe(true); // JST 3/5 == 3/5
+  });
+});
+
+describe("本日一覧の抽出（/clinic page.tsx と同じ式: isTodayJst(displayDateIso(...), nowIso)）", () => {
+  const nowIso = "2026-03-10T01:00:00.000Z"; // JST 2026-03-10
+
+  it("前倒し来院（予約日=翌日以降・受付日=本日）は本日一覧に出て、本来の予約日には出ない", () => {
+    const appt = makeAppt({ appointmentAt: "2026-03-12T01:00:00.000Z", checkedInAt: nowIso });
+    expect(isTodayJst(displayDateIso(appt.appointmentAt, appt.checkedInAt), nowIso)).toBe(true);
+    expect(isTodayJst(appt.appointmentAt, nowIso)).toBe(false);
+  });
+
+  it("通常来院（予約日=本日）は本日一覧に出る", () => {
+    const appt = makeAppt({ appointmentAt: nowIso, checkedInAt: nowIso });
+    expect(isTodayJst(displayDateIso(appt.appointmentAt, appt.checkedInAt), nowIso)).toBe(true);
+  });
+
+  it("本日の予約で未来院なら本日一覧に出る", () => {
+    const appt = makeAppt({ appointmentAt: nowIso });
+    expect(isTodayJst(displayDateIso(appt.appointmentAt, appt.checkedInAt), nowIso)).toBe(true);
+  });
+
+  it("未来の予約（まだ来院していない）は本日一覧に出ない", () => {
+    const appt = makeAppt({ appointmentAt: "2026-03-12T01:00:00.000Z" });
+    expect(isTodayJst(displayDateIso(appt.appointmentAt, appt.checkedInAt), nowIso)).toBe(false);
   });
 });
 
@@ -220,6 +247,33 @@ describe("isEarlyCheckin", () => {
 
   it("予約日が今日より前（翌日以降に来院）ならfalse", () => {
     expect(isEarlyCheckin("2026-03-01T01:00:00.000Z", "2026-03-05T00:00:00.000Z")).toBe(false);
+  });
+});
+
+describe("isPrecheckinVisit / displayDateIso: 前倒し来院の判定と表示上の日付", () => {
+  const appointmentAt = "2026-03-10T01:00:00.000Z"; // JST 2026-03-10 10:00
+
+  it("前倒し来院（受付日が予約日より前）なら true、表示上の日付は受付日時", () => {
+    const checkedInAt = "2026-03-05T00:00:00.000Z"; // JST 2026-03-05
+    expect(isPrecheckinVisit(appointmentAt, checkedInAt)).toBe(true);
+    expect(displayDateIso(appointmentAt, checkedInAt)).toBe(checkedInAt);
+  });
+
+  it("当日来院（受付日=予約日）なら false、表示上の日付は予約日時", () => {
+    const checkedInAt = "2026-03-10T02:00:00.000Z"; // JST 2026-03-10
+    expect(isPrecheckinVisit(appointmentAt, checkedInAt)).toBe(false);
+    expect(displayDateIso(appointmentAt, checkedInAt)).toBe(appointmentAt);
+  });
+
+  it("未来院（checkedInAtなし）なら false、表示上の日付は予約日時", () => {
+    expect(isPrecheckinVisit(appointmentAt, undefined)).toBe(false);
+    expect(displayDateIso(appointmentAt, undefined)).toBe(appointmentAt);
+  });
+
+  it("受付後に診察完了(completed)になった予約でも、checkedInAtが残っていれば前倒し判定は維持される", () => {
+    // completed遷移はstatusのみ更新しcheckedInAtを書き換えないため、入力はcheckedInAtのみで判定できる
+    const checkedInAt = "2026-03-05T00:00:00.000Z";
+    expect(isPrecheckinVisit(appointmentAt, checkedInAt)).toBe(true);
   });
 });
 

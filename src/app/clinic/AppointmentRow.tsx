@@ -5,9 +5,9 @@ import Link from "next/link";
 import type { Appointment, StripeAccountStatus } from "@/lib/types";
 import { getAccessToken } from "@/lib/clinic-auth";
 import { isExpiredUnconfirmed } from "@/lib/clinic-appointments-view";
-import { STATUS_LABEL, STATUS_COLOR, formatDate, attentionReasons, confirmProgress } from "./appointment-row-view";
+import { STATUS_LABEL, STATUS_COLOR, formatDate, attentionReasons, confirmProgress, precheckinBadgeLabel } from "./appointment-row-view";
 
-export { STATUS_LABEL, STATUS_COLOR, formatDate, attentionReasons, confirmProgress };
+export { STATUS_LABEL, STATUS_COLOR, formatDate, attentionReasons, confirmProgress, precheckinBadgeLabel };
 export type { ConfirmProgress } from "./appointment-row-view";
 
 /** /clinic と /clinic/appointments の一覧で共通して使う予約の行。行を押すと詳細へ移動する。 */
@@ -16,11 +16,13 @@ export function AppointmentRow({
   onChanged,
   nowIso,
   stripeAccountStatus,
+  listContext = "all",
 }: {
   appointment: Appointment;
   onChanged: () => void;
   nowIso?: string;
   stripeAccountStatus?: StripeAccountStatus | null;
+  listContext?: "today" | "all";
 }) {
   const router = useRouter();
   const [copyStatus, setCopyStatus] = useState<"success" | "error" | null>(null);
@@ -28,6 +30,7 @@ export function AppointmentRow({
   const expired = isExpiredUnconfirmed(a.status, a.appointmentAt, now);
   const reasons = attentionReasons(a, now, stripeAccountStatus);
   const progress = confirmProgress(a);
+  const precheckinLabel = precheckinBadgeLabel(a, listContext);
 
   const copyConfirmUrl = async () => {
     if (!a.token) return;
@@ -114,6 +117,9 @@ export function AppointmentRow({
         )}
         {a.checkedInAt && (
           <p className="text-xs text-emerald-600 mt-0.5">来院: {formatDate(a.checkedInAt)}</p>
+        )}
+        {precheckinLabel && (
+          <p className="text-xs text-amber-700 mt-0.5">{precheckinLabel}</p>
         )}
         <p className="text-sm text-gray-500 mt-0.5">{a.description}</p>
         <p className="text-xs text-gray-400 mt-1">{a.clinicName}</p>

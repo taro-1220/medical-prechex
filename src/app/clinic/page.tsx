@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Appointment, Clinic, ClinicProfile, OnboardingProgress, ChargeDashboardResponse } from "@/lib/types";
 import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin, getClinicApprovalRedirect, isStripePendingBannerVisibleOnDashboard, incompleteOnboardingItems } from "@/lib/clinic-auth";
-import { isTodayJst } from "@/lib/clinic-appointments-view";
+import { isTodayJst, displayDateIso } from "@/lib/clinic-appointments-view";
 import OnboardingGuide, { GUIDE_KEY } from "./OnboardingGuide";
 import StripePendingBanner from "./StripePendingBanner";
 import { AppointmentRow, attentionReasons, formatDate } from "./AppointmentRow";
@@ -123,7 +123,8 @@ export default function ClinicPage() {
   // Phase J セクションC: 要対応の予約を時系列より上に固定表示する
   const needsAttention = sorted.filter((a) => attentionReasons(a, nowIso, profile?.stripeAccountStatus).length > 0);
 
-  const todaysAppointments = sorted.filter((a) => isTodayJst(a.appointmentAt, nowIso));
+  // 前倒し来院（予約日より前に受付済み）は、来院した日の一覧に出し、本来の予約日には出さない
+  const todaysAppointments = sorted.filter((a) => isTodayJst(displayDateIso(a.appointmentAt, a.checkedInAt), nowIso));
 
   if (!guardResolved) {
     return <div className="min-h-screen bg-gray-50" />;
@@ -304,7 +305,7 @@ export default function ClinicPage() {
         ) : (
           <div className="space-y-3">
             {todaysAppointments.map((a) => (
-              <AppointmentRow key={a.id} appointment={a} onChanged={load} nowIso={nowIso} stripeAccountStatus={profile?.stripeAccountStatus} />
+              <AppointmentRow key={a.id} appointment={a} onChanged={load} nowIso={nowIso} stripeAccountStatus={profile?.stripeAccountStatus} listContext="today" />
             ))}
           </div>
         )}

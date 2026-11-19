@@ -43,6 +43,20 @@ export function isEarlyCheckin(appointmentAt: string, nowIso: string): boolean {
   return toJstDateKey(appointmentAt) > toJstDateKey(nowIso);
 }
 
+/**
+ * 予約日より前（JST暦日）に受付済みになったか（前倒し来院）。
+ * isEarlyCheckin と同じ判定軸を、受付時刻（checkedInAt）を基準に見たもの。
+ * 受付後に診察完了(completed)へ進んでも checkedInAt は残るため、completed でも前倒し扱いは維持される。
+ */
+export function isPrecheckinVisit(appointmentAt: string, checkedInAt: string | null | undefined): boolean {
+  return !!checkedInAt && isEarlyCheckin(appointmentAt, checkedInAt);
+}
+
+/** 一覧表示に使う「表示上の日付」。前倒し来院なら受付日時、それ以外は予約日時 */
+export function displayDateIso(appointmentAt: string, checkedInAt: string | null | undefined): string {
+  return isPrecheckinVisit(appointmentAt, checkedInAt) ? (checkedInAt as string) : appointmentAt;
+}
+
 export function matchesRange(appointmentAtIso: string, nowIso: string, range: PeriodRange): boolean {
   if (range === "all") return true;
   const apptKey = toJstDateKey(appointmentAtIso);
