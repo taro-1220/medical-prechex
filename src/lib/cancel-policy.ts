@@ -94,3 +94,33 @@ export function shouldWarnMissingBaseAmount(
 export function isGeneralPolicyStepComplete(cancellationPolicyText: string, cancelPolicyEnabled: boolean): boolean {
   return cancellationPolicyText.trim().length > 0 || !cancelPolicyEnabled;
 }
+
+export interface CancelTierLike {
+  daysBefore?: number;
+  noShow?: boolean;
+  percent: number;
+}
+
+export interface PatientFacingCancelPolicyDetail {
+  tiers: CancelTierLike[] | null;
+  basisNote: string | undefined;
+  showBasisToPatient: boolean;
+}
+
+/**
+ * 同意画面に出す段階表・根拠メモを決める。表示（getAppointmentForDisplay）と
+ * 記録（confirmWithConsent）の両方がこの関数を使い、見せたものと残すものを一致させる。
+ * 根拠メモは患者に表示する設定のときだけ返す（表示していないものは記録もしない）。
+ */
+export function patientFacingCancelPolicyDetail(
+  applied: boolean,
+  policy: { tiers?: CancelTierLike[] | null; basisNote?: string | null; showBasisToPatient?: boolean | null } | null | undefined,
+): PatientFacingCancelPolicyDetail {
+  if (!applied || !policy) return { tiers: null, basisNote: undefined, showBasisToPatient: false };
+  const showBasisToPatient = !!policy.showBasisToPatient;
+  return {
+    tiers: policy.tiers ?? null,
+    basisNote: showBasisToPatient ? (policy.basisNote || undefined) : undefined,
+    showBasisToPatient,
+  };
+}

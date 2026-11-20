@@ -9,8 +9,35 @@ import {
   isInsuranceNotificationConfirmationSatisfied,
   isGeneralPolicyStepComplete,
   shouldWarnMissingBaseAmount,
+  patientFacingCancelPolicyDetail,
   DAY_COUNTING_NOTE,
 } from "./cancel-policy";
+
+describe("patientFacingCancelPolicyDetail: 同意画面の表示＝同意記録の内容", () => {
+  const TIERS = [{ daysBefore: 1, percent: 50 }];
+  const POLICY = { tiers: TIERS, basisNote: "根拠メモ", showBasisToPatient: true };
+
+  it("適用あり・根拠メモ表示ありなら、段階表と根拠メモを返す", () => {
+    expect(patientFacingCancelPolicyDetail(true, POLICY)).toEqual({
+      tiers: TIERS, basisNote: "根拠メモ", showBasisToPatient: true,
+    });
+  });
+
+  it("根拠メモ非表示なら、根拠メモは返さない（表示していないものは記録しない）", () => {
+    expect(patientFacingCancelPolicyDetail(true, { ...POLICY, showBasisToPatient: false })).toEqual({
+      tiers: TIERS, basisNote: undefined, showBasisToPatient: false,
+    });
+  });
+
+  it("段階表が未設定ならtiersはnull", () => {
+    expect(patientFacingCancelPolicyDetail(true, { ...POLICY, tiers: null }).tiers).toBeNull();
+  });
+
+  it("適用外、またはポリシー行が無い場合は何も返さない", () => {
+    expect(patientFacingCancelPolicyDetail(false, POLICY)).toEqual({ tiers: null, basisNote: undefined, showBasisToPatient: false });
+    expect(patientFacingCancelPolicyDetail(true, null)).toEqual({ tiers: null, basisNote: undefined, showBasisToPatient: false });
+  });
+});
 
 describe("scopeAppliesToCategory", () => {
   it("other はどの scope でも対象外", () => {

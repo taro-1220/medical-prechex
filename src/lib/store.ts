@@ -19,7 +19,7 @@ import type {
   ChargeEventType,
   ChargeEventActor,
 } from "./types";
-import { resolveCancelPolicyApplication } from "./cancel-policy";
+import { resolveCancelPolicyApplication, patientFacingCancelPolicyDetail } from "./cancel-policy";
 import { TERMS_VERSION } from "./terms";
 import { getClinicStaffMember } from "./clinic-staff-store";
 
@@ -307,14 +307,19 @@ export async function getAppointmentForDisplay(token: string): Promise<Appointme
       .eq("clinic_id", appt.clinicId)
       .eq("treatment_category", appt.treatmentCategory)
       .maybeSingle();
+    const detail = patientFacingCancelPolicyDetail(true, policy ? {
+      tiers: policy.tiers as CancelTier[] | null | undefined,
+      basisNote: policy.basis_note as string | null | undefined,
+      showBasisToPatient: policy.show_basis_to_patient as boolean | null | undefined,
+    } : null);
     return {
       ...redacted,
       clinicPhone,
       chargeFailureKind,
       emailRegistered,
-      cancelPolicyShowBasisToPatient: (policy?.show_basis_to_patient as boolean | undefined) ?? false,
-      cancelPolicyBasisNote: policy?.show_basis_to_patient ? (policy?.basis_note as string | undefined) : undefined,
-      cancelPolicyTiers: (policy?.tiers as CancelTier[] | null | undefined) ?? null,
+      cancelPolicyShowBasisToPatient: detail.showBasisToPatient,
+      cancelPolicyBasisNote: detail.basisNote,
+      cancelPolicyTiers: detail.tiers as CancelTier[] | null,
     } as Appointment;
   }
 
@@ -454,25 +459,42 @@ export async function confirmWithConsent(token: string): Promise<boolean> {
   // policy_text自体のスナップショットは既存どおり appt.cancellationPolicy のみ（構造は変更しない）
   const settings = appt.clinicId ? await getClinicCancelPolicySettings(appt.clinicId) : null;
 
+  // 同意画面に出していた段階表・根拠メモを、表示と同じ関数で決めて記録する（migration 031）。
+  // 表示していないもの（適用外・根拠メモ非表示）は null のまま残す。
+  const policyForCategory = appt.treatmentCategory === "private" || appt.treatmentCategory === "insurance"
+    ? settings?.policies[appt.treatmentCategory] ?? null
+    : null;
+  const shownDetail = patientFacingCancelPolicyDetail(!!appt.cancelPolicyApplied, policyForCategory);
+
   // 2. consent_logs に先に insert（失敗時は appointments を更新しない）
   // Medipre利用規約への同意は、キャンセルポリシー適用有無に関わらず、確定操作そのものに
   // 常に伴うため（画面側チェックボックスは既存のcancelPolicyConsentedと同じ扱いのゲート）、
   // 条件分岐せず毎回記録する。
+  const baseLog = {
+    appointment_id:     appt.id,
+    token:              appt.token,
+    policy_text:        appt.cancellationPolicy,
+    consented_at:       consentAt,
+    patient_name:       appt.patientName,
+    appointment_at:     appt.appointmentAt,
+    treatment_category: appt.treatmentCategory,
+    policy_scope:       settings?.scope ?? null,
+    terms_version:      TERMS_VERSION,
+    terms_agreed_at:    consentAt,
+  };
   const { error: logError } = await getSupabase()
     .from("consent_logs")
     .insert({
-      appointment_id:     appt.id,
-      token:              appt.token,
-      policy_text:        appt.cancellationPolicy,
-      consented_at:       consentAt,
-      patient_name:       appt.patientName,
-      appointment_at:     appt.appointmentAt,
-      treatment_category: appt.treatmentCategory,
-      policy_scope:       settings?.scope ?? null,
-      terms_version:      TERMS_VERSION,
-      terms_agreed_at:    consentAt,
+      ...baseLog,
+      cancel_policy_tiers_snapshot:      shownDetail.tiers,
+      cancel_policy_basis_note_snapshot: shownDetail.basisNote ?? null,
     });
-  if (logError) throw new Error(`consent_log insert failed: ${logError.message}`);
+  if (logError) {
+    // migration 031 未適用(42703)の間は、同意記録そのものを失敗させず既存列だけで残す
+    if (logError.code !== "42703") throw new Error(`consent_log insert failed: ${logError.message}`);
+    const { error: retryError } = await getSupabase().from("consent_logs").insert(baseLog);
+    if (retryError) throw new Error(`consent_log insert failed: ${retryError.message}`);
+  }
 
   // 3. consent_logs 保存成功後のみ appointments を confirmed に更新。
   //    キャンセル料ポリシー適用時は同意日時も記録する（本文は作成時点で既にsnapshot済み）

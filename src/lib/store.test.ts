@@ -37,6 +37,10 @@ let insertCalls: { table: string; payload: unknown }[] = [];
 let appointmentRow: Record<string, unknown> = BASE_APPOINTMENT_ROW;
 let updateCalls: { table: string; payload: unknown }[] = [];
 let updateError: { code: string; message: string } | null = null;
+/** clinic_cancel_policies の行（既定は未設定） */
+let cancelPolicyRows: Record<string, unknown>[] = [];
+/** consent_logs の insert が返すエラーを呼び出し順に差し込む（migration未適用の再試行検証用） */
+let consentInsertErrors: ({ code: string; message: string } | null)[] = [];
 
 function mockClient() {
   return {
@@ -53,14 +57,18 @@ function mockClient() {
                 },
                 // clinic_cancel_policies は maybeSingle を呼ばず、配列取得のみ
                 then: (resolve: (v: { data: unknown[]; error: null }) => unknown) =>
-                  Promise.resolve({ data: [], error: null }).then(resolve),
+                  Promise.resolve({
+                    data: table === "clinic_cancel_policies" ? cancelPolicyRows : [],
+                    error: null,
+                  }).then(resolve),
               };
             },
           };
         },
         insert(payload: unknown) {
           insertCalls.push({ table, payload });
-          return { then: (resolve: (v: { error: null }) => unknown) => Promise.resolve({ error: null }).then(resolve) };
+          const error = table === "consent_logs" ? consentInsertErrors.shift() ?? null : null;
+          return { then: (resolve: (v: { error: unknown }) => unknown) => Promise.resolve({ error }).then(resolve) };
         },
         update(payload: unknown) {
           updateCalls.push({ table, payload });
@@ -82,6 +90,8 @@ describe("confirmWithConsent: 利用規約の同意記録", () => {
   beforeEach(() => {
     insertCalls = [];
     appointmentRow = BASE_APPOINTMENT_ROW;
+    cancelPolicyRows = [];
+    consentInsertErrors = [];
   });
 
   it("consent_logsにterms_versionとterms_agreed_atが記録される", async () => {
@@ -108,6 +118,70 @@ describe("confirmWithConsent: 利用規約の同意記録", () => {
     const payload = consentLogInsert!.payload as Record<string, unknown>;
     expect(payload.policy_text).toBe(BASE_APPOINTMENT_ROW.cancellation_policy);
     expect(payload.patient_name).toBe(BASE_APPOINTMENT_ROW.patient_name);
+  });
+});
+
+describe("confirmWithConsent: 同意画面に出した段階表・根拠メモの記録（migration 031）", () => {
+  const TIERS = [{ daysBefore: 1, percent: 50 }, { noShow: true, percent: 100 }];
+
+  beforeEach(() => {
+    insertCalls = [];
+    appointmentRow = { ...BASE_APPOINTMENT_ROW, cancel_policy_applied: true, treatment_category: "private" };
+    cancelPolicyRows = [];
+    consentInsertErrors = [];
+  });
+
+  function consentPayload(): Record<string, unknown> {
+    return insertCalls.find((c) => c.table === "consent_logs")!.payload as Record<string, unknown>;
+  }
+
+  it("段階表ありなら、表示に使ったtiersをそのまま記録する", async () => {
+    cancelPolicyRows = [{ treatment_category: "private", policy_text: "p", basis_note: "根拠", show_basis_to_patient: false, grace_hours: 24, tiers: TIERS }];
+    await confirmWithConsent("token-1");
+    expect(consentPayload().cancel_policy_tiers_snapshot).toEqual(TIERS);
+  });
+
+  it("段階表なし（tiers未設定）ならnullを記録する", async () => {
+    cancelPolicyRows = [{ treatment_category: "private", policy_text: "p", basis_note: "根拠", show_basis_to_patient: false, grace_hours: 24, tiers: null }];
+    await confirmWithConsent("token-1");
+    expect(consentPayload().cancel_policy_tiers_snapshot).toBeNull();
+  });
+
+  it("根拠メモを患者に表示している場合だけ記録する", async () => {
+    cancelPolicyRows = [{ treatment_category: "private", policy_text: "p", basis_note: "根拠メモ本文", show_basis_to_patient: true, grace_hours: 24, tiers: TIERS }];
+    await confirmWithConsent("token-1");
+    expect(consentPayload().cancel_policy_basis_note_snapshot).toBe("根拠メモ本文");
+  });
+
+  it("根拠メモを患者に表示していない場合はnullを記録する", async () => {
+    cancelPolicyRows = [{ treatment_category: "private", policy_text: "p", basis_note: "根拠メモ本文", show_basis_to_patient: false, grace_hours: 24, tiers: TIERS }];
+    await confirmWithConsent("token-1");
+    expect(consentPayload().cancel_policy_basis_note_snapshot).toBeNull();
+  });
+
+  it("キャンセルポリシー適用外の予約は、段階表も根拠メモも記録しない", async () => {
+    appointmentRow = { ...BASE_APPOINTMENT_ROW, cancel_policy_applied: false, treatment_category: "private" };
+    cancelPolicyRows = [{ treatment_category: "private", policy_text: "p", basis_note: "根拠メモ本文", show_basis_to_patient: true, grace_hours: 24, tiers: TIERS }];
+    await confirmWithConsent("token-1");
+    expect(consentPayload().cancel_policy_tiers_snapshot).toBeNull();
+    expect(consentPayload().cancel_policy_basis_note_snapshot).toBeNull();
+  });
+
+  it("migration 031未適用(42703)なら、既存列だけで同意記録を残して成功する", async () => {
+    consentInsertErrors = [{ code: "42703", message: "column does not exist" }];
+    cancelPolicyRows = [{ treatment_category: "private", policy_text: "p", basis_note: "根拠", show_basis_to_patient: true, grace_hours: 24, tiers: TIERS }];
+    const ok = await confirmWithConsent("token-1");
+    expect(ok).toBe(true);
+    const consentInserts = insertCalls.filter((c) => c.table === "consent_logs");
+    expect(consentInserts).toHaveLength(2);
+    const retried = consentInserts[1].payload as Record<string, unknown>;
+    expect("cancel_policy_tiers_snapshot" in retried).toBe(false);
+    expect(retried.terms_version).toBe(TERMS_VERSION);
+  });
+
+  it("42703以外のエラーは従来どおり例外にする", async () => {
+    consentInsertErrors = [{ code: "23505", message: "duplicate key" }];
+    await expect(confirmWithConsent("token-1")).rejects.toThrow();
   });
 });
 
