@@ -28,6 +28,23 @@ describe("recordNotificationRun", () => {
     expect(insert).toHaveBeenCalledWith(expect.objectContaining({ skip_reasons: skipReasons }));
   });
 
+  it("列なし以外のエラー（制約違反など）では再記録しない", async () => {
+    const insert = vi.fn().mockResolvedValue({ error: { code: "23505", message: "duplicate key" } });
+    fromMock.mockReturnValue({ insert });
+    await recordNotificationRun({ notificationType: "reminder_day_before", startedAt: "2026-03-05T08:00:00.000Z", sentCount: 0, failedCount: 0, skippedCount: 1, cappedCount: 0, skipReasons: { clinic_settings_incomplete: [{ clinic_id: "clinic-1", count: 1 }] } });
+    expect(insert).toHaveBeenCalledTimes(1);
+  });
+
+  it("PostgRESTのスキーマキャッシュに列が無い(PGRST204)場合も skip_reasons を外して記録し直す", async () => {
+    const insert = vi.fn()
+      .mockResolvedValueOnce({ error: { code: "PGRST204", message: "Could not find the column in the schema cache" } })
+      .mockResolvedValueOnce({ error: null });
+    fromMock.mockReturnValue({ insert });
+    await recordNotificationRun({ notificationType: "reminder_day_before", startedAt: "2026-03-05T08:00:00.000Z", sentCount: 0, failedCount: 0, skippedCount: 1, cappedCount: 0, skipReasons: { clinic_settings_incomplete: [{ clinic_id: "clinic-1", count: 1 }] } });
+    expect(insert).toHaveBeenCalledTimes(2);
+    expect("skip_reasons" in (insert.mock.calls[1][0] as Record<string, unknown>)).toBe(false);
+  });
+
   it("migration 031未適用(42703)なら skip_reasons を外して記録し直す", async () => {
     const insert = vi.fn()
       .mockResolvedValueOnce({ error: { code: "42703", message: "column does not exist" } })

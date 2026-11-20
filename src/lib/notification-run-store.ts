@@ -2,6 +2,7 @@
 // (appointments.email_last_failed_at)。migration 026未適用の間は、記録の失敗を握りつぶし、
 // 送信処理自体は止めない（安全側）。
 import { getSupabase } from "./supabase";
+import { isMissingColumnError } from "./db-errors";
 
 /** 送信を止めた理由ごとのクリニック別件数。形式: {"clinic_settings_incomplete": [{clinic_id, count}]} */
 export type NotificationSkipReasons = Record<string, { clinic_id: string; count: number }[]>;
@@ -31,9 +32,10 @@ export async function recordNotificationRun(result: NotificationRunResult): Prom
     const { error } = await getSupabase()
       .from("notification_run_log")
       .insert({ ...base, skip_reasons: result.skipReasons ?? null });
-    // migration 031 未適用(42703)の間は、skip_reasons を外して既存列だけで記録する。
+    // 列が存在しない(migration 031未適用)ときだけ、skip_reasons を外して既存列で記録し直す。
     // それ以外のエラーは意図的に見ない: migration未適用(42P01)等でも送信処理自体を止めないため。
-    if (error?.code === "42703") {
+    if (isMissingColumnError(error)) {
+      console.error("notification_run_log skip_reasons column missing");
       await getSupabase().from("notification_run_log").insert(base);
     }
   } catch {

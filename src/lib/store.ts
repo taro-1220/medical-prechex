@@ -1,4 +1,5 @@
 import { getSupabase } from "./supabase";
+import { isMissingColumnError } from "./db-errors";
 import { addAppointmentNote } from "./appointment-notes-store";
 import { resolvePatientFacingClinicName, resolvePatientFacingClinicPhone } from "./patient-facing-clinic";
 import type {
@@ -493,8 +494,10 @@ export async function confirmWithConsent(token: string): Promise<boolean> {
       cancel_policy_basis_note_snapshot: shownDetail.basisNote ?? null,
     });
   if (logError) {
-    // migration 031 未適用(42703)の間は、同意記録そのものを失敗させず既存列だけで残す
-    if (logError.code !== "42703") throw new Error(`consent_log insert failed: ${logError.message}`);
+    // 列が存在しない(migration 031未適用)ときだけ、同意記録そのものを失敗させず既存列で残す。
+    // それ以外のエラー（制約違反・権限等）は再試行せず従来どおり失敗させる。
+    if (!isMissingColumnError(logError)) throw new Error(`consent_log insert failed: ${logError.message}`);
+    console.error("consent snapshot columns missing");
     const { error: retryError } = await getSupabase().from("consent_logs").insert(baseLog);
     if (retryError) throw new Error(`consent_log insert failed: ${retryError.message}`);
   }

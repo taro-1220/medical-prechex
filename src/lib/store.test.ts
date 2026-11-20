@@ -179,9 +179,23 @@ describe("confirmWithConsent: 同意画面に出した段階表・根拠メモ�
     expect(retried.terms_version).toBe(TERMS_VERSION);
   });
 
-  it("42703以外のエラーは従来どおり例外にする", async () => {
+  it("PostgRESTのスキーマキャッシュに列が無い(PGRST204)場合も再試行する", async () => {
+    consentInsertErrors = [{ code: "PGRST204", message: "Could not find the column in the schema cache" }];
+    const ok = await confirmWithConsent("token-1");
+    expect(ok).toBe(true);
+    expect(insertCalls.filter((c) => c.table === "consent_logs")).toHaveLength(2);
+  });
+
+  it("列なし以外のエラー（制約違反など）は再試行せず例外にする", async () => {
     consentInsertErrors = [{ code: "23505", message: "duplicate key" }];
     await expect(confirmWithConsent("token-1")).rejects.toThrow();
+    expect(insertCalls.filter((c) => c.table === "consent_logs")).toHaveLength(1);
+  });
+
+  it("コード無しのエラーも再試行せず例外にする", async () => {
+    consentInsertErrors = [{ code: "", message: "network error" }];
+    await expect(confirmWithConsent("token-1")).rejects.toThrow();
+    expect(insertCalls.filter((c) => c.table === "consent_logs")).toHaveLength(1);
   });
 });
 
