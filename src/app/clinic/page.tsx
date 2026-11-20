@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Appointment, Clinic, ClinicProfile, OnboardingProgress, ChargeDashboardResponse } from "@/lib/types";
-import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin, getClinicApprovalRedirect, isStripePendingBannerVisibleOnDashboard, incompleteOnboardingItems } from "@/lib/clinic-auth";
+import { getCurrentUser, getUserClinics, getCurrentClinic, getAccessToken, redirectToLogin, getClinicApprovalRedirect, isStripePendingBannerVisible, incompleteOnboardingItems } from "@/lib/clinic-auth";
 import { isTodayJst, displayDateIso } from "@/lib/clinic-appointments-view";
 import OnboardingGuide, { GUIDE_KEY } from "./OnboardingGuide";
 import StripePendingBanner from "./StripePendingBanner";
@@ -38,9 +38,8 @@ export default function ClinicPage() {
   const [showGuide, setShowGuide] = useState(false);
   const [clinic, setClinic]   = useState<Clinic | null>(null);
   const [clinics, setClinics] = useState<Clinic[]>([]);
-  const [activatedAt, setActivatedAt] = useState<string | null | undefined>(undefined);
-  const [onboardingProgress, setOnboardingProgress] = useState<OnboardingProgress | null>(null);
   const [profile, setProfile] = useState<ClinicProfile | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [dashboard, setDashboard] = useState<ChargeDashboardResponse | null>(null);
   const [guardResolved, setGuardResolved] = useState(false);
 
@@ -73,13 +72,10 @@ export default function ClinicPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (obRes.ok) {
-        const { progress, profile: prof } = await obRes.json();
-        setActivatedAt(progress?.activatedAt ?? null);
-        setOnboardingProgress(progress ?? null);
+        const { profile: prof } = await obRes.json();
         setProfile(prof ?? null);
-      } else {
-        setActivatedAt(null);
       }
+      setProfileLoaded(true);
     })();
   }, [router]);
 
@@ -183,25 +179,22 @@ export default function ClinicPage() {
         </div>
       </header>
       {showGuide && <OnboardingGuide onClose={() => setShowGuide(false)} />}
-      {clinic && isStripePendingBannerVisibleOnDashboard(activatedAt, profile?.stripeAccountStatus) && (
+      {clinic && isStripePendingBannerVisible(profile?.stripeAccountStatus) && (
         <StripePendingBanner clinicId={clinic.id} />
       )}
-      {activatedAt !== undefined && (() => {
-        const incomplete = incompleteOnboardingItems(onboardingProgress, profile);
-        if (activatedAt !== null && incomplete.length === 0) return null;
+      {/* 未設定の必須項目があるときだけ出す（判定は患者向け送信のガードと同じ条件） */}
+      {profileLoaded && (() => {
+        const incomplete = incompleteOnboardingItems(profile);
+        if (incomplete.length === 0) return null;
         return (
           <div className="bg-amber-50 border-b border-amber-200 px-6 py-3 flex items-center justify-between">
             <div>
               <p className="text-sm text-amber-800 font-medium">
-                初期設定が完了していません
-                {incomplete.length > 0 && `（未完了：${incomplete.join("・")}）`}
+                患者さんへの送信に必要な設定が未完了です（未設定：{incomplete.join("・")}）
               </p>
-              {!profile?.phone && (
-                <p className="text-sm text-amber-800 font-medium">電話番号が未登録のため、患者さんへのメールに連絡先が載りません</p>
-              )}
             </div>
-            <Link href="/clinic/onboarding" className="px-4 py-1.5 bg-amber-500 rounded-lg text-white text-sm font-bold hover:bg-amber-600 transition">
-              初期設定へ
+            <Link href="/clinic/onboarding?mode=settings" className="px-4 py-1.5 bg-amber-500 rounded-lg text-white text-sm font-bold hover:bg-amber-600 transition">
+              医院設定を開く
             </Link>
           </div>
         );

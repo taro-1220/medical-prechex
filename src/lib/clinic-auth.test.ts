@@ -18,9 +18,7 @@ import {
   shouldShowStripePreCheck,
   getStripeStatusLabel,
   isStripePendingBannerVisible,
-  isStripePendingBannerVisibleOnDashboard,
   incompleteOnboardingItems,
-  incompleteRequiredOnboardingItems,
   staffStatusLabel,
   requestStripeConnectUrl,
   calculateFeeExampleReceivedAmount,
@@ -127,59 +125,31 @@ describe("isStripePendingBannerVisible: セクションF-2 再開バナーの表
   });
 });
 
-describe("isStripePendingBannerVisibleOnDashboard: /clinicでは初期設定完了後だけStripeバナーを出す", () => {
-  it("初期設定未完了(activatedAtがnull/undefined)なら、pendingでもfalse（初期設定バナーのみ出す）", () => {
-    expect(isStripePendingBannerVisibleOnDashboard(null, "pending")).toBe(false);
-    expect(isStripePendingBannerVisibleOnDashboard(undefined, "pending")).toBe(false);
+describe("incompleteOnboardingItems: 必須設定の未完了項目（判定条件はmissingPatientFacingSettingsと同一）", () => {
+  const COMPLETE = { clinicDisplayName: "テスト医院", phone: "03-0000-0000", cancellationPolicy: "前日までキャンセル無料" };
+
+  it("クリニック名・電話番号・キャンセルポリシーが揃っていれば空配列", () => {
+    expect(incompleteOnboardingItems(COMPLETE)).toEqual([]);
   });
 
-  it("初期設定完了(activatedAtが日時文字列)かつpendingならtrue", () => {
-    expect(isStripePendingBannerVisibleOnDashboard("2026-09-01T00:00:00Z", "pending")).toBe(true);
+  it("電話番号が空なら「医院プロフィール（電話番号）」を返す", () => {
+    expect(incompleteOnboardingItems({ ...COMPLETE, phone: "" })).toEqual(["医院プロフィール（電話番号）"]);
   });
 
-  it("初期設定完了していてもactive/not_connectedならfalse", () => {
-    expect(isStripePendingBannerVisibleOnDashboard("2026-09-01T00:00:00Z", "active")).toBe(false);
-    expect(isStripePendingBannerVisibleOnDashboard("2026-09-01T00:00:00Z", "not_connected")).toBe(false);
-  });
-});
-
-describe("incompleteOnboardingItems: /clinicの「初期設定が完了していません」帯に出す未完了項目", () => {
-  const completeProgress = { profileCompleted: true, policyCompleted: true, notificationCompleted: true };
-
-  it("全て完了・電話番号ありなら空配列", () => {
-    expect(incompleteOnboardingItems(completeProgress, { phone: "03-0000-0000" })).toEqual([]);
+  it("キャンセルポリシーが空なら「キャンセルポリシー」を返す", () => {
+    expect(incompleteOnboardingItems({ ...COMPLETE, cancellationPolicy: "   " })).toEqual(["キャンセルポリシー"]);
   });
 
-  it("progressがnullなら、プロフィール・ポリシー・通知の3項目が未完了になる", () => {
-    expect(incompleteOnboardingItems(null, { phone: "03-0000-0000" })).toEqual(["医院プロフィール", "キャンセルポリシー", "通知設定"]);
+  it("profileがnullなら3項目すべてを、直す場所が分かる名前で返す", () => {
+    expect(incompleteOnboardingItems(null)).toEqual([
+      "医院プロフィール（医院表示名）",
+      "医院プロフィール（電話番号）",
+      "キャンセルポリシー",
+    ]);
   });
 
-  it("他は完了していても電話番号が空なら「電話番号」のみ未完了", () => {
-    expect(incompleteOnboardingItems(completeProgress, { phone: "" })).toEqual(["電話番号"]);
-  });
-
-  it("profileがnullも電話番号未登録として扱う", () => {
-    expect(incompleteOnboardingItems(completeProgress, null)).toEqual(["電話番号"]);
-  });
-});
-
-describe("incompleteRequiredOnboardingItems: 「利用開始」ボタンの未完了項目（必須3項目のみ）", () => {
-  const completeProgress = { profileCompleted: true, policyCompleted: true, notificationCompleted: true };
-
-  it("全て完了なら空配列", () => {
-    expect(incompleteRequiredOnboardingItems(completeProgress)).toEqual([]);
-  });
-
-  it("progressがnullなら3項目すべてが未完了になる", () => {
-    expect(incompleteRequiredOnboardingItems(null)).toEqual(["医院プロフィール", "キャンセルポリシー", "予約確認メッセージ"]);
-  });
-
-  it("一部のみ未完了なら、その項目名だけを返す", () => {
-    expect(incompleteRequiredOnboardingItems({ ...completeProgress, policyCompleted: false })).toEqual(["キャンセルポリシー"]);
-  });
-
-  it("電話番号は対象に含めない", () => {
-    expect(incompleteRequiredOnboardingItems(completeProgress)).not.toContain("電話番号");
+  it("予約確認メッセージ（任意項目）は未完了に含めない", () => {
+    expect(incompleteOnboardingItems(COMPLETE)).not.toContain("予約確認メッセージ");
   });
 });
 

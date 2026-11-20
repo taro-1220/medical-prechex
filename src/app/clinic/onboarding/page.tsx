@@ -8,7 +8,7 @@ import {
   shouldShowStripePreCheck,
   getStripeStatusLabel,
   isStripePendingBannerVisible,
-  incompleteRequiredOnboardingItems,
+  incompleteOnboardingItems,
   staffStatusLabel,
 } from "@/lib/clinic-auth";
 import { useClinicGuard } from "@/lib/useClinicGuard";
@@ -303,22 +303,9 @@ export default function OnboardingPage() {
     setSaving(false);
   }
 
-  async function activate() {
-    if (!clinicId) return;
-    setSaving(true);
-    const token = await getAccessToken();
-    const res = await fetch("/api/clinic/activate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ clinicId }),
-    });
-    setSaving(false);
-    if (res.ok) router.replace("/clinic");
-  }
-
-  const allDone = !!progress?.profileCompleted && !!progress?.policyCompleted && !!progress?.notificationCompleted;
-  const REQUIRED_TOTAL = 3;
-  const requiredCompletedCount = [progress?.profileCompleted, progress?.policyCompleted, progress?.notificationCompleted].filter(Boolean).length;
+  // 必須項目の完了判定は、患者向け送信のガード（missingPatientFacingSettings）と同じ条件を使う
+  const incompleteRequired = incompleteOnboardingItems(profile);
+  const allDone = incompleteRequired.length === 0;
 
   if (!shouldRenderClinicContent(guardState)) {
     return <div className="min-h-screen bg-gray-50" />;
@@ -337,8 +324,8 @@ export default function OnboardingPage() {
           {!isSettingsMode && (
             <p className="text-xs text-gray-400 mt-1">
               {allDone
-                ? `必須項目 ${REQUIRED_TOTAL}/${REQUIRED_TOTAL} 完了`
-                : `必須項目 ${requiredCompletedCount}/${REQUIRED_TOTAL} 完了・あと${REQUIRED_TOTAL - requiredCompletedCount}項目で利用開始できます`}
+                ? "必須項目は設定済みです"
+                : `未設定：${incompleteRequired.join("、")}`}
             </p>
           )}
         </div>
@@ -766,28 +753,6 @@ export default function OnboardingPage() {
           </div>
           {staffAddedMessage && <p className="text-xs text-teal-600 mt-2">{staffAddedMessage}</p>}
           {staffError && <p className="text-xs text-red-600 mt-2">{staffError}</p>}
-        </div>
-
-        <div className={`rounded-2xl border shadow-sm p-5 ${allDone ? "border-teal-200 bg-teal-50" : "border-gray-200 bg-white"}`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-bold text-gray-900">利用開始</p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {allDone ? "すべての設定が完了しました" : `未設定：${incompleteRequiredOnboardingItems(progress).join("、")}`}
-              </p>
-            </div>
-            <button
-              onClick={activate}
-              disabled={!allDone || saving}
-              className="px-5 py-2.5 bg-teal-600 rounded-xl text-white font-bold text-sm hover:bg-teal-700 transition disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              {saving ? "処理中..." : "利用開始"}
-            </button>
-          </div>
-          <p className="text-xs text-gray-400 mt-2">
-            利用開始を押すと、ホームの「初期設定が完了していません」の表示が消えます。<br />
-            予約の作成・受付は、押す前でも使えます。
-          </p>
         </div>
 
       </div>

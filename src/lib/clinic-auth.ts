@@ -1,7 +1,8 @@
 import type { User } from "@supabase/supabase-js";
 import { getSupabaseBrowser } from "./supabase-browser";
-import type { Clinic, ClinicStatus, StripeAccountStatus, OnboardingProgress, ClinicProfile } from "./types";
+import type { Clinic, ClinicStatus, StripeAccountStatus, ClinicProfile } from "./types";
 import { getStripeAccountStatusLabel } from "./status-labels";
+import { missingPatientFacingSettings } from "./clinic-readiness";
 
 const STRIPE_CONNECT_GENERIC_ERROR = "現在お支払い連携を開始できません。運営事務局までご連絡ください";
 
@@ -178,38 +179,20 @@ export function isStripePendingBannerVisible(status: StripeAccountStatus | null 
 }
 
 /**
- * /clinic（ダッシュボード）専用: Stripe連携はキャンセル料回収時にのみ必要な設定のため、
- * 初期設定（activate）が完了するまではStripeバナーを出さず、初期設定バナーのみ見せる。
- * /clinic/onboardingではこの制約を適用しない（そちらは元々Stripeバナーの表示のみ）。
+ * 必須設定の未完了項目名。判定条件は患者向け送信のガード（missingPatientFacingSettings）と同一で、
+ * clinic_profile のクリニック名・電話番号・キャンセルポリシーだけを見る。
+ * 項目名は、設定画面のどこを直せばよいか分かる形にする。
  */
-/**
- * /clinic（ダッシュボード）の「初期設定が完了していません」帯に出す、未完了項目名の一覧。
- * activate済みでも電話番号が未登録なら「電話番号」を出す（activateの判定自体は変更しない）。
- */
-export function incompleteOnboardingItems(
-  progress: Pick<OnboardingProgress, "profileCompleted" | "policyCompleted" | "notificationCompleted"> | null,
-  profile: Pick<ClinicProfile, "phone"> | null,
-): string[] {
-  const items: string[] = [];
-  if (!progress?.profileCompleted) items.push("医院プロフィール");
-  if (!progress?.policyCompleted) items.push("キャンセルポリシー");
-  if (!progress?.notificationCompleted) items.push("通知設定");
-  if (!profile?.phone) items.push("電話番号");
-  return items;
-}
+const ONBOARDING_ITEM_BY_MISSING_SETTING: Record<string, string> = {
+  "クリニック名": "医院プロフィール（医院表示名）",
+  "電話番号": "医院プロフィール（電話番号）",
+  "キャンセルポリシー": "キャンセルポリシー",
+};
 
-/**
- * /clinic/onboarding の「利用開始」ボタンの未完了項目（必須3項目のみ。電話番号は含まない）。
- * activateの判定条件（profileCompleted/policyCompleted/notificationCompleted）と同じ3項目。
- */
-export function incompleteRequiredOnboardingItems(
-  progress: Pick<OnboardingProgress, "profileCompleted" | "policyCompleted" | "notificationCompleted"> | null,
+export function incompleteOnboardingItems(
+  profile: Pick<ClinicProfile, "clinicDisplayName" | "phone" | "cancellationPolicy"> | null,
 ): string[] {
-  const items: string[] = [];
-  if (!progress?.profileCompleted) items.push("医院プロフィール");
-  if (!progress?.policyCompleted) items.push("キャンセルポリシー");
-  if (!progress?.notificationCompleted) items.push("予約確認メッセージ");
-  return items;
+  return missingPatientFacingSettings(profile).map((s) => ONBOARDING_ITEM_BY_MISSING_SETTING[s] ?? s);
 }
 
 /** スタッフ管理の行バッジ表示 */
@@ -217,12 +200,6 @@ export function staffStatusLabel(active: boolean): string {
   return active ? "有効" : "無効";
 }
 
-export function isStripePendingBannerVisibleOnDashboard(
-  activatedAt: string | null | undefined,
-  status: StripeAccountStatus | null | undefined,
-): boolean {
-  return !!activatedAt && isStripePendingBannerVisible(status);
-}
 
 /**
  * セクションF-2/F-4: Stripe Connectのオンボーディングリンクを要求する。
