@@ -73,8 +73,16 @@ export default function ClinicNewPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchDone, setSearchDone] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  // IME変換中は検索しない（確定前のかな文字で検索すると候補が出ないため）
+  const composingRef = useRef(false);
+  // 遅い応答が新しい応答を上書きしないようにする
+  const searchSeqRef = useRef(0);
+  // IME確定時に検索を走らせるためのトリガー（確定後の値は変わらないことがあるため）
+  const [searchTrigger, setSearchTrigger] = useState(0);
 
   // MVP+1: キャンセル料ポリシー
   const [treatmentCategory, setTreatmentCategory] = useState<TreatmentCategory>("other");
@@ -267,31 +275,50 @@ export default function ClinicNewPage() {
   const set = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(prev => ({ ...prev, [key]: e.target.value }));
 
-  // リアルタイム患者検索（200ms debounce）
+  // リアルタイム患者検索（200ms debounce）。IME変換中は走らせない
   useEffect(() => {
-    if (searchQuery.length < 2) {
+    if (searchQuery.trim().length < 2) {
       setPatients([]);
       setShowDropdown(false);
       setSearchDone(false);
+      setSearchLoading(false);
+      setSearchError(false);
       return;
     }
+    if (composingRef.current) return;
+    const seq = ++searchSeqRef.current;
+    setSearchError(false);
+    setSearchLoading(true);
     const timer = setTimeout(async () => {
-      const token = await getAccessToken();
-      fetch(`/api/patients/search?q=${encodeURIComponent(searchQuery)}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setPatients(data);
-            setShowDropdown(data.length > 0);
-            setSearchDone(true);
-          }
-        })
-        .catch(() => {});
+      try {
+        const token = await getAccessToken();
+        const res = await fetch(`/api/patients/search?q=${encodeURIComponent(searchQuery.trim())}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+        const data = res.ok ? await res.json().catch(() => null) : null;
+        if (seq !== searchSeqRef.current) return; // 古い応答は捨てる
+        if (!Array.isArray(data)) {
+          setPatients([]);
+          setShowDropdown(false);
+          setSearchDone(false);
+          setSearchError(true);
+          return;
+        }
+        setPatients(data);
+        setShowDropdown(data.length > 0);
+        setSearchDone(true);
+      } catch {
+        if (seq !== searchSeqRef.current) return;
+        setPatients([]);
+        setShowDropdown(false);
+        setSearchDone(false);
+        setSearchError(true);
+      } finally {
+        if (seq === searchSeqRef.current) setSearchLoading(false);
+      }
     }, 200);
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, searchTrigger]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -307,6 +334,9 @@ export default function ClinicNewPage() {
     setSearchQuery(p.name);
     setShowDropdown(false);
     setSearchDone(false);
+    setSearchError(false);
+    setSearchLoading(false);
+    searchSeqRef.current++; // 選択後に遅れて届く応答でドロップダウンを開かない
   };
 
   const clearPatient = () => {
@@ -315,6 +345,8 @@ export default function ClinicNewPage() {
     setForm(prev => ({ ...prev, patientName: "", phone: "", email: "" }));
     setPatients([]);
     setSearchDone(false);
+    setSearchError(false);
+    setSearchLoading(false);
   };
 
   const registerAsNew = () => {
@@ -458,7 +490,7 @@ export default function ClinicNewPage() {
     }
   };
 
-  const noResults = searchQuery.length >= 2 && searchDone && patients.length === 0 && !selectedPatient;
+  const noResults = searchQuery.trim().length >= 2 && searchDone && !searchLoading && !searchError && patients.length === 0 && !selectedPatient;
 
   // ─── 確認URL発行後の画面 ───────────────────────────────
   if (confirmUrl && bodies) {
@@ -703,6 +735,12 @@ export default function ClinicNewPage() {
                 placeholder="山田太郎 / 090-..."
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setSelectedPatient(null); }}
+                onCompositionStart={() => { composingRef.current = true; }}
+                onCompositionEnd={(e) => {
+                  composingRef.current = false;
+                  setSearchQuery(e.currentTarget.value);
+                  setSearchTrigger((n) => n + 1);
+                }}
                 className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-teal-500 transition text-sm"
               />
               {showDropdown && (
@@ -746,15 +784,24 @@ export default function ClinicNewPage() {
               </div>
             )}
 
-            {/* 0件時の新規登録導線 */}
+            {searchLoading && <p className="text-xs text-gray-500">検索中…</p>}
+
+            {searchError && (
+              <p className="text-xs text-red-600">検索できませんでした。時間をおいてもう一度お試しください。</p>
+            )}
+
+            {/* 0件時の案内と新規登録導線 */}
             {noResults && (
-              <button
-                type="button"
-                onClick={registerAsNew}
-                className="w-full py-3 rounded-xl border-2 border-dashed border-teal-300 text-teal-600 text-sm font-bold hover:bg-teal-50 transition"
-              >
-                ＋ 新規患者として登録
-              </button>
+              <>
+                <p className="text-xs text-gray-600">該当する患者が見つかりません。下の欄に入力して新規に登録できます。</p>
+                <button
+                  type="button"
+                  onClick={registerAsNew}
+                  className="w-full py-3 rounded-xl border-2 border-dashed border-teal-300 text-teal-600 text-sm font-bold hover:bg-teal-50 transition"
+                >
+                  ＋ 新規患者として登録
+                </button>
+              </>
             )}
           </div>
 
