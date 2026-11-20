@@ -7,6 +7,7 @@ import { isEmailSendEnabled, sendAppointmentReminderEmail } from "@/lib/notify-e
 import { reminderAlreadySentIds, recordReminderSent, REMINDER_NOTIFICATION_TYPE } from "@/lib/reminder-store";
 import { REMINDER_CLINIC_LIMIT, REMINDER_TOTAL_LIMIT } from "@/lib/notification-limits";
 import { recordNotificationRun, setEmailLastFailedAt } from "@/lib/notification-run-store";
+import type { NotificationSkipReasons } from "@/lib/notification-run-store";
 import { missingPatientFacingSettings } from "@/lib/clinic-readiness";
 import { resolvePatientFacingClinicName, resolvePatientFacingClinicPhone } from "@/lib/patient-facing-clinic";
 
@@ -83,6 +84,23 @@ export async function GET(req: NextRequest) {
     row[key]++;
     byType[kind][key]++;
   };
+  // 送信を止めた理由ごとのクリニック別件数（notification_run_log.skip_reasons へ）
+  const skipReasonCounts: Record<ReminderKind, Record<string, Record<string, number>>> = { threeDaysBefore: {}, dayBefore: {} };
+  const bumpSkipReason = (kind: ReminderKind, reason: string, clinicId: string) => {
+    const byReason = skipReasonCounts[kind];
+    const byClinic = byReason[reason] ?? (byReason[reason] = {});
+    byClinic[clinicId] = (byClinic[clinicId] ?? 0) + 1;
+  };
+  const skipReasonsOf = (kind: ReminderKind): NotificationSkipReasons | undefined => {
+    const entries = Object.entries(skipReasonCounts[kind]);
+    if (entries.length === 0) return undefined;
+    return Object.fromEntries(
+      entries.map(([reason, byClinic]) => [
+        reason,
+        Object.entries(byClinic).map(([clinic_id, count]) => ({ clinic_id, count })),
+      ]),
+    );
+  };
 
   const queue: { appt: Appointment; kind: ReminderKind }[] = [
     ...targets.threeDaysBefore.map((appt) => ({ appt, kind: "threeDaysBefore" as const })),
@@ -90,7 +108,7 @@ export async function GET(req: NextRequest) {
   ];
 
   // D: 医院設定の必須項目（クリニック名・電話番号・キャンセルポリシー）が未設定の間は送らない。
-  // クリニック単位で一度だけ判定する（notification_run_logには理由を残す列が無いため、理由はconsoleに出す）
+  // クリニック単位で一度だけ判定し、止めた理由は notification_run_log.skip_reasons に残す（migration 031）
   const clinicReadiness = new Map<string, boolean>();
   const clinicProfileCache = new Map<string, { clinic_display_name?: string; phone?: string; cancellation_policy?: string } | null>();
   async function getClinicProfile(clinicId: string) {
@@ -125,6 +143,7 @@ export async function GET(req: NextRequest) {
     if (!(await isClinicReady(appt.clinicId))) {
       skipped++;
       bump(kind, appt.clinicId, "skipped");
+      bumpSkipReason(kind, "clinic_settings_incomplete", appt.clinicId);
       continue;
     }
 
@@ -179,6 +198,7 @@ export async function GET(req: NextRequest) {
     skippedCount: byType.threeDaysBefore.skipped,
     cappedCount: byType.threeDaysBefore.capped,
     clinicBreakdown: breakdownByType.threeDaysBefore,
+    skipReasons: skipReasonsOf("threeDaysBefore"),
   });
   await recordNotificationRun({
     notificationType: REMINDER_NOTIFICATION_TYPE.dayBefore,
@@ -188,6 +208,7 @@ export async function GET(req: NextRequest) {
     skippedCount: byType.dayBefore.skipped,
     cappedCount: byType.dayBefore.capped,
     clinicBreakdown: breakdownByType.dayBefore,
+    skipReasons: skipReasonsOf("dayBefore"),
   });
 
   return NextResponse.json({ sent, skipped, failed, capped });

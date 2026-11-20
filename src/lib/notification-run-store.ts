@@ -3,6 +3,9 @@
 // 送信処理自体は止めない（安全側）。
 import { getSupabase } from "./supabase";
 
+/** 送信を止めた理由ごとのクリニック別件数。形式: {"clinic_settings_incomplete": [{clinic_id, count}]} */
+export type NotificationSkipReasons = Record<string, { clinic_id: string; count: number }[]>;
+
 export interface NotificationRunResult {
   notificationType: string;
   startedAt: string;
@@ -11,11 +14,12 @@ export interface NotificationRunResult {
   skippedCount: number;
   cappedCount: number;
   clinicBreakdown?: Record<string, unknown>;
+  skipReasons?: NotificationSkipReasons;
 }
 
 export async function recordNotificationRun(result: NotificationRunResult): Promise<void> {
   try {
-    await getSupabase().from("notification_run_log").insert({
+    const base = {
       notification_type: result.notificationType,
       started_at: result.startedAt,
       sent_count: result.sentCount,
@@ -23,9 +27,15 @@ export async function recordNotificationRun(result: NotificationRunResult): Prom
       skipped_count: result.skippedCount,
       capped_count: result.cappedCount,
       clinic_breakdown: result.clinicBreakdown ?? null,
-    });
-    // 戻り値の{error}は意図的に見ない: migration未適用(42703/42P01)でも
-    // 送信処理自体を止めないため、記録の失敗は無視する。
+    };
+    const { error } = await getSupabase()
+      .from("notification_run_log")
+      .insert({ ...base, skip_reasons: result.skipReasons ?? null });
+    // migration 031 未適用(42703)の間は、skip_reasons を外して既存列だけで記録する。
+    // それ以外のエラーは意図的に見ない: migration未適用(42P01)等でも送信処理自体を止めないため。
+    if (error?.code === "42703") {
+      await getSupabase().from("notification_run_log").insert(base);
+    }
   } catch {
     // ネットワーク例外等でも送信処理自体は止めない
   }

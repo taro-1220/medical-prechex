@@ -19,6 +19,24 @@ describe("recordNotificationRun", () => {
     await recordNotificationRun({ notificationType: "reminder_day_before", startedAt: "2026-03-05T08:00:00.000Z", sentCount: 3, failedCount: 1, skippedCount: 2, cappedCount: 0 });
     expect(insert).toHaveBeenCalledWith(expect.objectContaining({ notification_type: "reminder_day_before", sent_count: 3, failed_count: 1 }));
   });
+
+  it("skip_reasons を保存する（migration 031）", async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    fromMock.mockReturnValue({ insert });
+    const skipReasons = { clinic_settings_incomplete: [{ clinic_id: "clinic-1", count: 2 }] };
+    await recordNotificationRun({ notificationType: "reminder_day_before", startedAt: "2026-03-05T08:00:00.000Z", sentCount: 0, failedCount: 0, skippedCount: 2, cappedCount: 0, skipReasons });
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ skip_reasons: skipReasons }));
+  });
+
+  it("migration 031未適用(42703)なら skip_reasons を外して記録し直す", async () => {
+    const insert = vi.fn()
+      .mockResolvedValueOnce({ error: { code: "42703", message: "column does not exist" } })
+      .mockResolvedValueOnce({ error: null });
+    fromMock.mockReturnValue({ insert });
+    await recordNotificationRun({ notificationType: "reminder_day_before", startedAt: "2026-03-05T08:00:00.000Z", sentCount: 0, failedCount: 0, skippedCount: 1, cappedCount: 0, skipReasons: { clinic_settings_incomplete: [{ clinic_id: "clinic-1", count: 1 }] } });
+    expect(insert).toHaveBeenCalledTimes(2);
+    expect("skip_reasons" in (insert.mock.calls[1][0] as Record<string, unknown>)).toBe(false);
+  });
 });
 
 describe("getRecentNotificationSummary", () => {

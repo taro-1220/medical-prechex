@@ -31,7 +31,12 @@ vi.mock("./notify-email", () => ({
   sendAvailableSlotEmail: (...a: unknown[]) => sendAvailableSlotEmailMock(...a),
 }));
 
-const { handleAppointmentCancelledForSlotReopen } = await import("./available-slot-notify");
+const recordNotificationRunMock = vi.fn();
+vi.mock("./notification-run-store", () => ({
+  recordNotificationRun: (...a: unknown[]) => recordNotificationRunMock(...a),
+}));
+
+const { handleAppointmentCancelledForSlotReopen, AVAILABLE_SLOT_NOTIFICATION_TYPE } = await import("./available-slot-notify");
 
 const CANCELLED_APPT: Appointment = {
   id: "appt-a", token: "tok-a", clinicName: "検収クリニック", patientName: "患者A",
@@ -74,6 +79,26 @@ describe("handleAppointmentCancelledForSlotReopen", () => {
     const result = await handleAppointmentCancelledForSlotReopen(CANCELLED_APPT, "confirmed");
     expect(result).toEqual({ triggered: false, reason: "clinic_settings_incomplete" });
     expect(createAvailableSlotFromCancelledAppointmentMock).not.toHaveBeenCalled();
+  });
+
+  it("設定未完了で止めたときは、理由をskip_reasonsに記録する（migration 031）", async () => {
+    getClinicAutoNotifySettingMock.mockResolvedValue(true);
+    getPatientFacingClinicProfileMock.mockResolvedValue({
+      clinicDisplayName: "検収クリニック", phone: "", cancellationPolicy: "前日までキャンセル無料",
+    });
+    await handleAppointmentCancelledForSlotReopen(CANCELLED_APPT, "confirmed");
+    expect(recordNotificationRunMock).toHaveBeenCalledWith(expect.objectContaining({
+      notificationType: AVAILABLE_SLOT_NOTIFICATION_TYPE,
+      skippedCount: 1,
+      skipReasons: { clinic_settings_incomplete: [{ clinic_id: "clinic-1", count: 1 }] },
+    }));
+  });
+
+  it("設定が揃っているときは、設定未完了の記録をしない", async () => {
+    getClinicAutoNotifySettingMock.mockResolvedValue(true);
+    findNotifiablePatientsMock.mockResolvedValue([]);
+    await handleAppointmentCancelledForSlotReopen(CANCELLED_APPT, "confirmed");
+    expect(recordNotificationRunMock).not.toHaveBeenCalled();
   });
 
   it("過去の予約なら再募集しない", async () => {

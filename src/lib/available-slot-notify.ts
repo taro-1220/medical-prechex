@@ -14,8 +14,10 @@ import {
 } from "./available-slots-store";
 import { isEmailSendEnabled, sendAvailableSlotEmail } from "./notify-email";
 import { missingPatientFacingSettings } from "./clinic-readiness";
+import { recordNotificationRun } from "./notification-run-store";
 
 const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const AVAILABLE_SLOT_NOTIFICATION_TYPE = "available_slot";
 
 function baseUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -48,6 +50,16 @@ export async function handleAppointmentCancelledForSlotReopen(
   const missingSettings = missingPatientFacingSettings(clinicProfile);
   if (missingSettings.length > 0) {
     console.warn(`[available-slot-notify] skip clinic_settings_incomplete clinicId=${cancelledAppt.clinicId} missing=${missingSettings.join(",")}`);
+    // 止めた理由を notification_run_log.skip_reasons に残す（migration 031）
+    await recordNotificationRun({
+      notificationType: AVAILABLE_SLOT_NOTIFICATION_TYPE,
+      startedAt: new Date().toISOString(),
+      sentCount: 0,
+      failedCount: 0,
+      skippedCount: 1,
+      cappedCount: 0,
+      skipReasons: { clinic_settings_incomplete: [{ clinic_id: cancelledAppt.clinicId, count: 1 }] },
+    });
     return { triggered: false, reason: "clinic_settings_incomplete" };
   }
 

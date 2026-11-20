@@ -285,4 +285,32 @@ describe("GET /api/cron/appointment-reminders", () => {
     expect(body).toEqual({ sent: 0, skipped: 1, failed: 0, capped: 0 });
     expect(sendAppointmentReminderEmailMock).not.toHaveBeenCalled();
   });
+
+  it("設定未完了で止めた件数を、種別ごとにskip_reasonsへ記録する（migration 031）", async () => {
+    process.env.CRON_SECRET = "correct";
+    process.env.ENABLE_REMINDER_SEND = "true";
+    fromMock.mockImplementation((table: string) => {
+      if (table === "clinics") {
+        return { select: () => Promise.resolve({ data: [{ id: "clinic-1", name: "テスト医院", phone: "03-0000-0000" }], error: null }) };
+      }
+      if (table === "clinic_profile") {
+        return { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { ...COMPLETE_CLINIC_PROFILE, phone: "" }, error: null }) }) }) };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+    getAllAppointmentsMock.mockResolvedValue([makeAppt({ id: "1", appointmentAt: TOMORROW })]);
+    isEmailSendEnabledMock.mockReturnValue(true);
+
+    await GET(makeRequest("http://localhost/api/cron/appointment-reminders", "Bearer correct"));
+
+    const dayBeforeRun = recordNotificationRunMock.mock.calls
+      .map((c) => c[0] as Record<string, unknown>)
+      .find((r) => r.notificationType === "reminder_day_before");
+    expect(dayBeforeRun?.skipReasons).toEqual({ clinic_settings_incomplete: [{ clinic_id: "clinic-1", count: 1 }] });
+    // 対象が無かった種別には理由を付けない
+    const threeDaysRun = recordNotificationRunMock.mock.calls
+      .map((c) => c[0] as Record<string, unknown>)
+      .find((r) => r.notificationType === "reminder_three_days_before");
+    expect(threeDaysRun?.skipReasons).toBeUndefined();
+  });
 });
