@@ -365,7 +365,10 @@ export async function createAppointment(
   const clinicName = resolvePatientFacingClinicName(
     clinicProfile ? { clinicDisplayName: clinicProfile.clinic_display_name as string | undefined } : null,
     clinic,
-  ) || input.clinicName;
+  );
+  // クライアント入力へのフォールバックはしない。予約作成APIの事前判定（missingPatientFacingSettings）で
+  // 止まるため通常は到達しないが、到達した場合は患者に出す医院名が決まらないため作成しない。
+  if (!clinicName) throw new Error("clinic name is not configured");
   // キャンセルポリシー文面はクライアント入力(input.cancellationPolicy)を信用せず、サーバーで clinic_profile から読む
   const cancellationPolicy = (clinicProfile?.cancellation_policy as string | undefined) ?? "";
 

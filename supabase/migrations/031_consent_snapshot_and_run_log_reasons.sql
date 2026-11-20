@@ -13,7 +13,13 @@ alter table public.consent_logs
 alter table public.notification_run_log
   add column if not exists skip_reasons jsonb;
 
+-- 030 の追記専用トリガー関数は、呼び出し元のsearch_pathに依存しないよう空に固定する
+alter function public.appointment_notes_block_update_delete() set search_path = '';
+alter function public.appointment_notes_block_truncate() set search_path = '';
+
 -- ロールバック:
+--   alter function public.appointment_notes_block_update_delete() reset search_path;
+--   alter function public.appointment_notes_block_truncate() reset search_path;
 --   alter table public.consent_logs
 --     drop column if exists cancel_policy_tiers_snapshot,
 --     drop column if exists cancel_policy_basis_note_snapshot;
