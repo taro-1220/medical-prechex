@@ -1,11 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const { getUserMock, fromMock, getAppointmentMock, updateStatusMock } = vi.hoisted(() => ({
+const { getUserMock, fromMock, getAppointmentMock, updateStatusMock, slotReopenMock } = vi.hoisted(() => ({
   getUserMock: vi.fn(),
   fromMock: vi.fn(),
   getAppointmentMock: vi.fn(),
   updateStatusMock: vi.fn(),
+  slotReopenMock: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -15,6 +16,10 @@ vi.mock("@/lib/supabase", () => ({
 vi.mock("@/lib/store", () => ({
   getAppointment: getAppointmentMock,
   updateStatus: updateStatusMock,
+}));
+
+vi.mock("@/lib/available-slot-notify", () => ({
+  handleAppointmentCancelledForSlotReopen: slotReopenMock,
 }));
 
 import { POST } from "./route";
@@ -52,6 +57,8 @@ describe("POST /api/appointments/[token]/checkin", () => {
     clinicStatus = "active";
     getAppointmentMock.mockReset();
     updateStatusMock.mockReset();
+    slotReopenMock.mockReset();
+    slotReopenMock.mockResolvedValue({ triggered: true });
   });
 
   it("未認証なら401", async () => {
@@ -131,4 +138,64 @@ describe("POST /api/appointments/[token]/checkin", () => {
       expect(updateStatusMock).not.toHaveBeenCalled();
     });
   }
+});
+
+describe("POST /api/appointments/[token]/checkin: 前倒し来院で空いた枠の通知", () => {
+  const NOW = "2026-03-10T01:00:00.000Z"; // JST 2026-03-10 10:00
+  const FUTURE_APPT = "2026-03-12T01:00:00.000Z"; // JST 2026-03-12
+  const TODAY_APPT = "2026-03-10T05:00:00.000Z"; // JST 2026-03-10 14:00
+
+  beforeEach(() => {
+    getUserMock.mockReset();
+    fromMock.mockReset();
+    clinicStatus = "active";
+    getAppointmentMock.mockReset();
+    updateStatusMock.mockReset();
+    slotReopenMock.mockReset();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW));
+    getUserMock.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    updateStatusMock.mockResolvedValue(true);
+    slotReopenMock.mockResolvedValue({ triggered: true });
+    stubClinicMember(true, "owner");
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("前倒し来院（予約日が受付日より後）なら、本来の予約日時の枠で通知を起動する", async () => {
+    getAppointmentMock.mockResolvedValue({ id: "a1", token: "tok1", status: "confirmed", clinicId: "clinic-1", appointmentAt: FUTURE_APPT });
+    const res = await POST(makeRequest("Bearer t"), params());
+    expect(res.status).toBe(200);
+    expect(slotReopenMock).toHaveBeenCalledTimes(1);
+    const [apptArg, previousStatusArg] = slotReopenMock.mock.calls[0];
+    expect((apptArg as { appointmentAt: string }).appointmentAt).toBe(FUTURE_APPT);
+    expect(previousStatusArg).toBe("confirmed");
+  });
+
+  it("当日来院なら通知を起動しない", async () => {
+    getAppointmentMock.mockResolvedValue({ id: "a1", token: "tok1", status: "confirmed", clinicId: "clinic-1", appointmentAt: TODAY_APPT });
+    const res = await POST(makeRequest("Bearer t"), params());
+    expect(res.status).toBe(200);
+    expect(slotReopenMock).not.toHaveBeenCalled();
+  });
+
+  it("二重受付（既にchecked_in）では通知を起動しない", async () => {
+    getAppointmentMock.mockResolvedValue({ id: "a1", token: "tok1", status: "checked_in", clinicId: "clinic-1", appointmentAt: FUTURE_APPT });
+    const res = await POST(makeRequest("Bearer t"), params());
+    expect(res.status).toBe(200);
+    expect((await res.json()).alreadyCheckedIn).toBe(true);
+    expect(slotReopenMock).not.toHaveBeenCalled();
+    expect(updateStatusMock).not.toHaveBeenCalled();
+  });
+
+  it("通知が失敗しても受付は成功する", async () => {
+    getAppointmentMock.mockResolvedValue({ id: "a1", token: "tok1", status: "confirmed", clinicId: "clinic-1", appointmentAt: FUTURE_APPT });
+    slotReopenMock.mockRejectedValue(new Error("notify failed"));
+    const res = await POST(makeRequest("Bearer t"), params());
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(updateStatusMock).toHaveBeenCalledWith("tok1", "checked_in", expect.any(Object));
+  });
 });
