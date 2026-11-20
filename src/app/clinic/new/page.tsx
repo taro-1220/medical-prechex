@@ -17,9 +17,6 @@ const TREATMENT_CATEGORY_LABEL: Record<TreatmentCategory, string> = { private: "
 const CHANNELS: MessageChannel[] = ["sms", "line", "email"];
 const TAB_LABELS: Record<MessageChannel, string> = { sms: "SMS", line: "LINE", email: "メール" };
 
-const DEFAULT_POLICY =
-  "予約日の前日までのキャンセルは無料です。当日キャンセルおよび無断キャンセルには、予約確認対象額の全額をご請求する場合があります。";
-
 type FormState = {
   patientName: string;
   phone: string;
@@ -35,7 +32,7 @@ const EMPTY_FORM: FormState = {
   email: "",
   appointmentAt: "",
   description: "",
-  cancellationPolicy: DEFAULT_POLICY,
+  cancellationPolicy: "",
 };
 
 export default function ClinicNewPage() {
@@ -123,7 +120,7 @@ export default function ClinicNewPage() {
       .catch(() => {});
   }, []);
 
-  // 保存済みの予約確認ポリシーを初期値として反映（空の場合のみDEFAULT_POLICYのまま）
+  // 医院設定のキャンセルポリシー（予約に実際に記録される文面）を表示用に読み込む
   useEffect(() => {
     if (!clinicId) return;
     (async () => {
@@ -377,6 +374,7 @@ export default function ClinicNewPage() {
 
     setLoading(true);
     setCreateError(null);
+    const { cancellationPolicy: _policyShownOnly, ...formWithoutPolicy } = form;
     let res: Response;
     try {
       const token = await getAccessToken();
@@ -384,7 +382,8 @@ export default function ClinicNewPage() {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
-          ...form,
+          // キャンセルポリシーはサーバーが医院設定から読むため送らない
+          ...formWithoutPolicy,
           appointmentAt: jstLocalInputToIso(form.appointmentAt),
           clinicName,
           ...(clinicId ? { clinicId } : {}),
@@ -1041,18 +1040,18 @@ export default function ClinicNewPage() {
             </div>
           )}
 
-          {/* ⑤ キャンセルポリシー */}
+          {/* ⑤ キャンセルポリシー（医院設定の文面を表示するだけ。ここでは編集しない） */}
           <div>
-            <label className="block text-sm font-bold mb-1.5 text-gray-700">
-              予約確認ポリシー<span className="text-red-500 ml-1">*</span>
-            </label>
-            <textarea
-              required
-              rows={5}
-              value={form.cancellationPolicy}
-              onChange={set("cancellationPolicy")}
-              className="w-full px-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-900 focus:outline-none focus:border-teal-500 transition text-sm resize-none leading-relaxed"
-            />
+            <p className="block text-sm font-bold mb-1.5 text-gray-700">キャンセルポリシー</p>
+            <div className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-900 text-sm leading-relaxed whitespace-pre-wrap min-h-[60px]">
+              {form.cancellationPolicy || <span className="text-gray-400">医院設定で未設定です</span>}
+            </div>
+            <p className="text-xs text-gray-500 mt-1.5">
+              患者さまの同意画面に表示される文面です。変更は医院設定から行えます。
+              <Link href="/clinic/onboarding?mode=settings" className="text-teal-600 hover:underline ml-1">
+                医院設定を開く
+              </Link>
+            </p>
           </div>
 
           {/* ⑥ 確認URL発行 */}
