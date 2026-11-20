@@ -76,12 +76,21 @@ export async function handleAppointmentCancelledForSlotReopen(
   const dryRun = !isEmailSendEnabled();
   const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
 
+  // 枠を空けた本人に「枠が空きました」を送らない。patient_idでの除外（findNotifiablePatients）に加えて
+  // メールアドレスでも除く（同じ人が別の患者行で登録されている場合があるため）
+  const sourceEmails = new Set(
+    [cancelledAppt.email, cancelledAppt.patientRegisteredEmail]
+      .filter((e): e is string => !!e && e.trim().length > 0)
+      .map((e) => e.trim().toLowerCase()),
+  );
+
   let notifiedCount = 0;
   let skippedByRateLimit = 0;
 
   for (const patient of candidates) {
     // MVP: メールのみ対応。将来SMS/LINEを追加する場合はここでpatientの受信可能チャネルを見て分岐する
     if (!patient.email) continue;
+    if (sourceEmails.has(patient.email.trim().toLowerCase())) continue;
 
     const recentCount = await countRecentNotifications(patient.id, since);
     if (!isWithinDailyNotifyLimit(recentCount)) { skippedByRateLimit++; continue; }

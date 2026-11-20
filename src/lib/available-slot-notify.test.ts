@@ -121,6 +121,30 @@ describe("handleAppointmentCancelledForSlotReopen", () => {
     expect(markSlotNotificationSentMock).toHaveBeenCalledWith("notif-1", expect.objectContaining({ dryRun: true }));
   });
 
+  it("枠を空けた本人（予約と同じメールアドレス）は宛先から除く", async () => {
+    getClinicAutoNotifySettingMock.mockResolvedValue(true);
+    findNotifiablePatientsMock.mockResolvedValue([
+      { id: "patient-dup", name: "患者A（別行）", phone: "", email: "  A@Example.com  " },
+      { id: "patient-b", name: "患者B", phone: "", email: "b@example.com" },
+    ]);
+    const sourceAppt = { ...CANCELLED_APPT, email: "a@example.com" };
+    const result = await handleAppointmentCancelledForSlotReopen(sourceAppt, "confirmed");
+    expect(result.notifiedCount).toBe(1);
+    expect(insertSlotNotificationMock).toHaveBeenCalledTimes(1);
+    expect(insertSlotNotificationMock).toHaveBeenCalledWith(expect.objectContaining({ patientId: "patient-b" }));
+  });
+
+  it("患者自身が登録したメールアドレス（patientRegisteredEmail）でも本人を除く", async () => {
+    getClinicAutoNotifySettingMock.mockResolvedValue(true);
+    findNotifiablePatientsMock.mockResolvedValue([
+      { id: "patient-dup", name: "患者A（別行）", phone: "", email: "self@example.com" },
+    ]);
+    const sourceAppt = { ...CANCELLED_APPT, email: "", patientRegisteredEmail: "self@example.com" };
+    const result = await handleAppointmentCancelledForSlotReopen(sourceAppt, "confirmed");
+    expect(result.notifiedCount).toBe(0);
+    expect(insertSlotNotificationMock).not.toHaveBeenCalled();
+  });
+
   it("RESEND_API_KEY設定時は実際に送信を試みる", async () => {
     emailSendEnabled = true;
     getClinicAutoNotifySettingMock.mockResolvedValue(true);
