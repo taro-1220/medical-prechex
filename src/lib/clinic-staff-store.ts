@@ -51,3 +51,31 @@ export async function deactivateClinicStaffMember(clinicId: string, staffMemberI
     .eq("clinic_id", clinicId);
   return !error;
 }
+
+export type ReactivateClinicStaffResult =
+  | { ok: true }
+  | { ok: false; reason: "not_found" | "duplicate_name" | "update_failed" };
+
+/**
+ * 無効にしたスタッフを有効に戻す。同じ名前の有効なスタッフが既にいる場合は戻さない
+ * （担当の選択肢に同名が並び、どちらを選んだか分からなくなるため）。
+ */
+export async function reactivateClinicStaffMember(
+  clinicId: string,
+  staffMemberId: string,
+): Promise<ReactivateClinicStaffResult> {
+  const target = await getClinicStaffMember(staffMemberId);
+  if (!target || target.clinicId !== clinicId) return { ok: false, reason: "not_found" };
+
+  const active = await listClinicStaff(clinicId, true);
+  if (active.some((s) => s.id !== staffMemberId && s.name === target.name)) {
+    return { ok: false, reason: "duplicate_name" };
+  }
+
+  const { error } = await getSupabase()
+    .from("clinic_staff_members")
+    .update({ active: true, updated_at: new Date().toISOString() })
+    .eq("id", staffMemberId)
+    .eq("clinic_id", clinicId);
+  return error ? { ok: false, reason: "update_failed" } : { ok: true };
+}

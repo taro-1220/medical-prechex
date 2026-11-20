@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireClinicAccess } from "@/lib/clinic-access";
-import { deactivateClinicStaffMember } from "@/lib/clinic-staff-store";
+import { deactivateClinicStaffMember, reactivateClinicStaffMember } from "@/lib/clinic-staff-store";
 
-// 無効化のみ（物理削除はしない）。スタッフ管理は「設定」の権限のみ
+// 無効化と、有効への戻し（物理削除はしない）。スタッフ管理は「設定」の権限のみ
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -15,9 +15,20 @@ export async function PATCH(
   const access = await requireClinicAccess(req, clinicId, "settings", { requireActive: true });
   if (!access.ok) return access.response;
 
-  if (body?.active !== false) {
-    return NextResponse.json({ error: "only_deactivation_supported" }, { status: 400 });
+  if (typeof body?.active !== "boolean") {
+    return NextResponse.json({ error: "active required" }, { status: 400 });
   }
+
+  if (body.active === true) {
+    const result = await reactivateClinicStaffMember(clinicId, id);
+    if (result.ok) return NextResponse.json({ ok: true });
+    if (result.reason === "not_found") return NextResponse.json({ error: "not_found" }, { status: 404 });
+    if (result.reason === "duplicate_name") {
+      return NextResponse.json({ error: "同じ名前のスタッフが登録されています" }, { status: 409 });
+    }
+    return NextResponse.json({ error: "update_failed" }, { status: 500 });
+  }
+
   const ok = await deactivateClinicStaffMember(clinicId, id);
   if (!ok) return NextResponse.json({ error: "update_failed" }, { status: 500 });
   return NextResponse.json({ ok: true });

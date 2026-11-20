@@ -75,6 +75,7 @@ export default function OnboardingPage() {
   const [staffError, setStaffError] = useState<string | null>(null);
   const [staffAddedMessage, setStaffAddedMessage] = useState<string | null>(null);
   const [confirmingStaffId, setConfirmingStaffId] = useState<string | null>(null);
+  const [confirmingReactivateStaffId, setConfirmingReactivateStaffId] = useState<string | null>(null);
 
   async function loadStaff(cid: string) {
     const token = await getAccessToken();
@@ -107,12 +108,31 @@ export default function OnboardingPage() {
   async function deactivateStaff(staffId: string) {
     if (!clinicId) return;
     setConfirmingStaffId(null);
+    setStaffError(null);
     const token = await getAccessToken();
     await fetch(`/api/clinic/staff/${staffId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ clinicId, active: false }),
     });
+    await loadStaff(clinicId);
+  }
+
+  async function reactivateStaff(staffId: string) {
+    if (!clinicId) return;
+    setConfirmingReactivateStaffId(null);
+    setStaffError(null);
+    const token = await getAccessToken();
+    const res = await fetch(`/api/clinic/staff/${staffId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ clinicId, active: true }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setStaffError(typeof body?.error === "string" ? body.error : "有効に戻せませんでした");
+      return;
+    }
     await loadStaff(clinicId);
   }
 
@@ -693,7 +713,27 @@ export default function OnboardingPage() {
             {staffList.length === 0 && <p className="text-xs text-gray-400">スタッフが登録されていません</p>}
             {staffList.map((s) => (
               <div key={s.id} className="rounded-lg bg-gray-50 px-3 py-2">
-                {confirmingStaffId === s.id ? (
+                {confirmingReactivateStaffId === s.id ? (
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-700 leading-relaxed">
+                      {s.name}さんを有効に戻しますか？新規予約の担当の選択肢に再び表示されます。
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => reactivateStaff(s.id)}
+                        className="px-3 py-1.5 rounded-lg bg-teal-600 text-white text-xs font-bold hover:bg-teal-700 transition"
+                      >
+                        有効に戻す
+                      </button>
+                      <button
+                        onClick={() => setConfirmingReactivateStaffId(null)}
+                        className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-100 transition"
+                      >
+                        やめる
+                      </button>
+                    </div>
+                  </div>
+                ) : confirmingStaffId === s.id ? (
                   <div className="space-y-2">
                     <p className="text-xs text-gray-700 leading-relaxed">
                       {s.name}さんを無効にしますか？新規予約の担当の選択肢に出なくなります。保存済みの予約の担当名は変わりません。
@@ -721,12 +761,19 @@ export default function OnboardingPage() {
                         {staffStatusLabel(s.active)}
                       </span>
                     </div>
-                    {s.active && (
+                    {s.active ? (
                       <button
                         onClick={() => setConfirmingStaffId(s.id)}
                         className="shrink-0 px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 transition"
                       >
                         無効にする
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmingReactivateStaffId(s.id)}
+                        className="shrink-0 px-3 py-1.5 rounded-lg border border-teal-200 text-teal-700 text-xs font-bold hover:bg-teal-50 transition"
+                      >
+                        有効に戻す
                       </button>
                     )}
                   </div>

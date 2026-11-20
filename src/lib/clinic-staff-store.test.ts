@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const { fromMock } = vi.hoisted(() => ({ fromMock: vi.fn() }));
 vi.mock("./supabase", () => ({ getSupabase: () => ({ from: fromMock }) }));
 
-import { listClinicStaff, addClinicStaffMember, deactivateClinicStaffMember } from "./clinic-staff-store";
+import { listClinicStaff, addClinicStaffMember, deactivateClinicStaffMember, reactivateClinicStaffMember } from "./clinic-staff-store";
 
 let rows: Record<string, unknown>[] = [];
 let listError: { code: string; message: string } | null = null;
@@ -104,5 +104,38 @@ describe("deactivateClinicStaffMember", () => {
     const ok = await deactivateClinicStaffMember("clinic-1", "staff-1");
     expect(ok).toBe(true);
     expect(updateCalls).toEqual([{ table: "clinic_staff_members", payload: expect.objectContaining({ active: false }) }]);
+  });
+});
+
+describe("reactivateClinicStaffMember", () => {
+  beforeEach(() => {
+    fromMock.mockReset();
+    rows = [];
+    listError = null;
+    updateCalls.length = 0;
+    stub();
+  });
+
+  it("同名の有効なスタッフがいなければ有効に戻す", async () => {
+    rows = [makeRow({ id: "staff-1", active: false })];
+    expect(await reactivateClinicStaffMember("clinic-1", "staff-1")).toEqual({ ok: true });
+    expect(updateCalls).toEqual([{ table: "clinic_staff_members", payload: expect.objectContaining({ active: true }) }]);
+  });
+
+  it("同じ名前の有効なスタッフが既にいれば戻さない（duplicate_name）", async () => {
+    rows = [
+      makeRow({ id: "staff-1", active: false }),
+      makeRow({ id: "staff-2", active: true }),
+    ];
+    expect(await reactivateClinicStaffMember("clinic-1", "staff-1")).toEqual({ ok: false, reason: "duplicate_name" });
+    expect(updateCalls).toEqual([]);
+  });
+
+  it("存在しない・他院のスタッフなら not_found", async () => {
+    rows = [];
+    expect(await reactivateClinicStaffMember("clinic-1", "staff-1")).toEqual({ ok: false, reason: "not_found" });
+    rows = [makeRow({ id: "staff-1", clinic_id: "other-clinic", active: false })];
+    expect(await reactivateClinicStaffMember("clinic-1", "staff-1")).toEqual({ ok: false, reason: "not_found" });
+    expect(updateCalls).toEqual([]);
   });
 });
