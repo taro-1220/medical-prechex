@@ -354,7 +354,7 @@ export default function OnboardingPage() {
 
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-4">
 
-        <h2 className="text-xs font-bold text-gray-400 tracking-wide">必須（3項目）</h2>
+        <h2 className="text-xs font-bold text-gray-400 tracking-wide">必須（2項目）</h2>
 
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <div className="flex items-center justify-between">
@@ -415,11 +415,13 @@ export default function OnboardingPage() {
           )}
         </div>
 
+        <h2 className="text-xs font-bold text-gray-400 tracking-wide pt-2">任意</h2>
+
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-bold text-gray-900">予約確認メッセージ</p>
-              <p className="text-xs text-gray-400 mt-0.5">予約確定時に患者へ送るメッセージ</p>
+              <p className="text-xs text-gray-400 mt-0.5">スタッフがSMS・LINE・メールを手動で送るときの下書きです。自動送信のメールには使いません。</p>
             </div>
             <div className="flex items-center gap-3">
               {progress?.notificationCompleted
@@ -439,8 +441,6 @@ export default function OnboardingPage() {
             </div>
           )}
         </div>
-
-        <h2 className="text-xs font-bold text-gray-400 tracking-wide pt-2">任意</h2>
 
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -464,7 +464,7 @@ export default function OnboardingPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="font-bold text-gray-900">キャンセル料の同意文（任意）</p>
-              <p className="text-xs text-gray-400 mt-0.5">任意設定。予約時に患者さまへ提示し、同意をいただく文章です</p>
+              <p className="text-xs text-gray-400 mt-0.5">キャンセル料の金額と無料期限の表です。設定すると、患者さまの同意画面で、キャンセルポリシーの下に表示されます。</p>
             </div>
             <div className="flex items-center gap-3">
               {cpEnabled
